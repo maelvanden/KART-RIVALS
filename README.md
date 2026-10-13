@@ -1,56 +1,45 @@
-# Welcome to your Expo app 👋
+# Kart League
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Application mobile iOS / Android pour pilotes de karting amateurs : se trouver, se défier
+sur des circuits locaux, valider les résultats à deux et grimper au classement ELO.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo (SDK 57) + Expo Router + TypeScript
+- Supabase : Auth, PostgreSQL + PostGIS, Realtime, Edge Functions
+- TanStack Query, React Hook Form, Zod
 
-   ```bash
-   npm install
-   ```
+## Base de données
 
-2. Start the app
+Migrations dans [`supabase/migrations`](./supabase/migrations) :
 
-   ```bash
-   npx expo start
-   ```
+| Fichier | Contenu |
+| --- | --- |
+| `…_init_schema.sql` | tables `tracks`, `profiles`, `challenges`, `matches`, `elo_history` |
+| `…_security.sql` | RLS + droits par colonne (l'ELO n'est jamais modifiable par le client) |
+| `…_functions.sql` | RPC : `respond_challenge`, `cancel_challenge`, `submit_match_result`, `dispute_match`, `confirm_match` (moteur ELO), `nearby_pilots`, `leaderboard_near` + vue `leaderboard_global` |
 
-In the output, you'll find options to open the app in a
+Flux d'un défi :
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. A crée un défi (`insert` dans `challenges`) → B l'accepte / refuse (`respond_challenge`).
+2. Après la course, un pilote saisit le résultat (`submit_match_result`) — sa validation est implicite.
+3. L'autre confirme (`confirm_match`) → l'ELO des deux est recalculé dans la même transaction,
+   ou conteste (`dispute_match`) → le résultat peut être ressaisi.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
+Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
-## Get a fresh project
-
-When you're ready, run:
+## Démarrer
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env              # renseigner l'URL et la clé anon Supabase
+npx supabase login
+npx supabase link --project-ref <TON_PROJECT_REF>
+npx supabase db push              # applique les migrations
+npx supabase gen types typescript --linked > src/types/database.types.ts
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Les notifications push nécessitent un development build (`npx eas-cli@latest build --profile development`),
+elles ne fonctionnent pas dans Expo Go.
