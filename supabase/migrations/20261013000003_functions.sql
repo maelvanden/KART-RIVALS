@@ -1,4 +1,4 @@
--- Kart League : fonctions RPC (défis, feuille de temps, moteur ELO, proximité, classements)
+-- Kart Rivals : fonctions RPC (défis, feuille de temps, moteur ELO, proximité, classements)
 
 -- ========== DÉFIS ==========
 create or replace function public.respond_challenge(p_challenge_id uuid, p_accept boolean)

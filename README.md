@@ -1,4 +1,4 @@
-# Kart League
+# Kart Rivals
 
 Application mobile iOS / Android pour pilotes de karting amateurs : se trouver, se défier
 sur des circuits locaux, valider les résultats à deux et grimper au classement ELO.

@@ -1,4 +1,4 @@
--- Kart League : schéma initial (circuits, licences pilotes, défis, matchs, historique ELO)
+-- Kart Rivals : schéma initial (circuits, licences pilotes, défis, matchs, historique ELO)
 
 create extension if not exists postgis with schema extensions;
 

@@ -1,4 +1,4 @@
--- Kart League : droits par colonne + RLS.
+-- Kart Rivals : droits par colonne + RLS.
 -- Principe : les colonnes de classement (elo, wins, losses, draws) et les statuts de
 -- défis/matchs ne sont jamais modifiables directement par le client ; seules les
 -- fonctions RPC (security definer) les font évoluer.

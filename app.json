@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "kart-league",
-    "slug": "kart-league",
+    "name": "Kart Rivals",
+    "slug": "kart-rivals",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "kartleague",
+    "scheme": "kartrivals",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
