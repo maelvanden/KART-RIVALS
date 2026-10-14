@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/auth-provider';
 import { demoChallenges, demoEloHistory, demoNearby, demoProfile, demoTracks, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
+import { isExpired } from '@/features/challenges/state';
 import type { Challenge, Match, RaceFormat } from '@/types/models';
 
 const CHALLENGE_SELECT = `
-  id, challenger_id, opponent_id, status, format, scheduled_at, message, created_at,
+  id, challenger_id, opponent_id, status, format, scheduled_at, message, created_at, expires_at,
   challenger:profiles!challenges_challenger_id_fkey (id, username, elo, rank),
   opponent:profiles!challenges_opponent_id_fkey (id, username, elo, rank),
   track:tracks (id, name, city),
@@ -15,6 +16,8 @@ const CHALLENGE_SELECT = `
     challenger_best_lap_ms, opponent_best_lap_ms, challenger_confirmed_at, opponent_confirmed_at, dispute_reason
   )
 `;
+
+const isOpen = (c: Challenge) => c.status === 'accepted' || (c.status === 'pending' && !isExpired(c));
 
 type ChallengeRow = Omit<Challenge, 'match'> & { match: Match | Match[] | null };
 
@@ -30,14 +33,15 @@ export function useMyChallenges() {
     queryKey: ['challenges', userId],
     enabled: !!userId,
     queryFn: async (): Promise<Challenge[]> => {
-      if (isDemoMode) return demoChallenges.filter((c) => c.status === 'pending' || c.status === 'accepted');
+      if (isDemoMode) return demoChallenges.filter(isOpen);
       const { data, error } = await supabase
         .from('challenges')
         .select(CHALLENGE_SELECT)
         .in('status', ['pending', 'accepted'])
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as ChallengeRow[]).map(normalize);
+      // Un défi échu peut rester « pending » jusqu'au passage du planificateur (toutes les 15 min).
+      return (data as unknown as ChallengeRow[]).map(normalize).filter(isOpen);
     },
   });
 }
@@ -221,6 +225,7 @@ function demoCreate(input: NewChallenge): string {
     scheduled_at: input.scheduledAt,
     message: input.message,
     created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     challenger: { id: demoProfile.id, username: demoProfile.username, elo: demoProfile.elo, rank: demoProfile.rank },
     opponent: { id: input.opponentId, username: rival?.username ?? 'Pilote', elo: rival?.elo ?? 1000, rank: rival?.rank ?? 'novice' },
     track: demoTracks.find((t) => t.id === input.trackId) ?? demoTracks[0],

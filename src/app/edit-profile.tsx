@@ -81,8 +81,8 @@ function EditProfileForm({ profile }: { profile: Profile }) {
         <View style={styles.switchText}>
           <Text variant="heading">Visible dans « Pilotes »</Text>
           <Text variant="caption">
-            Les pilotes proches peuvent te trouver et te défier. Seule une position approximative (~1 km) est
-            utilisée.
+            Les pilotes proches te voient dans la liste « autour de toi » (position approximative, ~1 km). Même
+            invisible, on peut toujours te trouver par ton pseudo.
           </Text>
         </View>
         <Switch

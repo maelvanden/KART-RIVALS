@@ -56,6 +56,7 @@ export type Challenge = {
   scheduled_at: string | null;
   message: string | null;
   created_at: string;
+  expires_at: string;
   challenger: Pick<Profile, 'id' | 'username' | 'elo' | 'rank'>;
   opponent: Pick<Profile, 'id' | 'username' | 'elo' | 'rank'>;
   track: Track;

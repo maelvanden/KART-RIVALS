@@ -10,9 +10,14 @@ export type ChallengeStep =
   | 'done'
   | 'closed'; // refusé, annulé ou expiré
 
+/** Défi sans réponse après son échéance (72 h), même si le planificateur ne l'a pas encore fermé. */
+export const isExpired = (c: Pick<Challenge, 'status' | 'expires_at'>) =>
+  c.status === 'expired' || (c.status === 'pending' && new Date(c.expires_at).getTime() < Date.now());
+
 export function challengeStep(c: Challenge, myId: string): ChallengeStep {
   const iAmChallenger = c.challenger_id === myId;
   if (c.status === 'completed' || c.match?.status === 'confirmed') return 'done';
+  if (isExpired(c)) return 'closed';
   if (c.status === 'pending') return iAmChallenger ? 'awaiting_their_answer' : 'awaiting_my_answer';
   if (c.status !== 'accepted') return 'closed';
   if (!c.match || c.match.status === 'disputed') return 'to_race';

@@ -20,6 +20,7 @@ export const icons = {
   logout: { ios: 'rectangle.portrait.and.arrow.right', material: 'logout' },
   edit: { ios: 'pencil', material: 'edit' },
   chevron: { ios: 'chevron.right', material: 'chevron_right' },
+  search: { ios: 'magnifyingglass', material: 'search' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

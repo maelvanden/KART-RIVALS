@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 
-import { demoNearby, isDemoMode } from '@/lib/demo';
+import { useAuth } from '@/features/auth/auth-provider';
+import { demoLeaderboard, demoNearby, demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
-import type { NearbyPilot } from '@/types/models';
+import type { NearbyPilot, Profile } from '@/types/models';
 
 export type Coords = { lat: number; lng: number };
 
@@ -40,6 +41,39 @@ export function useNearbyPilots(coords: Coords | null | undefined, radiusKm: num
     queryFn: async (): Promise<NearbyPilot[]> => {
       if (isDemoMode) return demoNearby.filter((p) => p.distance_km <= radiusKm);
       const { data, error } = await supabase.rpc('nearby_pilots', { lat: coords!.lat, lng: coords!.lng, radius_km: radiusKm });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export type PilotSearchResult = Pick<Profile, 'id' | 'username' | 'elo' | 'rank' | 'wins' | 'losses'>;
+
+/** Échappe les jokers de ILIKE (% et _, fréquent dans les pseudos). */
+const escapeLike = (q: string) => q.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/** Recherche par pseudo, partout (pas seulement à proximité). Dès 2 caractères. */
+export function useSearchPilots(query: string) {
+  const { userId } = useAuth();
+  const q = query.trim();
+  return useQuery({
+    queryKey: ['search-pilots', q],
+    enabled: q.length >= 2,
+    staleTime: 60_000,
+    queryFn: async (): Promise<PilotSearchResult[]> => {
+      if (isDemoMode) {
+        const all = new Map([...demoNearby, ...demoLeaderboard].map((p) => [p.id, p]));
+        return [...all.values()].filter(
+          (p) => p.id !== demoProfile.id && p.username.toLowerCase().includes(q.toLowerCase()),
+        );
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, elo, rank, wins, losses')
+        .ilike('username', `%${escapeLike(q)}%`)
+        .neq('id', userId!)
+        .order('elo', { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data;
     },

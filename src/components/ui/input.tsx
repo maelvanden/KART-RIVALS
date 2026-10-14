@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/theme';
@@ -23,5 +23,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: spacing.lg,
     fontSize: 16,
+    ...(Platform.OS === 'web' ? { outlineWidth: 0 } : {}),
   },
 });

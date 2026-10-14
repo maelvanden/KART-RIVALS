@@ -143,7 +143,7 @@ export default function ChallengeScreen() {
         />
       ) : null}
 
-      {step === 'closed' ? <Notice text="Ce défi est clos (refusé, annulé ou expiré)." /> : null}
+      {step === 'closed' ? <Notice text={closedText[c.status] ?? 'Ce défi est clos.'} /> : null}
 
       {actionError ? <Text style={{ color: colors.danger }}>{actionError.message}</Text> : null}
 
@@ -158,6 +158,13 @@ export default function ChallengeScreen() {
     </Screen>
   );
 }
+
+const closedText: Partial<Record<string, string>> = {
+  declined: 'Défi refusé.',
+  cancelled: 'Défi annulé.',
+  expired: 'Défi expiré : pas de réponse dans les 72 h.',
+  pending: 'Défi expiré : pas de réponse dans les 72 h.',
+};
 
 function Notice({ text, tone = 'info' }: { text: string; tone?: 'info' | 'success' | 'warning' }) {
   const color = tone === 'success' ? colors.neon : tone === 'warning' ? colors.orange : colors.textMuted;
