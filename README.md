@@ -41,5 +41,23 @@ npx supabase gen types typescript --linked > src/types/database.types.ts
 npx expo start
 ```
 
+Mode démo (interface avec des données d'exemple, sans compte ni réseau) :
+
+```bash
+EXPO_PUBLIC_DEMO_MODE=true npx expo start
+```
+
+## Structure
+
+```
+src/
+  app/            routes Expo Router : (auth) connexion, onboarding, (tabs) Licence / Défis / Pilotes / Classement
+  components/     UI partagée (ui/ : Button, Card, Input, Screen, Segmented, Icon…)
+  features/       logique par domaine (auth, profile, challenges, nearby, leaderboard) : hooks TanStack Query + composants
+  lib/            client Supabase, données de démo
+  theme/          couleurs, espacements, rangs
+  types/          modèles partagés
+```
+
 Les notifications push nécessitent un development build (`npx eas-cli@latest build --profile development`),
 elles ne fonctionnent pas dans Expo Go.
