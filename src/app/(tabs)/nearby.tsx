@@ -43,6 +43,7 @@ export default function NearbyScreen() {
       {pilots.data?.map((p) => (
         <PilotRow
           key={p.id}
+          pilotId={p.id}
           username={p.username}
           rank={p.rank}
           elo={p.elo}

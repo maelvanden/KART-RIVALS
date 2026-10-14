@@ -14,9 +14,22 @@ export type Profile = {
   losses: number;
   draws: number;
   matches_played: number;
+  is_discoverable: boolean;
+  home_track: Track | null;
 };
 
 export type Track = { id: string; name: string; city: string };
+
+export type PilotMatch = {
+  match_id: string;
+  confirmed_at: string;
+  opponent_id: string;
+  opponent_username: string;
+  track_name: string;
+  format: RaceFormat;
+  outcome: 'win' | 'loss' | 'draw';
+  elo_delta: number | null;
+};
 
 export type MatchStatus = 'awaiting_confirmation' | 'confirmed' | 'disputed';
 

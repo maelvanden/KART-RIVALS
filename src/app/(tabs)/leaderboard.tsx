@@ -42,6 +42,7 @@ export default function LeaderboardScreen() {
       {board.data?.map((entry) => (
         <PilotRow
           key={entry.id}
+          pilotId={entry.id}
           username={entry.username}
           rank={entry.rank}
           elo={entry.elo}

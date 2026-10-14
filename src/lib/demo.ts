@@ -1,4 +1,4 @@
-import type { Challenge, EloPoint, LeaderboardEntry, NearbyPilot, Profile, Track } from '@/types/models';
+import type { Challenge, EloPoint, LeaderboardEntry, NearbyPilot, PilotMatch, Profile, Track } from '@/types/models';
 
 /**
  * Mode démo : `EXPO_PUBLIC_DEMO_MODE=true` court-circuite Supabase et affiche des données
@@ -11,13 +11,15 @@ export const demoProfile: Profile = {
   username: 'Mael_44',
   avatar_url: null,
   kart_number: 44,
-  home_track_id: null,
+  home_track_id: 't1',
   elo: 1286,
   rank: 'argent',
   wins: 14,
   losses: 9,
   draws: 1,
   matches_played: 24,
+  is_discoverable: true,
+  home_track: { id: 't1', name: 'Circuit indoor', city: 'Angers' },
 };
 
 const pilot = (id: string, username: string, elo: number, rank: Profile['rank']) => ({ id, username, elo, rank });
@@ -102,10 +104,58 @@ export const demoLeaderboard: LeaderboardEntry[] = [
   { id: 'p2', username: 'Drift_Max', avatar_url: null, elo: 1198, rank: 'bronze', wins: 9, losses: 11, position: 7 },
 ];
 
-export const demoEloHistory: EloPoint[] = [1000, 1040, 1068, 1049, 1092, 1131, 1110, 1158, 1203, 1187, 1240, 1262, 1286].map(
+// Écarts ≤ 24 points : K = 24 pour un pilote qui a plus de 10 matchs.
+export const demoEloHistory: EloPoint[] = [1150, 1168, 1156, 1177, 1193, 1178, 1200, 1219, 1208, 1228, 1245, 1262, 1286].map(
   (elo, i, all) => ({
     elo_after: elo,
     delta: i === 0 ? 0 : elo - all[i - 1],
     created_at: new Date(Date.now() - (all.length - i) * 5 * 86400000).toISOString(),
   }),
 );
+
+/** Profil d'un autre pilote de démo, reconstitué depuis le classement et la liste « à proximité ». */
+export function demoPilot(id: string): Profile | null {
+  if (id === demoProfile.id) return demoProfile;
+  const p = [...demoLeaderboard, ...demoNearby].find((x) => x.id === id);
+  if (!p) return null;
+  return {
+    id: p.id,
+    username: p.username,
+    avatar_url: null,
+    kart_number: (p.username.length * 7) % 99 + 1,
+    home_track_id: null,
+    elo: p.elo,
+    rank: p.rank,
+    wins: p.wins,
+    losses: p.losses,
+    draws: 0,
+    matches_played: p.wins + p.losses,
+    is_discoverable: true,
+    home_track: null,
+  };
+}
+
+/** Courbe ELO d'exemple qui se termine à l'ELO actuel du pilote. */
+export function demoEloHistoryFor(profile: Profile): EloPoint[] {
+  if (profile.id === demoProfile.id) return [...demoEloHistory];
+  const shift = profile.elo - demoEloHistory[demoEloHistory.length - 1].elo_after;
+  return demoEloHistory.map((p) => ({ ...p, elo_after: p.elo_after + shift }));
+}
+
+const rivals = ['TurboLéa', 'Drift_Max', 'ApexHunter', 'KartiNono', 'RedLine'];
+
+/** Derniers matchs d'exemple, déduits de la courbe ELO (gain = victoire, perte = défaite). */
+export function demoMatchesFor(profile: Profile): PilotMatch[] {
+  const history = demoEloHistoryFor(profile).slice(1).reverse();
+  const opponents = rivals.filter((r) => r !== profile.username);
+  return history.slice(0, 6).map((p, i) => ({
+    match_id: `dm-${profile.id}-${i}`,
+    confirmed_at: p.created_at,
+    opponent_id: [...demoNearby, ...demoLeaderboard].find((x) => x.username === opponents[i % opponents.length])?.id ?? 'p1',
+    opponent_username: opponents[i % opponents.length],
+    track_name: i % 2 ? 'Piste extérieure' : 'Circuit indoor',
+    format: i % 3 === 0 ? 'lap_time' : 'position',
+    outcome: p.delta > 0 ? 'win' : p.delta < 0 ? 'loss' : 'draw',
+    elo_delta: p.delta,
+  }));
+}

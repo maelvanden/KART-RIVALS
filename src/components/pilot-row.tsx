@@ -1,5 +1,6 @@
+import { Link } from 'expo-router';
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
@@ -7,6 +8,8 @@ import { colors, rankMeta, spacing } from '@/theme';
 import type { RankTier } from '@/types/models';
 
 type Props = {
+  /** Si fourni, la ligne ouvre la fiche de ce pilote. */
+  pilotId?: string;
   username: string;
   rank: RankTier;
   elo: number;
@@ -16,8 +19,8 @@ type Props = {
   highlighted?: boolean;
 };
 
-export function PilotRow({ username, rank, elo, subtitle, leading, trailing, highlighted }: Props) {
-  return (
+export function PilotRow({ pilotId, username, rank, elo, subtitle, leading, trailing, highlighted }: Props) {
+  const row = (
     <View style={[styles.row, highlighted && styles.highlighted]}>
       {leading}
       <View style={[styles.avatar, { borderColor: rankMeta[rank].color }]}>
@@ -33,6 +36,15 @@ export function PilotRow({ username, rank, elo, subtitle, leading, trailing, hig
       {trailing ?? <Text style={styles.elo}>{elo}</Text>}
     </View>
   );
+
+  if (!pilotId) return row;
+  return (
+    <Link href={{ pathname: '/pilot/[id]', params: { id: pilotId } }} asChild>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Voir la licence de ${username}`} style={({ pressed }) => pressed && styles.pressed}>
+        {row}
+      </Pressable>
+    </Link>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -47,6 +59,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   highlighted: { borderColor: colors.neon, backgroundColor: '#12190F' },
+  pressed: { opacity: 0.85 },
   avatar: {
     width: 42,
     height: 42,

@@ -18,6 +18,8 @@ export const icons = {
   check: { ios: 'checkmark', material: 'check' },
   close: { ios: 'xmark', material: 'close' },
   logout: { ios: 'rectangle.portrait.and.arrow.right', material: 'logout' },
+  edit: { ios: 'pencil', material: 'edit' },
+  chevron: { ios: 'chevron.right', material: 'chevron_right' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

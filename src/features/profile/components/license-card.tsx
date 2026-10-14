@@ -46,6 +46,11 @@ export function LicenseCard({ profile }: { profile: Profile }) {
         <View style={styles.identityText}>
           <Text variant="title" numberOfLines={1}>{profile.username}</Text>
           <RankBadge rank={profile.rank} />
+          {profile.home_track ? (
+            <Text variant="caption" numberOfLines={1}>
+              Circuit favori : {profile.home_track.name} · {profile.home_track.city}
+            </Text>
+          ) : null}
         </View>
       </View>
 

@@ -62,6 +62,11 @@ function RootNavigator() {
           options={{ ...detailHeader, presentation: 'modal', title: 'Lancer un défi' }}
         />
         <Stack.Screen name="challenge/[id]" options={{ ...detailHeader, title: 'Défi' }} />
+        <Stack.Screen name="pilot/[id]" options={{ ...detailHeader, title: 'Pilote' }} />
+        <Stack.Screen
+          name="edit-profile"
+          options={{ ...detailHeader, presentation: 'modal', title: 'Modifier ma licence' }}
+        />
       </Stack.Protected>
     </Stack>
   );
