@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -46,7 +47,15 @@ export default function NearbyScreen() {
           rank={p.rank}
           elo={p.elo}
           subtitle={`${p.distance_km} km · ${p.elo} ELO · ${p.wins}V ${p.losses}D`}
-          trailing={<Button title="Défier" style={styles.challenge} />}
+          trailing={
+            <Button
+              title="Défier"
+              style={styles.challenge}
+              onPress={() =>
+                router.push({ pathname: '/challenge/new', params: { opponentId: p.id, username: p.username } })
+              }
+            />
+          }
         />
       ))}
     </Screen>

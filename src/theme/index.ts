@@ -39,3 +39,7 @@ export const rankThresholds: { tier: RankTier; min: number }[] = [
   { tier: 'diamant', min: 1700 },
   { tier: 'legende', min: 1850 },
 ];
+
+export function rankForElo(elo: number): RankTier {
+  return rankThresholds.findLast((t) => elo >= t.min)?.tier ?? 'novice';
+}

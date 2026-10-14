@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/auth-provider';
 import { demoEloHistory, demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
+import { rankForElo } from '@/theme';
 import type { EloPoint, Profile } from '@/types/models';
 
 const PROFILE_COLUMNS =
@@ -14,7 +15,8 @@ export function useMyProfile() {
     queryKey: ['profile', userId],
     enabled: !!userId,
     queryFn: async (): Promise<Profile | null> => {
-      if (isDemoMode) return demoProfile;
+      // Copie : en démo, l'objet est modifié en place après un match validé.
+      if (isDemoMode) return { ...demoProfile, rank: rankForElo(demoProfile.elo) };
       const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -27,7 +29,7 @@ export function useEloHistory(profileId: string | undefined) {
     queryKey: ['elo-history', profileId],
     enabled: !!profileId,
     queryFn: async (): Promise<EloPoint[]> => {
-      if (isDemoMode) return demoEloHistory;
+      if (isDemoMode) return [...demoEloHistory];
       const { data, error } = await supabase
         .from('elo_history')
         .select('delta, elo_after, created_at')

@@ -2,6 +2,9 @@ import { Tabs } from 'expo-router/js-tabs';
 import { Platform, type ColorValue } from 'react-native';
 
 import { Icon, icons, type IconName } from '@/components/ui/icon';
+import { useAuth } from '@/features/auth/auth-provider';
+import { useMyChallenges } from '@/features/challenges/api';
+import { challengeStep, needsMe } from '@/features/challenges/state';
 import { colors } from '@/theme';
 
 const tabIcon = (name: IconName) =>
@@ -10,6 +13,11 @@ const tabIcon = (name: IconName) =>
   };
 
 export default function TabsLayout() {
+  const { userId } = useAuth();
+  const challenges = useMyChallenges();
+  // Pastille sur l'onglet Défis : nombre de défis où c'est au pilote d'agir.
+  const todo = userId ? (challenges.data ?? []).filter((c) => needsMe(challengeStep(c, userId))).length : 0;
+
   return (
     <Tabs
       screenOptions={{
@@ -26,7 +34,15 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.background },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Licence', tabBarIcon: tabIcon(icons.license) }} />
-      <Tabs.Screen name="challenges" options={{ title: 'Défis', tabBarIcon: tabIcon(icons.challenge) }} />
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          title: 'Défis',
+          tabBarIcon: tabIcon(icons.challenge),
+          tabBarBadge: todo > 0 ? todo : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.orange, color: colors.background, fontWeight: '800' },
+        }}
+      />
       <Tabs.Screen name="nearby" options={{ title: 'Pilotes', tabBarIcon: tabIcon(icons.nearby) }} />
       <Tabs.Screen name="leaderboard" options={{ title: 'Classement', tabBarIcon: tabIcon(icons.trophy) }} />
     </Tabs>

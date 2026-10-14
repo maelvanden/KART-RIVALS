@@ -1,36 +1,33 @@
-import { StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { challengeStep, needsMe, stepLabel } from '@/features/challenges/state';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { dateTimeFormat } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { Challenge } from '@/types/models';
-
-const dateFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 type Props = {
   challenge: Challenge;
   myId: string;
-  onRespond?: (accept: boolean) => void;
-  responding?: boolean;
+  /** Rend la carte cliquable vers l'écran du défi. */
+  linked?: boolean;
 };
 
-export function ChallengeCard({ challenge, myId, onRespond, responding }: Props) {
-  const incoming = challenge.opponent_id === myId;
-  const rival = incoming ? challenge.challenger : challenge.opponent;
-  const awaitingMe = incoming && challenge.status === 'pending';
-  const statusLabel =
-    challenge.status === 'accepted' ? 'Accepté · à courir' : incoming ? 'Défi reçu' : 'En attente de réponse';
+export function ChallengeCard({ challenge, myId, linked }: Props) {
+  const rival = challenge.opponent_id === myId ? challenge.challenger : challenge.opponent;
+  const step = challengeStep(challenge, myId);
+  const myTurn = needsMe(step);
+  const tone = myTurn ? colors.orange : step === 'done' ? colors.neon : colors.textMuted;
 
-  return (
-    <Card style={[styles.card, awaitingMe && styles.highlight]}>
+  const card = (
+    <Card style={[styles.card, myTurn && styles.highlight]}>
       <View style={styles.header}>
-        <View style={[styles.status, { backgroundColor: challenge.status === 'accepted' ? colors.neonDim : colors.orangeDim }]}>
-          <Text style={[styles.statusText, { color: challenge.status === 'accepted' ? colors.neon : colors.orange }]}>
-            {statusLabel}
-          </Text>
+        <View style={[styles.status, { backgroundColor: myTurn ? colors.orangeDim : step === 'done' ? colors.neonDim : colors.surfaceAlt }]}>
+          <Text style={[styles.statusText, { color: tone }]}>{stepLabel[step]}</Text>
         </View>
         <Icon name={challenge.format === 'lap_time' ? icons.timer : icons.challenge} size={18} color={colors.textMuted} />
       </View>
@@ -48,19 +45,21 @@ export function ChallengeCard({ challenge, myId, onRespond, responding }: Props)
 
       <View style={styles.details}>
         <Detail icon={icons.pin} text={`${challenge.track.name} · ${challenge.track.city}`} />
-        {challenge.scheduled_at ? <Detail icon={icons.clock} text={dateFormat.format(new Date(challenge.scheduled_at))} /> : null}
+        {challenge.scheduled_at ? <Detail icon={icons.clock} text={dateTimeFormat.format(new Date(challenge.scheduled_at))} /> : null}
         <Detail icon={icons.bolt} text={challenge.format === 'lap_time' ? 'Meilleur tour' : 'Position à l’arrivée'} />
       </View>
 
       {challenge.message ? <Text style={styles.message}>« {challenge.message} »</Text> : null}
-
-      {awaitingMe && onRespond ? (
-        <View style={styles.actions}>
-          <Button title="Refuser" variant="secondary" style={styles.action} onPress={() => onRespond(false)} disabled={responding} />
-          <Button title="Accepter" style={styles.action} onPress={() => onRespond(true)} loading={responding} />
-        </View>
-      ) : null}
     </Card>
+  );
+
+  if (!linked) return card;
+  return (
+    <Link href={{ pathname: '/challenge/[id]', params: { id: challenge.id } }} asChild>
+      <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
+        {card}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -86,6 +85,5 @@ const styles = StyleSheet.create({
   details: { gap: spacing.xs },
   detail: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   message: { fontStyle: 'italic', color: colors.textMuted },
-  actions: { flexDirection: 'row', gap: spacing.md },
-  action: { flex: 1 },
+  pressed: { opacity: 0.85 },
 });

@@ -18,6 +18,22 @@ export type Profile = {
 
 export type Track = { id: string; name: string; city: string };
 
+export type MatchStatus = 'awaiting_confirmation' | 'confirmed' | 'disputed';
+
+export type Match = {
+  id: string;
+  submitted_by: string;
+  status: MatchStatus;
+  winner_id: string | null;
+  challenger_position: number | null;
+  opponent_position: number | null;
+  challenger_best_lap_ms: number | null;
+  opponent_best_lap_ms: number | null;
+  challenger_confirmed_at: string | null;
+  opponent_confirmed_at: string | null;
+  dispute_reason: string | null;
+};
+
 export type Challenge = {
   id: string;
   challenger_id: string;
@@ -30,6 +46,7 @@ export type Challenge = {
   challenger: Pick<Profile, 'id' | 'username' | 'elo' | 'rank'>;
   opponent: Pick<Profile, 'id' | 'username' | 'elo' | 'rank'>;
   track: Track;
+  match: Match | null;
 };
 
 export type NearbyPilot = Pick<Profile, 'id' | 'username' | 'avatar_url' | 'elo' | 'rank' | 'wins' | 'losses'> & {
@@ -40,4 +57,4 @@ export type LeaderboardEntry = Pick<Profile, 'id' | 'username' | 'avatar_url' | 
   position: number;
 };
 
-export type EloPoint = { delta: number; elo_after: number; created_at: string };
+export type EloPoint = { delta: number; elo_after: number; created_at: string; match_id?: string };

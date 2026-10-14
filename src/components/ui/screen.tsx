@@ -11,11 +11,13 @@ type Props = PropsWithChildren<{
   right?: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** false quand l'écran a déjà un en-tête de navigation qui gère l'encoche. */
+  safeTop?: boolean;
 }>;
 
-export function Screen({ title, subtitle, right, refreshing = false, onRefresh, children }: Props) {
+export function Screen({ title, subtitle, right, refreshing = false, onRefresh, safeTop = true, children }: Props) {
   return (
-    <SafeAreaView edges={['top']} style={styles.safe}>
+    <SafeAreaView edges={safeTop ? ['top'] : []} style={styles.safe}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

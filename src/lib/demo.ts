@@ -1,4 +1,4 @@
-import type { Challenge, EloPoint, LeaderboardEntry, NearbyPilot, Profile } from '@/types/models';
+import type { Challenge, EloPoint, LeaderboardEntry, NearbyPilot, Profile, Track } from '@/types/models';
 
 /**
  * Mode démo : `EXPO_PUBLIC_DEMO_MODE=true` court-circuite Supabase et affiche des données
@@ -22,6 +22,12 @@ export const demoProfile: Profile = {
 
 const pilot = (id: string, username: string, elo: number, rank: Profile['rank']) => ({ id, username, elo, rank });
 
+export const demoTracks: Track[] = [
+  { id: 't1', name: 'Circuit indoor', city: 'Angers' },
+  { id: 't2', name: 'Piste extérieure', city: 'Cholet' },
+];
+
+/** Copie modifiable : en mode démo, les actions (défier, accepter, valider…) la mettent à jour. */
 export const demoChallenges: Challenge[] = [
   {
     id: 'c1',
@@ -35,6 +41,7 @@ export const demoChallenges: Challenge[] = [
     challenger: pilot('p1', 'TurboLéa', 1342, 'argent'),
     opponent: pilot('demo-me', 'Mael_44', 1286, 'argent'),
     track: { id: 't1', name: 'Circuit indoor', city: 'Angers' },
+    match: null,
   },
   {
     id: 'c2',
@@ -48,6 +55,33 @@ export const demoChallenges: Challenge[] = [
     challenger: pilot('demo-me', 'Mael_44', 1286, 'argent'),
     opponent: pilot('p2', 'Drift_Max', 1198, 'bronze'),
     track: { id: 't2', name: 'Piste extérieure', city: 'Cholet' },
+    match: null,
+  },
+  {
+    id: 'c3',
+    challenger_id: 'p3',
+    opponent_id: 'demo-me',
+    status: 'accepted',
+    format: 'position',
+    scheduled_at: new Date(Date.now() - 86400000).toISOString(),
+    message: null,
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    challenger: pilot('p3', 'ApexHunter', 1467, 'or'),
+    opponent: pilot('demo-me', 'Mael_44', 1286, 'argent'),
+    track: { id: 't1', name: 'Circuit indoor', city: 'Angers' },
+    match: {
+      id: 'm3',
+      submitted_by: 'p3',
+      status: 'awaiting_confirmation',
+      winner_id: 'demo-me',
+      challenger_position: 2,
+      opponent_position: 1,
+      challenger_best_lap_ms: null,
+      opponent_best_lap_ms: null,
+      challenger_confirmed_at: new Date().toISOString(),
+      opponent_confirmed_at: null,
+      dispute_reason: null,
+    },
   },
 ];
 
