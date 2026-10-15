@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { demoLeaderboard, isDemoMode } from '@/lib/demo';
+import { demoLeaderboard, demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import type { LeaderboardEntry } from '@/types/models';
 
@@ -11,7 +11,10 @@ export function useLeaderboard(scope: LeaderboardScope | null) {
     queryKey: ['leaderboard', scope],
     enabled: !!scope,
     queryFn: async (): Promise<LeaderboardEntry[]> => {
-      if (isDemoMode) return scope?.kind === 'local' ? demoLeaderboard.slice(3) : demoLeaderboard;
+      if (isDemoMode) {
+        const rows = demoLeaderboard.map((e) => (e.id === demoProfile.id ? { ...e, avatar_url: demoProfile.avatar_url } : e));
+        return scope?.kind === 'local' ? rows.slice(3) : rows;
+      }
       if (scope!.kind === 'local') {
         const { data, error } = await supabase.rpc('leaderboard_near', { lat: scope!.lat, lng: scope!.lng, radius_km: 50 });
         if (error) throw error;

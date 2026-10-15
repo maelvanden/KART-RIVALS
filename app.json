@@ -40,6 +40,13 @@
         {
           "locationWhenInUsePermission": "Kart Rivals utilise ta position approximative (~1 km) pour te montrer les pilotes et le classement de ta région."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kart Rivals accède à tes photos pour choisir ta photo de profil.",
+          "cameraPermission": false
+        }
       ]
     ],
     "experiments": {

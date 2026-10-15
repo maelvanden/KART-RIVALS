@@ -64,6 +64,7 @@ export default function NearbyScreen() {
               key={p.id}
               pilotId={p.id}
               username={p.username}
+              avatarUrl={p.avatar_url}
               rank={p.rank}
               elo={p.elo}
               subtitle={`${p.elo} ELO · ${p.wins}V ${p.losses}D`}
@@ -99,6 +100,7 @@ export default function NearbyScreen() {
               key={p.id}
               pilotId={p.id}
               username={p.username}
+              avatarUrl={p.avatar_url}
               rank={p.rank}
               elo={p.elo}
               subtitle={`${formatKm(Number(p.distance_km))} · ${p.elo} ELO · ${p.wins}V ${p.losses}D`}

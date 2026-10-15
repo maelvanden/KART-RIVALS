@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { Avatar } from '@/components/ui/avatar';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
+import { pickSquarePhoto, useSetAvatar } from '@/features/profile/avatar';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
-import { colors, spacing } from '@/theme';
+import { colors, rankMeta, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
@@ -25,6 +27,8 @@ export default function EditProfileScreen() {
 function EditProfileForm({ profile }: { profile: Profile }) {
   const tracks = useTracksMap();
   const update = useUpdateProfile();
+  const setAvatar = useSetAvatar();
+  const [pickError, setPickError] = useState<string | null>(null);
   const [username, setUsername] = useState(profile.username);
   const [kartNumber, setKartNumber] = useState(profile.kart_number ? String(profile.kart_number) : '');
   const [homeTrackId, setHomeTrackId] = useState<string | null>(profile.home_track_id);
@@ -36,6 +40,18 @@ function EditProfileForm({ profile }: { profile: Profile }) {
   const error = update.error as { code?: string; message?: string } | null;
   const errorText = error?.code === '23505' ? 'Ce pseudo est déjà pris.' : error?.message;
 
+  async function choosePhoto() {
+    setPickError(null);
+    try {
+      const uri = await pickSquarePhoto();
+      if (uri) setAvatar.mutate(uri);
+    } catch (e) {
+      setPickError(e instanceof Error ? e.message : 'Impossible d’ouvrir tes photos.');
+    }
+  }
+
+  const avatarError = pickError ?? (setAvatar.error as Error | null)?.message;
+
   function save() {
     update.mutate(
       { username, kart_number: parsedNumber, home_track_id: homeTrackId, is_discoverable: discoverable },
@@ -45,6 +61,32 @@ function EditProfileForm({ profile }: { profile: Profile }) {
 
   return (
     <Screen safeTop={false}>
+      <View style={styles.photoRow}>
+        <Avatar
+          username={profile.username}
+          url={profile.avatar_url}
+          size={84}
+          borderColor={rankMeta[profile.rank].color}
+        />
+        <View style={styles.photoActions}>
+          <Button
+            title={profile.avatar_url ? 'Changer la photo' : 'Ajouter une photo'}
+            variant="secondary"
+            onPress={choosePhoto}
+            loading={setAvatar.isPending}
+          />
+          {profile.avatar_url ? (
+            <Button
+              title="Retirer la photo"
+              variant="quiet"
+              onPress={() => setAvatar.mutate(null)}
+              disabled={setAvatar.isPending}
+            />
+          ) : null}
+        </View>
+      </View>
+      {avatarError ? <Text style={styles.error}>{avatarError}</Text> : null}
+
       <View style={styles.form}>
         <Input
           label="Pseudo"
@@ -97,6 +139,8 @@ function EditProfileForm({ profile }: { profile: Profile }) {
 
 const styles = StyleSheet.create({
   form: { gap: spacing.md },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
+  photoActions: { flex: 1, gap: spacing.xs },
   error: { color: colors.danger },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   switchText: { flex: 1, gap: spacing.xs },

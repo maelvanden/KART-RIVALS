@@ -44,6 +44,7 @@ export default function LeaderboardScreen() {
           key={entry.id}
           pilotId={entry.id}
           username={entry.username}
+          avatarUrl={entry.avatar_url}
           rank={entry.rank}
           elo={entry.elo}
           subtitle={`${entry.wins} victoires · ${entry.losses} défaites`}

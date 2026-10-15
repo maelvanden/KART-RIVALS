@@ -47,7 +47,7 @@ export function useNearbyPilots(coords: Coords | null | undefined, radiusKm: num
   });
 }
 
-export type PilotSearchResult = Pick<Profile, 'id' | 'username' | 'elo' | 'rank' | 'wins' | 'losses'>;
+export type PilotSearchResult = Pick<Profile, 'id' | 'username' | 'avatar_url' | 'elo' | 'rank' | 'wins' | 'losses'>;
 
 /** Échappe les jokers de ILIKE (% et _, fréquent dans les pseudos). */
 const escapeLike = (q: string) => q.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -69,7 +69,7 @@ export function useSearchPilots(query: string) {
       }
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, elo, rank, wins, losses')
+        .select('id, username, avatar_url, elo, rank, wins, losses')
         .ilike('username', `%${escapeLike(q)}%`)
         .neq('id', userId!)
         .order('elo', { ascending: false })

@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
+import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
 import { colors, radius, rankMeta, rankThresholds, spacing } from '@/theme';
@@ -42,9 +43,7 @@ export function LicenseCard({ profile }: { profile: Profile }) {
       </View>
 
       <View style={styles.identity}>
-        <View style={[styles.avatar, { borderColor: accent }]}>
-          <Text style={styles.avatarText}>{profile.username.slice(0, 2).toUpperCase()}</Text>
-        </View>
+        <Avatar username={profile.username} url={profile.avatar_url} size={64} borderColor={accent} />
         <View style={styles.identityText}>
           <Text variant="title" numberOfLines={1}>{profile.username}</Text>
           <RankBadge rank={profile.rank} />
@@ -118,16 +117,6 @@ const styles = StyleSheet.create({
   },
   number: { color: colors.background, fontWeight: '900', fontStyle: 'italic', fontSize: 18 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  avatarText: { fontSize: 22, fontWeight: '900', fontStyle: 'italic' },
   identityText: { flex: 1, gap: spacing.sm },
   eloRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xl },
   elo: { fontSize: 48, fontWeight: '900', fontStyle: 'italic', color: colors.neon, fontVariant: ['tabular-nums'], lineHeight: 52 },

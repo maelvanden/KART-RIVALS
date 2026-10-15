@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
 import { colors, rankMeta, spacing } from '@/theme';
@@ -11,6 +12,7 @@ type Props = {
   /** Si fourni, la ligne ouvre la fiche de ce pilote. */
   pilotId?: string;
   username: string;
+  avatarUrl?: string | null;
   rank: RankTier;
   elo: number;
   subtitle: string;
@@ -19,13 +21,11 @@ type Props = {
   highlighted?: boolean;
 };
 
-export function PilotRow({ pilotId, username, rank, elo, subtitle, leading, trailing, highlighted }: Props) {
+export function PilotRow({ pilotId, username, avatarUrl = null, rank, elo, subtitle, leading, trailing, highlighted }: Props) {
   const row = (
     <View style={[styles.row, highlighted && styles.highlighted]}>
       {leading}
-      <View style={[styles.avatar, { borderColor: rankMeta[rank].color }]}>
-        <Text style={styles.avatarText}>{username.slice(0, 2).toUpperCase()}</Text>
-      </View>
+      <Avatar username={username} url={avatarUrl} size={42} borderColor={rankMeta[rank].color} />
       <View style={styles.body}>
         <View style={styles.nameRow}>
           <Text variant="heading" numberOfLines={1} style={styles.name}>{username}</Text>
@@ -60,16 +60,6 @@ const styles = StyleSheet.create({
   },
   highlighted: { borderColor: colors.neon, backgroundColor: '#12190F' },
   pressed: { opacity: 0.85 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  avatarText: { fontWeight: '900', fontStyle: 'italic' },
   body: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { flexShrink: 1, fontSize: 16 },
