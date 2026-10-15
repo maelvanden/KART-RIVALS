@@ -33,6 +33,8 @@ export const icons = {
   trending: { ios: 'chart.line.uptrend.xyaxis', material: 'trending_up' },
   premium: { ios: 'rosette', material: 'workspace_premium' },
   lock: { ios: 'lock.fill', material: 'lock' },
+  group: { ios: 'person.3.fill', material: 'groups' },
+  checkCircle: { ios: 'checkmark.circle.fill', material: 'check_circle' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

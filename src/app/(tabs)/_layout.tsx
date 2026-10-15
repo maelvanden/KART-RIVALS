@@ -5,6 +5,8 @@ import { Icon, icons, type IconName } from '@/components/ui/icon';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useMyChallenges } from '@/features/challenges/api';
 import { challengeStep, needsMe } from '@/features/challenges/state';
+import { useMyRaces } from '@/features/races/api';
+import { raceNeedsMe, raceStep } from '@/features/races/state';
 import { colors } from '@/theme';
 
 const tabIcon = (name: IconName) =>
@@ -15,8 +17,12 @@ const tabIcon = (name: IconName) =>
 export default function TabsLayout() {
   const { userId } = useAuth();
   const challenges = useMyChallenges();
+  const races = useMyRaces();
   // Pastille sur l'onglet Défis : nombre de défis où c'est au pilote d'agir.
-  const todo = userId ? (challenges.data ?? []).filter((c) => needsMe(challengeStep(c, userId))).length : 0;
+  const todo = userId
+    ? (challenges.data ?? []).filter((c) => needsMe(challengeStep(c, userId))).length +
+      (races.data ?? []).filter((r) => raceNeedsMe(raceStep(r, userId))).length
+    : 0;
 
   return (
     <Tabs

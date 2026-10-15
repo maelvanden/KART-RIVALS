@@ -76,6 +76,13 @@ export function LicenseCard({ profile }: { profile: Profile }) {
         <Stat label="Nuls" value={profile.draws} color={colors.textMuted} />
         <Stat label="Win %" value={`${winRate}%`} color={colors.orange} />
       </View>
+
+      {profile.race_count > 0 ? (
+        <Text variant="caption" style={styles.races}>
+          Courses à plusieurs : {profile.race_count} · {profile.race_wins} victoire{profile.race_wins > 1 ? 's' : ''} ·{' '}
+          {profile.race_podiums} podium{profile.race_podiums > 1 ? 's' : ''}
+        </Text>
+      ) : null}
     </LinearGradient>
   );
 }
@@ -131,6 +138,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   stat: { alignItems: 'center', gap: 2 },
+  races: { textAlign: 'center', marginTop: -spacing.md },
   statValue: { fontSize: 22, fontWeight: '900', fontVariant: ['tabular-nums'] },
   statLabel: { fontSize: 9 },
 });

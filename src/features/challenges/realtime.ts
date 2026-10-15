@@ -16,6 +16,7 @@ export function useChallengesRealtime(userId: string | null) {
     const refresh = () => {
       queryClient.invalidateQueries({ queryKey: ['challenges'] });
       queryClient.invalidateQueries({ queryKey: ['challenge'] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['elo-history'] });
     };
@@ -23,6 +24,8 @@ export function useChallengesRealtime(userId: string | null) {
       .channel(`challenges:${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'races' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'race_entries' }, refresh)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

@@ -6,6 +6,7 @@ import type {
   PilotLapRecord,
   PilotMatch,
   Profile,
+  Race,
   Track,
   TrackDetails,
   TrackLapRecord,
@@ -33,6 +34,9 @@ export const demoProfile: Profile = {
   losses: 9,
   draws: 1,
   matches_played: 24,
+  race_count: 3,
+  race_wins: 1,
+  race_podiums: 2,
   is_discoverable: true,
   home_track: { id: 't1', name: 'SpeedPark Angers', city: 'Beaucouzé' },
 };
@@ -154,6 +158,9 @@ export function demoPilot(id: string): Profile | null {
     losses: p.losses,
     draws: 0,
     matches_played: p.wins + p.losses,
+    race_count: 0,
+    race_wins: 0,
+    race_podiums: 0,
     is_discoverable: true,
     home_track: null,
   };
@@ -235,3 +242,48 @@ export function demoTrackRecords(): TrackRecord[] {
     .filter(([, laps]) => laps.length > 0)
     .map(([trackId, laps]) => ({ track_id: trackId, lap_ms: laps[0][1], username: demoPilot(laps[0][0])?.username ?? 'Pilote' }));
 }
+
+const racePilot = (id: string) => {
+  const p = demoPilot(id);
+  return { id, username: p?.username ?? 'Pilote', avatar_url: p?.avatar_url ?? null, elo: p?.elo ?? 1000, rank: p?.rank ?? 'novice' };
+};
+const entry = (id: string, status: 'invited' | 'accepted' | 'declined', position: number | null = null, confirmed = false) => ({
+  pilot_id: id,
+  status,
+  position,
+  best_lap_ms: null,
+  confirmed_at: confirmed ? new Date().toISOString() : null,
+  pilot: racePilot(id),
+});
+
+/** Courses d'exemple : une invitation reçue, et un résultat à valider. Modifiées en place par les actions. */
+export const demoRaces: Race[] = [
+  {
+    id: 'r1',
+    organizer_id: 'p3',
+    scheduled_at: new Date(new Date(Date.now() + 3 * 86400000).setHours(15, 0, 0, 0)).toISOString(),
+    format: 'position',
+    message: 'Grand prix du samedi : qui monte sur le podium ?',
+    status: 'open',
+    submitted_at: null,
+    confirmed_at: null,
+    dispute_reason: null,
+    created_at: new Date().toISOString(),
+    track: { id: 't3', name: 'Inwall Kart', city: 'Les Ponts-de-Cé' },
+    entries: [entry('p3', 'accepted'), entry('p1', 'accepted'), entry('demo-me', 'invited'), entry('p2', 'invited'), entry('p4', 'invited')],
+  },
+  {
+    id: 'r2',
+    organizer_id: 'p1',
+    scheduled_at: new Date(new Date(Date.now() - 86400000).setHours(19, 0, 0, 0)).toISOString(),
+    format: 'position',
+    message: null,
+    status: 'awaiting_confirmation',
+    submitted_at: new Date(Date.now() - 3600000).toISOString(),
+    confirmed_at: null,
+    dispute_reason: null,
+    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+    track: { id: 't1', name: 'SpeedPark Angers', city: 'Beaucouzé' },
+    entries: [entry('p1', 'accepted', 2, true), entry('demo-me', 'accepted', 1), entry('p2', 'accepted', 3), entry('p4', 'accepted', 4)],
+  },
+];

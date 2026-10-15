@@ -16,6 +16,9 @@ export type Profile = {
   matches_played: number;
   is_discoverable: boolean;
   home_track: Track | null;
+  race_count: number;
+  race_wins: number;
+  race_podiums: number;
 };
 
 export type Track = { id: string; name: string; city: string };
@@ -135,3 +138,30 @@ export type PilotLapRecord = {
 };
 
 export type TrackRecord = { track_id: string; lap_ms: number; username: string };
+
+export type RaceStatus = 'open' | 'awaiting_confirmation' | 'confirmed' | 'disputed' | 'cancelled';
+export type RaceEntryStatus = 'invited' | 'accepted' | 'declined';
+
+export type RaceEntry = {
+  pilot_id: string;
+  status: RaceEntryStatus;
+  position: number | null;
+  best_lap_ms: number | null;
+  confirmed_at: string | null;
+  pilot: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'elo' | 'rank'>;
+};
+
+export type Race = {
+  id: string;
+  organizer_id: string;
+  scheduled_at: string | null;
+  format: RaceFormat;
+  message: string | null;
+  status: RaceStatus;
+  submitted_at: string | null;
+  confirmed_at: string | null;
+  dispute_reason: string | null;
+  created_at: string;
+  track: Track;
+  entries: RaceEntry[];
+};

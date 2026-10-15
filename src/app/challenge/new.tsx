@@ -13,20 +13,8 @@ import { useCreateChallenge } from '@/features/challenges/api';
 import { useApproxLocation } from '@/features/nearby/api';
 import { useCreateTrack, useTracks } from '@/features/tracks/api';
 import { colors, spacing } from '@/theme';
+import { HOURS, nextDays, toScheduledAt } from '@/lib/schedule';
 import type { RaceFormat } from '@/types/models';
-
-const HOURS = [10, 14, 17, 19, 21];
-const dayLabel = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric' });
-
-function nextDays(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
-    const label = i === 0 ? 'Aujourd’hui' : i === 1 ? 'Demain' : dayLabel.format(d);
-    return { value: d.getTime(), label };
-  });
-}
 
 export default function NewChallengeScreen() {
   const { opponentId, username } = useLocalSearchParams<{ opponentId: string; username: string }>();
@@ -46,7 +34,7 @@ export default function NewChallengeScreen() {
   const [trackCity, setTrackCity] = useState('');
 
   const selectedTrack = trackId ?? tracks.data?.[0]?.id ?? null;
-  const scheduledAt = day === null ? null : new Date(day + hour * 3_600_000).toISOString();
+  const scheduledAt = toScheduledAt(day, hour);
   const error = (createChallenge.error ?? createTrack.error) as Error | null;
 
   async function addTrack() {
