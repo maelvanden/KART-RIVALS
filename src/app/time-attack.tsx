@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chips } from '@/components/ui/chips';
 import { Icon, icons } from '@/components/ui/icon';
+import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
@@ -18,7 +20,7 @@ import {
   type RejectionMessage,
 } from '@/features/time-attack/errors';
 import { useTracks } from '@/features/tracks/api';
-import { dateTimeFormat, formatLapTime } from '@/lib/format';
+import { dateTimeFormat, formatLapTime, parseLapTime } from '@/lib/format';
 import { colors, spacing } from '@/theme';
 import type { TimeAttackSession } from '@/types/models';
 
@@ -68,7 +70,7 @@ function CheckIn() {
         </Text>
         <Text variant="heading">Engage-toi avant de rouler</Text>
         <Rule n={1} text="Appuie sur « Je pars rouler » avant le briefing : l’heure du check-in est enregistrée par le serveur." />
-        <Rule n={2} text="Après ta session, envoie la photo du ticket imprimé dans les 90 minutes." />
+        <Rule n={2} text="Après ta session, envoie dans les 90 minutes la photo du ticket imprimé, avec le nom et le meilleur tour qui y figurent." />
         <Rule n={3} text="L’heure de session imprimée sur le ticket doit être postérieure à ton check-in, sinon il est refusé." />
         <Rule n={4} text="Pas de ticket valide au bout de 90 minutes : abandon (DNF) et perte d’ELO." />
       </Card>
@@ -91,14 +93,19 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
   const submit = useSubmitTicket();
   const remaining = useRemaining(s.deadline_at);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [ticketName, setTicketName] = useTicketName();
+  const [lapInput, setLapInput] = useState('');
   const expired = remaining <= 0;
+  const bestLapMs = parseLapTime(lapInput);
+  const canSend = ticketName.trim().length >= 2 && bestLapMs !== null && bestLapMs >= 10_000;
 
   async function sendTicket() {
+    if (!canSend) return;
     setPickError(null);
     submit.reset();
     try {
-      const uri = await pickTicketPhoto();
-      if (uri) submit.mutate({ sessionId: s.id, localUri: uri });
+      const photo = await pickTicketPhoto();
+      if (photo) submit.mutate({ sessionId: s.id, photo, ticketName: ticketName.trim(), bestLapMs });
     } catch (e) {
       setPickError(e instanceof Error ? e.message : 'Impossible d’ouvrir les photos.');
     }
@@ -140,9 +147,38 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
       </Card>
 
       {!expired ? (
+        <Card style={styles.block}>
+          <Text variant="caption">Recopie ce qui est imprimé sur ton ticket : on vérifie que ça figure bien sur la photo.</Text>
+          <Input
+            label="Nom sur le ticket"
+            value={ticketName}
+            onChangeText={setTicketName}
+            placeholder="Jean Dupont"
+            autoCapitalize="words"
+            autoCorrect={false}
+            maxLength={60}
+          />
+          <Input
+            label="Meilleur tour"
+            value={lapInput}
+            onChangeText={setLapInput}
+            placeholder="47.312"
+            keyboardType="numbers-and-punctuation"
+            autoCorrect={false}
+          />
+          {lapInput.trim() && bestLapMs === null ? (
+            <Text variant="caption" style={{ color: colors.orange }}>
+              Format attendu : 47.312 ou 1:02.345
+            </Text>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {!expired ? (
         <Button
           title={submit.isPending ? 'Lecture du ticket…' : 'Envoyer la photo du ticket'}
           loading={submit.isPending}
+          disabled={!canSend}
           onPress={sendTicket}
         />
       ) : null}
@@ -208,6 +244,25 @@ function Meta({ icon, text }: { icon: (typeof icons)[keyof typeof icons]; text: 
     </View>
   );
 }
+
+/** Nom imprimé sur le ticket, mémorisé pour la prochaine session. */
+function useTicketName(): [string, (name: string) => void] {
+  const [name, setName] = useState('');
+  useEffect(() => {
+    AsyncStorage.getItem(TICKET_NAME_KEY)
+      .then((saved) => saved && setName((current) => current || saved))
+      .catch(() => {});
+  }, []);
+  return [
+    name,
+    (value: string) => {
+      setName(value);
+      AsyncStorage.setItem(TICKET_NAME_KEY, value).catch(() => {});
+    },
+  ];
+}
+
+const TICKET_NAME_KEY = 'time-attack:ticket-name';
 
 /** Millisecondes restantes avant l'échéance, rafraîchies chaque seconde. */
 function useRemaining(deadline: string) {

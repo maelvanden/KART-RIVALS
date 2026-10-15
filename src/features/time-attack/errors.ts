@@ -102,7 +102,21 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
       return { title: 'Session déjà clôturée', message: 'Cette session Time Attack est déjà validée ou terminée.' };
     case 'SESSION_NOT_FOUND':
       return { title: 'Session introuvable', message: 'Cette session Time Attack n’existe pas ou ne t’appartient pas.' };
-    case 'VISION_UNAVAILABLE':
+    case 'NAME_NOT_FOUND':
+      return {
+        title: 'Nom introuvable sur le ticket',
+        message: 'Le nom que tu as indiqué n’a pas été trouvé sur la photo.',
+        hint: 'Tape le nom exactement comme il est imprimé sur le ticket (celui donné à l’accueil du circuit), puis reprends une photo nette si besoin.',
+      };
+    case 'LAP_NOT_FOUND':
+      return {
+        severe: true,
+        title: 'Meilleur tour introuvable',
+        message:
+          'Le temps que tu as indiqué n’apparaît pas sur le ticket à côté de ton nom. Seul ton propre meilleur tour, imprimé sur le ticket, est accepté.',
+        hint: 'Vérifie le temps (avec les millièmes s’ils sont imprimés) et que la photo est bien lisible.',
+      };
+    case 'OCR_UNAVAILABLE':
       return {
         title: 'Lecture du ticket indisponible',
         message: 'Le service de lecture des tickets ne répond pas pour le moment.',

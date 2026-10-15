@@ -1,6 +1,6 @@
 # Déploie le backend Supabase à chaque push sur main qui touche supabase/ (ou à la main depuis l'onglet Actions) :
 #   1. applique les nouvelles migrations SQL (une seule fois chacune, suivi dans deploy.migrations) ;
-#   2. enregistre le secret ANTHROPIC_API_KEY de l'Edge Function ;
+#   2. enregistre le secret OCR_SPACE_API_KEY de l'Edge Function (lecture des tickets) ;
 #   3. déploie les Edge Functions.
 # Tout passe par l'API de gestion Supabase : seul le secret GitHub SUPABASE_ACCESS_TOKEN est nécessaire
 # (jeton personnel créé sur supabase.com > Account > Access Tokens).
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OCR_SPACE_API_KEY: ${{ secrets.OCR_SPACE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -113,8 +113,8 @@ jobs:
         if: steps.ready.outputs.ok == 'true'
 
       - name: Secret de l'Edge Function
-        if: steps.ready.outputs.ok == 'true' && env.ANTHROPIC_API_KEY != ''
-        run: npx supabase secrets set ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" --project-ref "$PROJECT_REF"
+        if: steps.ready.outputs.ok == 'true' && env.OCR_SPACE_API_KEY != ''
+        run: npx supabase secrets set OCR_SPACE_API_KEY="$OCR_SPACE_API_KEY" --project-ref "$PROJECT_REF"
 
       - name: Déployer les Edge Functions
         if: steps.ready.outputs.ok == 'true'

@@ -29,14 +29,17 @@ Flux d'un défi :
 Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `time-attack-ticket`) :
 
 1. Check-in « Je pars rouler » (`start_time_attack`) : l'heure est celle du serveur ; le pilote a 90 min.
-2. Photo du ticket → bucket privé `time-attack-tickets` → Edge Function : Claude lit la date, l'heure de session
-   et le meilleur tour. **L'heure de session du ticket doit être strictement postérieure au check-in**, sinon refus
+2. Le pilote recopie le nom et le meilleur tour imprimés, puis envoie la photo du ticket → bucket privé
+   `time-attack-tickets` → Edge Function : le texte est lu par OCR (OCR.space, gratuit) ; le nom et le temps déclarés
+   doivent y figurer (sur la même ligne pour une feuille de classement), la date et l'heure de session sont repérées. **L'heure de session du ticket doit être strictement postérieure au check-in**, sinon refus
    (`TICKET_BEFORE_CHECK_IN`). Décision finale sous verrou en SQL (`record_time_attack_ticket`), un ticket ne sert qu'une fois.
 3. Sans ticket valide 90 min après le check-in : DNF et −15 ELO (`expire_time_attack_sessions`, pg_cron toutes les 5 min).
 
 Déploiement du backend : la GitHub Action « Déployer Supabase » applique les nouvelles migrations, enregistre
-la clé de l'IA et déploie l'Edge Function à chaque push sur `main` qui touche `supabase/` (ou à la main depuis l'onglet
-Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `ANTHROPIC_API_KEY`.
+la clé OCR et déploie l'Edge Function à chaque push sur `main` qui touche `supabase/` (ou à la main depuis l'onglet
+Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `OCR_SPACE_API_KEY`
+(clé gratuite sur ocr.space/ocrapi). Le Time Attack reste masqué dans l'app tant que `TIME_ATTACK_ENABLED`
+(`src/features/time-attack/config.ts`) vaut false.
 
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.

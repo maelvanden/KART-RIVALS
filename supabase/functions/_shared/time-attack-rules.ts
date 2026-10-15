@@ -9,12 +9,14 @@ export type TicketErrorCode =
   | 'SESSION_CLOSED'
   | 'DEADLINE_PASSED'
   | 'NOT_A_TICKET'
+  | 'NAME_NOT_FOUND'
+  | 'LAP_NOT_FOUND'
   | 'TICKET_TIME_UNREADABLE'
   | 'TICKET_DATE_UNREADABLE'
   | 'TICKET_BEFORE_CHECK_IN'
   | 'TICKET_IN_FUTURE'
   | 'TICKET_ALREADY_USED'
-  | 'VISION_UNAVAILABLE';
+  | 'OCR_UNAVAILABLE';
 
 /** Tolérance sur l'horloge de l'imprimante du circuit. */
 export const FUTURE_TOLERANCE_MS = 10 * 60_000;

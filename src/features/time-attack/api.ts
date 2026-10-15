@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/features/auth/auth-provider';
@@ -61,33 +62,54 @@ export function useStartTimeAttack() {
 }
 
 /** Photo du ticket depuis la galerie (prise avec l'appareil photo une fois le téléphone récupéré). */
-export async function pickTicketPhoto(): Promise<string | null> {
-  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-  return result.canceled ? null : result.assets[0].uri;
+export async function pickTicketPhoto(): Promise<TicketPhoto | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+  if (result.canceled) return null;
+  const { uri, width } = result.assets[0];
+  return { uri, width };
 }
 
+export type TicketPhoto = { uri: string; width: number };
+
+/** Largeur maximale envoyée : assez pour lire le ticket, et sous la limite de 1 Mo de l'OCR gratuit. */
+const MAX_WIDTH = 1600;
+
+async function compressTicket({ uri, width }: TicketPhoto): Promise<ArrayBuffer> {
+  const context = ImageManipulator.manipulate(uri);
+  if (width > MAX_WIDTH) context.resize({ width: MAX_WIDTH });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
+  return (await fetch(saved.uri)).arrayBuffer();
+}
+
+export type TicketSubmission = {
+  sessionId: string;
+  photo: TicketPhoto;
+  /** Nom imprimé sur le ticket. */
+  ticketName: string;
+  /** Meilleur tour imprimé sur le ticket. */
+  bestLapMs: number;
+};
+
 /**
- * Envoie la photo du ticket puis la fait valider par l'Edge Function (lecture par l'IA + règle d'or :
- * l'heure de session du ticket doit être postérieure au check-in). Un refus lève TicketRejectedError.
+ * Envoie la photo du ticket puis la fait valider par l'Edge Function : le nom et le meilleur tour déclarés
+ * doivent figurer sur le ticket (lu par OCR), et l'heure de session doit être postérieure au check-in.
+ * Un refus lève TicketRejectedError.
  */
 export function useSubmitTicket() {
   const { userId } = useAuth();
   const invalidate = useInvalidateTimeAttack();
   return useMutation({
-    mutationFn: async ({ sessionId, localUri }: { sessionId: string; localUri: string }) => {
-      if (isDemoMode) return demoSubmit(sessionId);
+    mutationFn: async ({ sessionId, photo, ticketName, bestLapMs }: TicketSubmission) => {
+      if (isDemoMode) return demoSubmit(sessionId, bestLapMs);
 
-      const response = await fetch(localUri);
-      const bytes = await response.arrayBuffer();
-      const isPng = localUri.toLowerCase().endsWith('.png') || localUri.startsWith('data:image/png');
-      const path = `${userId}/${sessionId}/${Date.now()}.${isPng ? 'png' : 'jpg'}`;
-      const upload = await supabase.storage
-        .from('time-attack-tickets')
-        .upload(path, bytes, { contentType: isPng ? 'image/png' : 'image/jpeg' });
+      const bytes = await compressTicket(photo);
+      const path = `${userId}/${sessionId}/${Date.now()}.jpg`;
+      const upload = await supabase.storage.from('time-attack-tickets').upload(path, bytes, { contentType: 'image/jpeg' });
       if (upload.error) throw upload.error;
 
       const { error } = await supabase.functions.invoke('time-attack-ticket', {
-        body: { session_id: sessionId, ticket_path: path },
+        body: { session_id: sessionId, ticket_path: path, ticket_name: ticketName, best_lap_ms: bestLapMs },
       });
       if (error instanceof FunctionsHttpError) {
         const body = (await (error.context as Response).json().catch(() => null)) as TicketRejection | null;
@@ -163,7 +185,7 @@ function demoStart(trackId: string) {
 }
 
 /** En démo, le ticket « lu » date toujours d'il y a 20 min : refusé si le check-in est plus récent. */
-async function demoSubmit(sessionId: string) {
+async function demoSubmit(sessionId: string, bestLapMs: number) {
   await new Promise((r) => setTimeout(r, 1200)); // le temps de la lecture
   const s = demoSessions.find((x) => x.id === sessionId);
   if (!s) throw new TicketRejectedError({ code: 'SESSION_NOT_FOUND' });
@@ -183,5 +205,5 @@ async function demoSubmit(sessionId: string) {
   s.status = 'validated';
   s.ticket_at = times.ticket_at;
   s.validated_at = iso(received);
-  s.best_lap_ms = 46_000 + Math.round(Math.random() * 3000);
+  s.best_lap_ms = bestLapMs;
 }
