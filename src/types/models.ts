@@ -90,3 +90,14 @@ export type LeaderboardEntry = Pick<Profile, 'id' | 'username' | 'avatar_url' | 
 };
 
 export type EloPoint = { delta: number; elo_after: number; created_at: string; match_id?: string };
+
+export type HeadToHead = {
+  my_wins: number;
+  their_wins: number;
+  draws: number;
+  matches: number;
+  elo_net: number;
+  last_played_at: string | null;
+  last_outcome: 'win' | 'loss' | 'draw' | null;
+  last_track: string | null;
+};

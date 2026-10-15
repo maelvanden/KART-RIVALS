@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
-import { useEloHistory, usePilotMatches, useProfile } from '@/features/profile/api';
+import { useEloHistory, useHeadToHead, usePilotMatches, useProfile } from '@/features/profile/api';
 import { EloChart } from '@/features/profile/components/elo-chart';
+import { HeadToHeadCard } from '@/features/profile/components/head-to-head-card';
 import { LicenseCard } from '@/features/profile/components/license-card';
 import { MatchHistory } from '@/features/profile/components/match-history';
 
@@ -15,6 +16,7 @@ export default function PilotScreen() {
   const profile = useProfile(id);
   const history = useEloHistory(id);
   const matches = usePilotMatches(id);
+  const h2h = useHeadToHead(id);
   const isMe = id === userId;
 
   return (
@@ -25,6 +27,7 @@ export default function PilotScreen() {
         profile.refetch();
         history.refetch();
         matches.refetch();
+        h2h.refetch();
       }}>
       <Stack.Screen options={{ title: profile.data?.username ?? 'Pilote' }} />
       {profile.isPending ? <Loading /> : null}
@@ -33,6 +36,7 @@ export default function PilotScreen() {
       {profile.data ? (
         <>
           <LicenseCard profile={profile.data} />
+          {!isMe && h2h.data ? <HeadToHeadCard h2h={h2h.data} rival={profile.data.username} /> : null}
           {!isMe ? (
             <Button
               title={`Défier ${profile.data.username}`}

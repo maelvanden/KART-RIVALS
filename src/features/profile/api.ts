@@ -12,7 +12,7 @@ import {
 } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import { rankForElo } from '@/theme';
-import type { EloPoint, PilotMatch, Profile } from '@/types/models';
+import type { EloPoint, HeadToHead, PilotMatch, Profile } from '@/types/models';
 
 const PROFILE_COLUMNS = `
   id, username, avatar_url, kart_number, home_track_id, elo, rank, wins, losses, draws, matches_played,
@@ -130,5 +130,33 @@ export function useUpdateProfile() {
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
         queryClient.invalidateQueries({ queryKey: ['nearby'] }),
       ]),
+  });
+}
+
+/** Bilan du pilote connecté face à un autre pilote (matchs validés). */
+export function useHeadToHead(otherId: string | undefined) {
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: ['elo-history', 'h2h', userId, otherId],
+    enabled: !!otherId && !!userId && otherId !== userId,
+    queryFn: async (): Promise<HeadToHead> => {
+      if (isDemoMode) {
+        const games = demoMatchesFor(demoProfile).filter((m) => m.opponent_id === otherId);
+        const last = games[0];
+        return {
+          my_wins: games.filter((m) => m.outcome === 'win').length,
+          their_wins: games.filter((m) => m.outcome === 'loss').length,
+          draws: games.filter((m) => m.outcome === 'draw').length,
+          matches: games.length,
+          elo_net: games.reduce((sum, m) => sum + (m.elo_delta ?? 0), 0),
+          last_played_at: last?.confirmed_at ?? null,
+          last_outcome: last?.outcome ?? null,
+          last_track: last?.track_name ?? null,
+        };
+      }
+      const { data, error } = await supabase.rpc('head_to_head', { p_other: otherId }).single();
+      if (error) throw error;
+      return data as HeadToHead;
+    },
   });
 }
