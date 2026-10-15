@@ -56,6 +56,15 @@
     "backgroundColor": "#0A0B0D",
     "runtimeVersion": {
       "policy": "sdkVersion"
+    },
+    "owner": "maelvddsh",
+    "extra": {
+      "eas": {
+        "projectId": "8c9d420c-f2b6-4cb2-97ea-b51472cb4a66"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8c9d420c-f2b6-4cb2-97ea-b51472cb4a66"
     }
   }
 }
