@@ -165,3 +165,24 @@ export type Race = {
   track: Track;
   entries: RaceEntry[];
 };
+
+export type TimeAttackStatus = 'on_track' | 'validated' | 'dnf';
+
+export type TimeAttackSession = {
+  id: string;
+  status: TimeAttackStatus;
+  /** Heure du check-in, prise par le serveur. */
+  check_in_at: string;
+  /** check_in_at + 90 min : au-delà, la session passe en DNF. */
+  deadline_at: string;
+  /** Heure de session lue sur le ticket validé. */
+  ticket_at: string | null;
+  best_lap_ms: number | null;
+  validated_at: string | null;
+  rejection_count: number;
+  last_rejection_code: string | null;
+  last_rejected_ticket_at: string | null;
+  dnf_at: string | null;
+  elo_penalty: number | null;
+  track: Track;
+};

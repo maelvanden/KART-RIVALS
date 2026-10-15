@@ -26,6 +26,21 @@ Flux d'un défi :
 3. L'autre confirme (`confirm_match`) → l'ELO des deux est recalculé dans la même transaction,
    ou conteste (`dispute_match`) → le résultat peut être ressaisi.
 
+Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `time-attack-ticket`) :
+
+1. Check-in « Je pars rouler » (`start_time_attack`) : l'heure est celle du serveur ; le pilote a 90 min.
+2. Photo du ticket → bucket privé `time-attack-tickets` → Edge Function : Claude lit la date, l'heure de session
+   et le meilleur tour. **L'heure de session du ticket doit être strictement postérieure au check-in**, sinon refus
+   (`TICKET_BEFORE_CHECK_IN`). Décision finale sous verrou en SQL (`record_time_attack_ticket`), un ticket ne sert qu'une fois.
+3. Sans ticket valide 90 min après le check-in : DNF et −15 ELO (`expire_time_attack_sessions`, pg_cron toutes les 5 min).
+
+Déploiement de la fonction :
+
+```bash
+npx supabase secrets set ANTHROPIC_API_KEY=<clé>   # TICKET_TIME_ZONE optionnel (Europe/Paris par défaut)
+npx supabase functions deploy time-attack-ticket
+```
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

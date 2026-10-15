@@ -1,0 +1,187 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import * as ImagePicker from 'expo-image-picker';
+
+import { useAuth } from '@/features/auth/auth-provider';
+import { TicketRejectedError, type TicketRejection } from '@/features/time-attack/errors';
+import { demoEloHistory, demoProfile, demoTracks, isDemoMode } from '@/lib/demo';
+import { supabase } from '@/lib/supabase';
+import type { TimeAttackSession } from '@/types/models';
+
+const SESSION_SELECT = `
+  id, status, check_in_at, deadline_at, ticket_at, best_lap_ms, validated_at,
+  rejection_count, last_rejection_code, last_rejected_ticket_at, dnf_at, elo_penalty,
+  track:tracks (id, name, city)
+`;
+
+/** Les sessions Time Attack du pilote, la plus récente d'abord. */
+export function useTimeAttackSessions() {
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: ['time-attack', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<TimeAttackSession[]> => {
+      if (isDemoMode) return demoList();
+      const { data, error } = await supabase
+        .from('time_attack_sessions')
+        .select(SESSION_SELECT)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data as unknown as TimeAttackSession[];
+    },
+  });
+}
+
+function useInvalidateTimeAttack() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['time-attack'] }),
+      queryClient.invalidateQueries({ queryKey: ['profile'] }),
+      queryClient.invalidateQueries({ queryKey: ['elo-history'] }),
+    ]);
+}
+
+/** « Je pars rouler » : le serveur enregistre l'heure du check-in, le délai de 90 min démarre. */
+export function useStartTimeAttack() {
+  const invalidate = useInvalidateTimeAttack();
+  return useMutation({
+    mutationFn: async (trackId: string) => {
+      if (isDemoMode) return demoStart(trackId);
+      const { error } = await supabase.rpc('start_time_attack', { p_track_id: trackId });
+      if (error) {
+        throw new Error(
+          error.message.includes('already in progress') ? 'Tu as déjà une session Time Attack en cours.' : error.message,
+        );
+      }
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Photo du ticket depuis la galerie (prise avec l'appareil photo une fois le téléphone récupéré). */
+export async function pickTicketPhoto(): Promise<string | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+  return result.canceled ? null : result.assets[0].uri;
+}
+
+/**
+ * Envoie la photo du ticket puis la fait valider par l'Edge Function (lecture par l'IA + règle d'or :
+ * l'heure de session du ticket doit être postérieure au check-in). Un refus lève TicketRejectedError.
+ */
+export function useSubmitTicket() {
+  const { userId } = useAuth();
+  const invalidate = useInvalidateTimeAttack();
+  return useMutation({
+    mutationFn: async ({ sessionId, localUri }: { sessionId: string; localUri: string }) => {
+      if (isDemoMode) return demoSubmit(sessionId);
+
+      const response = await fetch(localUri);
+      const bytes = await response.arrayBuffer();
+      const isPng = localUri.toLowerCase().endsWith('.png') || localUri.startsWith('data:image/png');
+      const path = `${userId}/${sessionId}/${Date.now()}.${isPng ? 'png' : 'jpg'}`;
+      const upload = await supabase.storage
+        .from('time-attack-tickets')
+        .upload(path, bytes, { contentType: isPng ? 'image/png' : 'image/jpeg' });
+      if (upload.error) throw upload.error;
+
+      const { error } = await supabase.functions.invoke('time-attack-ticket', {
+        body: { session_id: sessionId, ticket_path: path },
+      });
+      if (error instanceof FunctionsHttpError) {
+        const body = (await (error.context as Response).json().catch(() => null)) as TicketRejection | null;
+        if (body?.code) throw new TicketRejectedError(body);
+      }
+      if (error) throw error;
+    },
+    // Un refus est aussi enregistré sur la session : on rafraîchit dans les deux cas.
+    onSettled: invalidate,
+  });
+}
+
+// ---------- Mode démo : mêmes règles que l'Edge Function et les fonctions SQL ----------
+
+const MINUTE = 60_000;
+const DNF_PENALTY = 15;
+const iso = (ms: number) => new Date(ms).toISOString();
+
+function demoSession(trackIndex: number, checkInMs: number, patch: Partial<TimeAttackSession> = {}): TimeAttackSession {
+  return {
+    id: `ta-${checkInMs}`,
+    status: 'on_track',
+    check_in_at: iso(checkInMs),
+    deadline_at: iso(checkInMs + 90 * MINUTE),
+    ticket_at: null,
+    best_lap_ms: null,
+    validated_at: null,
+    rejection_count: 0,
+    last_rejection_code: null,
+    last_rejected_ticket_at: null,
+    dnf_at: null,
+    elo_penalty: null,
+    track: demoTracks[trackIndex % demoTracks.length],
+    ...patch,
+  };
+}
+
+const now = Date.now();
+// Une session en piste depuis 40 min (son ticket sera accepté), et un historique.
+const demoSessions: TimeAttackSession[] = [
+  demoSession(0, now - 40 * MINUTE),
+  demoSession(1, now - 3 * 24 * 60 * MINUTE, {
+    status: 'validated',
+    ticket_at: iso(now - 3 * 24 * 60 * MINUTE + 25 * MINUTE),
+    validated_at: iso(now - 3 * 24 * 60 * MINUTE + 70 * MINUTE),
+    best_lap_ms: 47_312,
+  }),
+  demoSession(0, now - 9 * 24 * 60 * MINUTE, {
+    status: 'dnf',
+    dnf_at: iso(now - 9 * 24 * 60 * MINUTE + 95 * MINUTE),
+    elo_penalty: DNF_PENALTY,
+  }),
+];
+
+function demoList(): TimeAttackSession[] {
+  // Le « planificateur » de la démo : DNF 5 min après l'échéance.
+  for (const s of demoSessions) {
+    if (s.status === 'on_track' && new Date(s.deadline_at).getTime() + 5 * MINUTE < Date.now()) {
+      s.status = 'dnf';
+      s.dnf_at = new Date().toISOString();
+      s.elo_penalty = DNF_PENALTY;
+      demoProfile.elo -= DNF_PENALTY;
+      demoEloHistory.push({ delta: -DNF_PENALTY, elo_after: demoProfile.elo, created_at: s.dnf_at });
+    }
+  }
+  return JSON.parse(JSON.stringify(demoSessions));
+}
+
+function demoStart(trackId: string) {
+  if (demoSessions.some((s) => s.status === 'on_track')) throw new Error('Tu as déjà une session Time Attack en cours.');
+  const index = Math.max(0, demoTracks.findIndex((t) => t.id === trackId));
+  demoSessions.unshift(demoSession(index, Date.now()));
+}
+
+/** En démo, le ticket « lu » date toujours d'il y a 20 min : refusé si le check-in est plus récent. */
+async function demoSubmit(sessionId: string) {
+  await new Promise((r) => setTimeout(r, 1200)); // le temps de la lecture
+  const s = demoSessions.find((x) => x.id === sessionId);
+  if (!s) throw new TicketRejectedError({ code: 'SESSION_NOT_FOUND' });
+  const received = Date.now();
+  const ticketMs = Math.floor((received - 20 * MINUTE) / MINUTE) * MINUTE;
+  const times = { check_in_at: s.check_in_at, deadline_at: s.deadline_at, ticket_at: iso(ticketMs) };
+  let code: string | null = null;
+  if (s.status !== 'on_track') code = 'SESSION_CLOSED';
+  else if (received > new Date(s.deadline_at).getTime()) code = 'DEADLINE_PASSED';
+  else if (ticketMs <= new Date(s.check_in_at).getTime()) code = 'TICKET_BEFORE_CHECK_IN';
+  if (code) {
+    s.rejection_count += 1;
+    s.last_rejection_code = code;
+    s.last_rejected_ticket_at = times.ticket_at;
+    throw new TicketRejectedError({ code, ...times });
+  }
+  s.status = 'validated';
+  s.ticket_at = times.ticket_at;
+  s.validated_at = iso(received);
+  s.best_lap_ms = 46_000 + Math.round(Math.random() * 3000);
+}

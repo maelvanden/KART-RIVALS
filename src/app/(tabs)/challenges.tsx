@@ -43,6 +43,7 @@ export default function ChallengesScreen() {
       {filter === 'races' ? (
         <>
           <Button title="Organiser une course" onPress={() => router.push('/race/new')} />
+          <Button title="Time Attack solo" variant="secondary" onPress={() => router.push('/time-attack')} />
           {races.isPending ? <Loading /> : null}
           {races.error ? <ErrorState error={races.error} /> : null}
           {races.data && raceList.length === 0 ? (

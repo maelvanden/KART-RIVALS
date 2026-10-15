@@ -66,6 +66,7 @@ function RootNavigator() {
         <Stack.Screen name="track/[id]" options={{ ...detailHeader, title: 'Circuit' }} />
         <Stack.Screen name="race/new" options={{ ...detailHeader, presentation: 'modal', title: 'Organiser une course' }} />
         <Stack.Screen name="race/[id]" options={{ ...detailHeader, title: 'Course' }} />
+        <Stack.Screen name="time-attack" options={{ ...detailHeader, title: 'Time Attack' }} />
         <Stack.Screen
           name="edit-profile"
           options={{ ...detailHeader, presentation: 'modal', title: 'Modifier ma licence' }}
