@@ -25,6 +25,14 @@ export const icons = {
   directions: { ios: 'arrow.triangle.turn.up.right.diamond.fill', material: 'directions' },
   star: { ios: 'star.fill', material: 'star' },
   starOutline: { ios: 'star', material: 'star_border' },
+  flame: { ios: 'flame.fill', material: 'local_fire_department' },
+  medal: { ios: 'medal.fill', material: 'military_tech' },
+  crown: { ios: 'crown.fill', material: 'crown' },
+  explore: { ios: 'safari.fill', material: 'explore' },
+  helmet: { ios: 'flag.checkered.2.crossed', material: 'sports_motorsports' },
+  trending: { ios: 'chart.line.uptrend.xyaxis', material: 'trending_up' },
+  premium: { ios: 'rosette', material: 'workspace_premium' },
+  lock: { ios: 'lock.fill', material: 'lock' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

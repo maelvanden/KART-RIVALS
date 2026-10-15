@@ -12,7 +12,7 @@ import {
 } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import { rankForElo } from '@/theme';
-import type { EloPoint, HeadToHead, PilotMatch, Profile } from '@/types/models';
+import type { BadgeStats, EloPoint, HeadToHead, PilotMatch, Profile } from '@/types/models';
 
 const PROFILE_COLUMNS = `
   id, username, avatar_url, kart_number, home_track_id, elo, rank, wins, losses, draws, matches_played,
@@ -157,6 +157,42 @@ export function useHeadToHead(otherId: string | undefined) {
       const { data, error } = await supabase.rpc('head_to_head', { p_other: otherId }).single();
       if (error) throw error;
       return data as HeadToHead;
+    },
+  });
+}
+
+/** Statistiques servant aux badges d'un pilote (calculées côté base à partir des matchs validés). */
+export function useBadgeStats(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['elo-history', 'badges', profileId],
+    enabled: !!profileId,
+    queryFn: async (): Promise<BadgeStats> => {
+      if (isDemoMode) {
+        const p = demoPilot(profileId!);
+        const games = p ? demoMatchesFor(p).reverse() : []; // ordre chronologique
+        let best = 0;
+        let run = 0;
+        for (const g of games) {
+          run = g.outcome === 'win' ? run + 1 : 0;
+          best = Math.max(best, run);
+        }
+        const history = p ? demoEloHistoryFor(p) : [];
+        const isMe = profileId === demoProfile.id;
+        return {
+          matches: p?.matches_played ?? 0,
+          wins: p?.wins ?? 0,
+          best_streak: isMe && (p?.matches_played ?? 0) > 0 ? Math.max(best, 4) : best,
+          current_streak: run,
+          tracks_raced: new Set(games.map((g) => g.track_name)).size,
+          lap_time_matches: games.filter((g) => g.format === 'lap_time').length,
+          peak_elo: Math.max(p?.elo ?? 1000, ...history.map((h) => h.elo_after)),
+          giant_kills: isMe && (p?.wins ?? 0) > 0 ? 1 : 0,
+          crowned_tracks: profileId === 'p3' ? ['SpeedPark Angers'] : [],
+        };
+      }
+      const { data, error } = await supabase.rpc('pilot_badge_stats', { p_profile_id: profileId }).single();
+      if (error) throw error;
+      return data as BadgeStats;
     },
   });
 }

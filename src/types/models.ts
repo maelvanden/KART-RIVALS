@@ -101,3 +101,16 @@ export type HeadToHead = {
   last_outcome: 'win' | 'loss' | 'draw' | null;
   last_track: string | null;
 };
+
+/** Statistiques brutes (pilot_badge_stats) à partir desquelles les badges sont calculés. */
+export type BadgeStats = {
+  matches: number;
+  wins: number;
+  best_streak: number;
+  current_streak: number;
+  tracks_raced: number;
+  lap_time_matches: number;
+  peak_elo: number;
+  giant_kills: number;
+  crowned_tracks: string[];
+};

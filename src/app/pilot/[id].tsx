@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
-import { useEloHistory, useHeadToHead, usePilotMatches, useProfile } from '@/features/profile/api';
+import { useBadgeStats, useEloHistory, useHeadToHead, usePilotMatches, useProfile } from '@/features/profile/api';
+import { BadgesCard } from '@/features/profile/components/badges-card';
 import { EloChart } from '@/features/profile/components/elo-chart';
 import { HeadToHeadCard } from '@/features/profile/components/head-to-head-card';
 import { LicenseCard } from '@/features/profile/components/license-card';
@@ -17,6 +18,7 @@ export default function PilotScreen() {
   const history = useEloHistory(id);
   const matches = usePilotMatches(id);
   const h2h = useHeadToHead(id);
+  const badges = useBadgeStats(id);
   const isMe = id === userId;
 
   return (
@@ -28,6 +30,7 @@ export default function PilotScreen() {
         history.refetch();
         matches.refetch();
         h2h.refetch();
+        badges.refetch();
       }}>
       <Stack.Screen options={{ title: profile.data?.username ?? 'Pilote' }} />
       {profile.isPending ? <Loading /> : null}
@@ -48,6 +51,7 @@ export default function PilotScreen() {
               }
             />
           ) : null}
+          {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
           {matches.data ? <MatchHistory matches={matches.data} /> : null}
         </>

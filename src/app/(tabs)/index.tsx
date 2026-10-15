@@ -5,7 +5,8 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
-import { useEloHistory, useMyProfile, usePilotMatches } from '@/features/profile/api';
+import { useBadgeStats, useEloHistory, useMyProfile, usePilotMatches } from '@/features/profile/api';
+import { BadgesCard } from '@/features/profile/components/badges-card';
 import { EloChart } from '@/features/profile/components/elo-chart';
 import { LicenseCard } from '@/features/profile/components/license-card';
 import { MatchHistory } from '@/features/profile/components/match-history';
@@ -16,6 +17,7 @@ export default function LicenseScreen() {
   const profile = useMyProfile();
   const history = useEloHistory(profile.data?.id);
   const matches = usePilotMatches(profile.data?.id);
+  const badges = useBadgeStats(profile.data?.id);
 
   return (
     <Screen
@@ -26,6 +28,7 @@ export default function LicenseScreen() {
         profile.refetch();
         history.refetch();
         matches.refetch();
+        badges.refetch();
       }}
       right={
         <View style={styles.headerActions}>
@@ -40,6 +43,7 @@ export default function LicenseScreen() {
       {profile.isPending ? <Loading /> : null}
       {profile.error ? <ErrorState error={profile.error} /> : null}
       {profile.data ? <LicenseCard profile={profile.data} /> : null}
+      {badges.data ? <BadgesCard stats={badges.data} /> : null}
       {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
       {matches.data ? <MatchHistory matches={matches.data} /> : null}
     </Screen>
