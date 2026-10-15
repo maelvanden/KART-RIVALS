@@ -34,12 +34,9 @@ Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `ti
    (`TICKET_BEFORE_CHECK_IN`). Décision finale sous verrou en SQL (`record_time_attack_ticket`), un ticket ne sert qu'une fois.
 3. Sans ticket valide 90 min après le check-in : DNF et −15 ELO (`expire_time_attack_sessions`, pg_cron toutes les 5 min).
 
-Déploiement de la fonction :
-
-```bash
-npx supabase secrets set ANTHROPIC_API_KEY=<clé>   # TICKET_TIME_ZONE optionnel (Europe/Paris par défaut)
-npx supabase functions deploy time-attack-ticket
-```
+Déploiement du backend : la GitHub Action « Déployer Supabase » applique les nouvelles migrations, enregistre
+la clé de l'IA et déploie l'Edge Function à chaque push sur `main` qui touche `supabase/` (ou à la main depuis l'onglet
+Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `ANTHROPIC_API_KEY`.
 
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
