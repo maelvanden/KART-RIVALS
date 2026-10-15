@@ -6,9 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Chips } from '@/components/ui/chips';
 import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { ErrorState, Loading } from '@/components/ui/state-views';
+import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile } from '@/features/profile/api';
+import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { pickTicketPhoto, useStartTimeAttack, useSubmitTicket, useTimeAttackSessions } from '@/features/time-attack/api';
 import {
   TicketRejectedError,
@@ -22,6 +23,17 @@ import { colors, spacing } from '@/theme';
 import type { TimeAttackSession } from '@/types/models';
 
 export default function TimeAttackScreen() {
+  if (!TIME_ATTACK_ENABLED) {
+    return (
+      <Screen safeTop={false}>
+        <EmptyState title="Bientôt disponible" message="Le mode Time Attack solo arrive prochainement." />
+      </Screen>
+    );
+  }
+  return <TimeAttack />;
+}
+
+function TimeAttack() {
   const sessions = useTimeAttackSessions();
   const active = sessions.data?.find((s) => s.status === 'on_track');
   const history = (sessions.data ?? []).filter((s) => s.status !== 'on_track');

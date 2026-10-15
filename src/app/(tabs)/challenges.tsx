@@ -11,6 +11,7 @@ import { ChallengeCard } from '@/features/challenges/components/challenge-card';
 import { useMyRaces } from '@/features/races/api';
 import { RaceCard } from '@/features/races/components/race-card';
 import { raceStep } from '@/features/races/state';
+import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 
 type Filter = 'received' | 'sent' | 'races';
 
@@ -43,7 +44,9 @@ export default function ChallengesScreen() {
       {filter === 'races' ? (
         <>
           <Button title="Organiser une course" onPress={() => router.push('/race/new')} />
-          <Button title="Time Attack solo" variant="secondary" onPress={() => router.push('/time-attack')} />
+          {TIME_ATTACK_ENABLED ? (
+            <Button title="Time Attack solo" variant="secondary" onPress={() => router.push('/time-attack')} />
+          ) : null}
           {races.isPending ? <Loading /> : null}
           {races.error ? <ErrorState error={races.error} /> : null}
           {races.data && raceList.length === 0 ? (
