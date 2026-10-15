@@ -44,6 +44,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="nearby" options={{ title: 'Pilotes', tabBarIcon: tabIcon(icons.nearby) }} />
+      <Tabs.Screen name="tracks" options={{ title: 'Circuits', tabBarIcon: tabIcon(icons.map) }} />
       <Tabs.Screen name="leaderboard" options={{ title: 'Classement', tabBarIcon: tabIcon(icons.trophy) }} />
     </Tabs>
   );

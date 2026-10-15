@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useApproxLocation, useNearbyPilots, useSearchPilots } from '@/features/nearby/api';
+import { formatKm } from '@/lib/format';
 import { colors, radius as radii, spacing } from '@/theme';
 
 type Radius = '10' | '30' | '100';
@@ -100,7 +101,7 @@ export default function NearbyScreen() {
               username={p.username}
               rank={p.rank}
               elo={p.elo}
-              subtitle={`${p.distance_km} km · ${p.elo} ELO · ${p.wins}V ${p.losses}D`}
+              subtitle={`${formatKm(Number(p.distance_km))} · ${p.elo} ELO · ${p.wins}V ${p.losses}D`}
               trailing={<Button title="Défier" style={styles.challenge} onPress={() => challenge(p.id, p.username)} />}
             />
           ))}

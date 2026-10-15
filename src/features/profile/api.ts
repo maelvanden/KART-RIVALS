@@ -96,11 +96,12 @@ export function useUpdateProfile() {
   const { userId } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: ProfileUpdate) => {
+    mutationFn: async (input: Partial<ProfileUpdate>) => {
       if (isDemoMode) {
-        Object.assign(demoProfile, input, {
-          home_track: demoTracks.find((t) => t.id === input.home_track_id) ?? null,
-        });
+        Object.assign(demoProfile, input);
+        if ('home_track_id' in input) {
+          demoProfile.home_track = demoTracks.find((t) => t.id === input.home_track_id) ?? null;
+        }
         return;
       }
       const { error } = await supabase.from('profiles').update(input).eq('id', userId!);

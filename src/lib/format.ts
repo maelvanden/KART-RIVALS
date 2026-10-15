@@ -24,3 +24,8 @@ export const dateTimeFormat = new Intl.DateTimeFormat('fr-FR', {
   hour: '2-digit',
   minute: '2-digit',
 });
+
+/** 2.4 → "2,4 km" ; au-delà de 10 km, arrondi au kilomètre. */
+export function formatKm(km: number): string {
+  return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
+}

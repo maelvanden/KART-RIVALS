@@ -21,6 +21,10 @@ export const icons = {
   edit: { ios: 'pencil', material: 'edit' },
   chevron: { ios: 'chevron.right', material: 'chevron_right' },
   search: { ios: 'magnifyingglass', material: 'search' },
+  map: { ios: 'map.fill', material: 'map' },
+  directions: { ios: 'arrow.triangle.turn.up.right.diamond.fill', material: 'directions' },
+  star: { ios: 'star.fill', material: 'star' },
+  starOutline: { ios: 'star', material: 'star_border' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

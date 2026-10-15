@@ -20,6 +20,24 @@ export type Profile = {
 
 export type Track = { id: string; name: string; city: string };
 
+/** Circuit complet avec coordonnées (vue tracks_map). */
+export type TrackDetails = Track & {
+  address: string | null;
+  postal_code: string | null;
+  region: string | null;
+  is_indoor: boolean;
+  length_m: number | null;
+  kart_power: string | null;
+  is_verified: boolean;
+  lat: number;
+  lng: number;
+};
+
+export type TrackLeaderboardEntry = Pick<Profile, 'id' | 'username' | 'elo' | 'rank'> & {
+  wins: number;
+  matches: number;
+};
+
 export type PilotMatch = {
   match_id: string;
   confirmed_at: string;
