@@ -1,9 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { demoProfile, demoTrackDetails, demoTracks, isDemoMode } from '@/lib/demo';
+import {
+  demoProfile,
+  demoTrackDetails,
+  demoTrackLapRecords,
+  demoTrackRecords,
+  demoTracks,
+  isDemoMode,
+} from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import type { Coords } from '@/features/nearby/api';
-import type { Track, TrackDetails, TrackLeaderboardEntry } from '@/types/models';
+import type { Track, TrackDetails, TrackLapRecord, TrackLeaderboardEntry, TrackRecord } from '@/types/models';
 
 export function useTracks() {
   return useQuery({
@@ -99,6 +106,37 @@ export function useTrackLeaderboard(id: string | undefined) {
       const { data, error } = await supabase.rpc('track_leaderboard', { p_track_id: id, p_limit: 20 });
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+/** Top des meilleurs tours d'un circuit (matchs validés au chrono). */
+export function useTrackLapRecords(id: string | undefined) {
+  return useQuery({
+    queryKey: ['leaderboard', 'laps', id],
+    enabled: !!id,
+    queryFn: async (): Promise<TrackLapRecord[]> => {
+      if (isDemoMode) return demoTrackLapRecords(id!);
+      const { data, error } = await supabase.rpc('track_lap_records', { p_track_id: id, p_limit: 10 });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Record absolu de chaque circuit, indexé par circuit. */
+export function useTrackRecords() {
+  return useQuery({
+    queryKey: ['leaderboard', 'track-records'],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<Record<string, TrackRecord>> => {
+      const rows: TrackRecord[] = isDemoMode
+        ? demoTrackRecords()
+        : await supabase.rpc('track_records').then(({ data, error }) => {
+            if (error) throw error;
+            return data;
+          });
+      return Object.fromEntries(rows.map((r) => [r.track_id, r]));
     },
   });
 }

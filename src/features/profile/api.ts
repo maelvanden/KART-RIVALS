@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import {
   demoEloHistoryFor,
   demoMatchesFor,
+  demoPilotLapRecords,
   demoPilot,
   demoProfile,
   demoState,
@@ -12,7 +13,7 @@ import {
 } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import { rankForElo } from '@/theme';
-import type { BadgeStats, EloPoint, HeadToHead, PilotMatch, Profile } from '@/types/models';
+import type { BadgeStats, EloPoint, HeadToHead, PilotLapRecord, PilotMatch, Profile } from '@/types/models';
 
 const PROFILE_COLUMNS = `
   id, username, avatar_url, kart_number, home_track_id, elo, rank, wins, losses, draws, matches_played,
@@ -193,6 +194,20 @@ export function useBadgeStats(profileId: string | undefined) {
       const { data, error } = await supabase.rpc('pilot_badge_stats', { p_profile_id: profileId }).single();
       if (error) throw error;
       return data as BadgeStats;
+    },
+  });
+}
+
+/** Meilleur tour du pilote sur chaque circuit, avec sa place au classement des chronos. */
+export function usePilotLapRecords(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['elo-history', 'laps', profileId],
+    enabled: !!profileId,
+    queryFn: async (): Promise<PilotLapRecord[]> => {
+      if (isDemoMode) return demoPilotLapRecords(profileId!);
+      const { data, error } = await supabase.rpc('pilot_lap_records', { p_profile_id: profileId });
+      if (error) throw error;
+      return data;
     },
   });
 }

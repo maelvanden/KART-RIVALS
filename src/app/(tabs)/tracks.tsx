@@ -6,7 +6,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useApproxLocation } from '@/features/nearby/api';
 import { useMyProfile } from '@/features/profile/api';
-import { useTracksMap } from '@/features/tracks/api';
+import { useTrackRecords, useTracksMap } from '@/features/tracks/api';
 import { TrackMap } from '@/features/tracks/components/track-map';
 import { TrackRow } from '@/features/tracks/components/track-row';
 import { distanceKm } from '@/lib/geo';
@@ -17,6 +17,7 @@ export default function TracksScreen() {
   const tracks = useTracksMap();
   const location = useApproxLocation();
   const profile = useMyProfile();
+  const records = useTrackRecords();
   const [filter, setFilter] = useState<Filter>('all');
 
   const list = useMemo(() => {
@@ -50,7 +51,13 @@ export default function TracksScreen() {
       />
       {tracks.data && list.length === 0 ? <EmptyState title="Aucun circuit de ce type" /> : null}
       {list.map(({ track, km }) => (
-        <TrackRow key={track.id} track={track} distanceKm={km} favorite={track.id === profile.data?.home_track_id} />
+        <TrackRow
+          key={track.id}
+          track={track}
+          distanceKm={km}
+          favorite={track.id === profile.data?.home_track_id}
+          recordMs={records.data?.[track.id]?.lap_ms}
+        />
       ))}
     </Screen>
   );

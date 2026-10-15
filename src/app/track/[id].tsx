@@ -8,7 +8,8 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
-import { useTrack, useTrackLeaderboard } from '@/features/tracks/api';
+import { useTrack, useTrackLapRecords, useTrackLeaderboard } from '@/features/tracks/api';
+import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
 import { TrackMap } from '@/features/tracks/components/track-map';
 import { TrackTypeBadge } from '@/features/tracks/components/track-row';
 import { colors, spacing } from '@/theme';
@@ -27,6 +28,7 @@ export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const track = useTrack(id);
   const board = useTrackLeaderboard(id);
+  const laps = useTrackLapRecords(id);
   const profile = useMyProfile();
   const update = useUpdateProfile();
 
@@ -34,7 +36,13 @@ export default function TrackScreen() {
   const isFavorite = !!t && profile.data?.home_track_id === t.id;
 
   return (
-    <Screen safeTop={false} refreshing={board.isRefetching} onRefresh={board.refetch}>
+    <Screen
+      safeTop={false}
+      refreshing={board.isRefetching}
+      onRefresh={() => {
+        board.refetch();
+        laps.refetch();
+      }}>
       <Stack.Screen options={{ title: t?.name ?? 'Circuit' }} />
       {track.isPending ? <Loading /> : null}
       {track.error ? <ErrorState error={track.error} /> : null}
@@ -76,6 +84,17 @@ export default function TrackScreen() {
               onPress={() => update.mutate({ home_track_id: t.id })}
             />
           </View>
+
+          <Text variant="label">Records du tour</Text>
+          {laps.isPending ? <Loading /> : null}
+          {laps.error ? <ErrorState error={laps.error} /> : null}
+          {laps.data?.length === 0 ? (
+            <EmptyState
+              title="Aucun chrono validé"
+              message="Le premier défi au format « meilleur tour » validé ici établira le record."
+            />
+          ) : null}
+          {laps.data && laps.data.length > 0 ? <TrackLapRecords records={laps.data} myId={profile.data?.id} /> : null}
 
           <Text variant="label">Classement du circuit</Text>
           {board.isPending ? <Loading /> : null}

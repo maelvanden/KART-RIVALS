@@ -3,10 +3,13 @@ import type {
   EloPoint,
   LeaderboardEntry,
   NearbyPilot,
+  PilotLapRecord,
   PilotMatch,
   Profile,
   Track,
   TrackDetails,
+  TrackLapRecord,
+  TrackRecord,
 } from '@/types/models';
 
 /**
@@ -182,4 +185,53 @@ export function demoMatchesFor(profile: Profile): PilotMatch[] {
     outcome: p.delta > 0 ? 'win' : p.delta < 0 ? 'loss' : 'draw',
     elo_delta: p.delta,
   }));
+}
+
+/** Meilleurs tours d'exemple (ms), cohérents avec la longueur de chaque piste. */
+const demoLaps: Record<string, [string, number][]> = {
+  t1: [['p3', 24812], ['demo-me', 25134], ['p1', 25390], ['p2', 26020]],
+  t2: [['p6', 44208], ['demo-me', 45310], ['p7', 45640]],
+  t3: [['p5', 38905], ['p3', 39420], ['demo-me', 40118]],
+  t4: [['p1', 29776], ['p4', 31402]],
+  t5: [],
+};
+
+export function demoTrackLapRecords(trackId: string): TrackLapRecord[] {
+  return (demoLaps[trackId] ?? []).map(([pilotId, lap], i) => {
+    const p = demoPilot(pilotId);
+    return {
+      position: i + 1,
+      pilot_id: pilotId,
+      username: p?.username ?? 'Pilote',
+      avatar_url: p?.avatar_url ?? null,
+      rank: p?.rank ?? 'novice',
+      lap_ms: lap,
+      set_at: new Date(Date.now() - (i + 2) * 6 * 86400000).toISOString(),
+    };
+  });
+}
+
+export function demoPilotLapRecords(pilotId: string): PilotLapRecord[] {
+  return demoTrackDetails
+    .map((t) => {
+      const laps = demoLaps[t.id] ?? [];
+      const i = laps.findIndex(([id]) => id === pilotId);
+      if (i < 0) return null;
+      return {
+        track_id: t.id,
+        track_name: t.name,
+        lap_ms: laps[i][1],
+        set_at: new Date(Date.now() - (i + 2) * 6 * 86400000).toISOString(),
+        position: i + 1,
+        pilots: laps.length,
+      };
+    })
+    .filter((r): r is PilotLapRecord => r !== null)
+    .sort((a, b) => a.position - b.position);
+}
+
+export function demoTrackRecords(): TrackRecord[] {
+  return Object.entries(demoLaps)
+    .filter(([, laps]) => laps.length > 0)
+    .map(([trackId, laps]) => ({ track_id: trackId, lap_ms: laps[0][1], username: demoPilot(laps[0][0])?.username ?? 'Pilote' }));
 }

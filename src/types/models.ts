@@ -114,3 +114,24 @@ export type BadgeStats = {
   giant_kills: number;
   crowned_tracks: string[];
 };
+
+export type TrackLapRecord = {
+  position: number;
+  pilot_id: string;
+  username: string;
+  avatar_url: string | null;
+  rank: RankTier;
+  lap_ms: number;
+  set_at: string;
+};
+
+export type PilotLapRecord = {
+  track_id: string;
+  track_name: string;
+  lap_ms: number;
+  set_at: string;
+  position: number;
+  pilots: number;
+};
+
+export type TrackRecord = { track_id: string; lap_ms: number; username: string };

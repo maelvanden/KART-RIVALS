@@ -3,11 +3,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { formatKm } from '@/lib/format';
+import { formatKm, formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { TrackDetails } from '@/types/models';
 
-type Props = { track: TrackDetails; distanceKm?: number | null; favorite?: boolean };
+type Props = { track: TrackDetails; distanceKm?: number | null; favorite?: boolean; recordMs?: number | null };
 
 export function TrackTypeBadge({ indoor }: { indoor: boolean }) {
   const color = indoor ? colors.neon : colors.orange;
@@ -18,7 +18,7 @@ export function TrackTypeBadge({ indoor }: { indoor: boolean }) {
   );
 }
 
-export function TrackRow({ track, distanceKm, favorite }: Props) {
+export function TrackRow({ track, distanceKm, favorite, recordMs }: Props) {
   const facts = [
     track.length_m ? `${track.length_m.toLocaleString('fr-FR')} m` : null,
     track.kart_power,
@@ -43,6 +43,12 @@ export function TrackRow({ track, distanceKm, favorite }: Props) {
               {track.city}
               {facts.length ? ` · ${facts.join(' · ')}` : ''}
             </Text>
+            {recordMs ? (
+              <View style={styles.record}>
+                <Icon name={icons.timer} size={12} color="#FFC83D" />
+                <Text style={styles.recordText}>Record {formatLapTime(recordMs)}</Text>
+              </View>
+            ) : null}
           </View>
           <TrackTypeBadge indoor={track.is_indoor} />
           <Icon name={icons.chevron} size={18} color={colors.textMuted} />
@@ -68,6 +74,8 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { flexShrink: 1 },
+  record: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  recordText: { fontSize: 12, fontWeight: '800', color: '#FFC83D', fontVariant: ['tabular-nums'] },
   badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   badgeText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
 });

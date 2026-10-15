@@ -5,7 +5,8 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
-import { useBadgeStats, useEloHistory, useMyProfile, usePilotMatches } from '@/features/profile/api';
+import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
+import { LapRecordsCard } from '@/features/profile/components/lap-records-card';
 import { BadgesCard } from '@/features/profile/components/badges-card';
 import { EloChart } from '@/features/profile/components/elo-chart';
 import { LicenseCard } from '@/features/profile/components/license-card';
@@ -18,6 +19,7 @@ export default function LicenseScreen() {
   const history = useEloHistory(profile.data?.id);
   const matches = usePilotMatches(profile.data?.id);
   const badges = useBadgeStats(profile.data?.id);
+  const laps = usePilotLapRecords(profile.data?.id);
 
   return (
     <Screen
@@ -29,6 +31,7 @@ export default function LicenseScreen() {
         history.refetch();
         matches.refetch();
         badges.refetch();
+        laps.refetch();
       }}
       right={
         <View style={styles.headerActions}>
@@ -45,6 +48,7 @@ export default function LicenseScreen() {
       {profile.data ? <LicenseCard profile={profile.data} /> : null}
       {badges.data ? <BadgesCard stats={badges.data} /> : null}
       {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
+      {laps.data ? <LapRecordsCard records={laps.data} isMe /> : null}
       {matches.data ? <MatchHistory matches={matches.data} /> : null}
     </Screen>
   );
