@@ -15,6 +15,9 @@ import type {
  */
 export const isDemoMode = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
 
+/** Avec EXPO_PUBLIC_DEMO_ONBOARDING=true, la démo démarre sans licence (écran de création). */
+export const demoState = { hasProfile: process.env.EXPO_PUBLIC_DEMO_ONBOARDING !== 'true' };
+
 export const demoProfile: Profile = {
   id: 'demo-me',
   username: 'Mael_44',
@@ -133,7 +136,7 @@ export const demoEloHistory: EloPoint[] = [1150, 1168, 1156, 1177, 1193, 1178, 1
 
 /** Profil d'un autre pilote de démo, reconstitué depuis le classement et la liste « à proximité ». */
 export function demoPilot(id: string): Profile | null {
-  if (id === demoProfile.id) return demoProfile;
+  if (id === demoProfile.id) return demoState.hasProfile ? demoProfile : null;
   const p = [...demoLeaderboard, ...demoNearby].find((x) => x.id === id);
   if (!p) return null;
   return {
@@ -155,7 +158,10 @@ export function demoPilot(id: string): Profile | null {
 
 /** Courbe ELO d'exemple qui se termine à l'ELO actuel du pilote. */
 export function demoEloHistoryFor(profile: Profile): EloPoint[] {
-  if (profile.id === demoProfile.id) return [...demoEloHistory];
+  if (profile.id === demoProfile.id) {
+    // Licence créée pendant la démo : aucun match encore.
+    return demoProfile.matches_played === 0 ? [] : [...demoEloHistory];
+  }
   const shift = profile.elo - demoEloHistory[demoEloHistory.length - 1].elo_after;
   return demoEloHistory.map((p) => ({ ...p, elo_after: p.elo_after + shift }));
 }

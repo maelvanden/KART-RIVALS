@@ -45,6 +45,8 @@ Mode démo (interface avec des données d'exemple, sans compte ni réseau) :
 
 ```bash
 EXPO_PUBLIC_DEMO_MODE=true npx expo start
+# démo qui commence par la création de licence :
+EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_DEMO_ONBOARDING=true npx expo start
 ```
 
 ## Structure

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCreateProfile } from '@/features/profile/api';
+import { useTracksMap } from '@/features/tracks/api';
+import { TrackPicker } from '@/features/tracks/components/track-picker';
 import { colors, spacing } from '@/theme';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
@@ -13,7 +15,9 @@ const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
 export default function OnboardingScreen() {
   const [username, setUsername] = useState('');
   const [kartNumber, setKartNumber] = useState('');
+  const [homeTrackId, setHomeTrackId] = useState<string | null>(null);
   const createProfile = useCreateProfile();
+  const tracks = useTracksMap();
 
   const usernameValid = USERNAME_PATTERN.test(username);
   const parsedNumber = kartNumber ? Number(kartNumber) : null;
@@ -25,7 +29,7 @@ export default function OnboardingScreen() {
   return (
     <Screen subtitle="Étape 1 / 1" title="Ta licence de pilote">
       <Text variant="caption" style={styles.intro}>
-        Choisis ton pseudo de course et ton numéro de kart. Tu démarres à 1000 ELO, rang Novice.
+        Choisis ton pseudo, ton numéro de kart et ton circuit. Tu démarres à 1000 ELO, rang Novice.
       </Text>
       <View style={styles.form}>
         <Input
@@ -46,14 +50,30 @@ export default function OnboardingScreen() {
           placeholder="44"
           maxLength={3}
         />
-        {errorText ? <Text style={{ color: colors.danger }}>{errorText}</Text> : null}
-        <Button
-          title="Valider ma licence"
-          disabled={!usernameValid || !numberValid}
-          loading={createProfile.isPending}
-          onPress={() => createProfile.mutate({ username, kart_number: parsedNumber })}
-        />
       </View>
+
+      <View style={styles.form}>
+        <Text variant="label">Ton circuit favori</Text>
+        <Text variant="caption">
+          Celui où tu roules le plus : il s’affiche sur ta licence et tu apparais dans son classement.
+        </Text>
+        {tracks.data ? (
+          <TrackPicker
+            tracks={tracks.data}
+            value={homeTrackId}
+            onChange={setHomeTrackId}
+            noneLabel="Je choisirai plus tard"
+          />
+        ) : null}
+      </View>
+
+      {errorText ? <Text style={{ color: colors.danger }}>{errorText}</Text> : null}
+      <Button
+        title="Valider ma licence"
+        disabled={!usernameValid || !numberValid}
+        loading={createProfile.isPending}
+        onPress={() => createProfile.mutate({ username, kart_number: parsedNumber, home_track_id: homeTrackId })}
+      />
     </Screen>
   );
 }

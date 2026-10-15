@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
-import { demoEloHistoryFor, demoMatchesFor, demoPilot, demoProfile, demoTracks, isDemoMode } from '@/lib/demo';
+import {
+  demoEloHistoryFor,
+  demoMatchesFor,
+  demoPilot,
+  demoProfile,
+  demoState,
+  demoTracks,
+  isDemoMode,
+} from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import { rankForElo } from '@/theme';
 import type { EloPoint, PilotMatch, Profile } from '@/types/models';
@@ -77,7 +85,16 @@ export function useCreateProfile() {
   const { userId } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { username: string; kart_number: number | null }) => {
+    mutationFn: async (input: { username: string; kart_number: number | null; home_track_id: string | null }) => {
+      if (isDemoMode) {
+        Object.assign(demoProfile, input, {
+          home_track: demoTracks.find((t) => t.id === input.home_track_id) ?? null,
+          // Nouvelle licence : on repart de zéro.
+          elo: 1000, rank: 'novice', wins: 0, losses: 0, draws: 0, matches_played: 0,
+        });
+        demoState.hasProfile = true;
+        return;
+      }
       const { error } = await supabase.from('profiles').insert({ id: userId!, ...input });
       if (error) throw error;
     },

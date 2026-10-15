@@ -11,9 +11,11 @@ function nextRankProgress(elo: number) {
   const current = rankThresholds[idx];
   const next = rankThresholds[idx + 1];
   if (!next) return { next: null, progress: 1, remaining: 0 };
+  // Le rang Novice n'a pas de plancher (0) : on mesure la barre sur 150 points, comme les autres rangs.
+  const base = current.tier === 'novice' ? next.min - 150 : current.min;
   return {
     next: next.tier,
-    progress: (elo - current.min) / (next.min - current.min),
+    progress: Math.min(1, Math.max(0, (elo - base) / (next.min - base))),
     remaining: next.min - elo,
   };
 }

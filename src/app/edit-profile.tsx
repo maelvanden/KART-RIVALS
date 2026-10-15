@@ -4,13 +4,13 @@ import { StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Chips } from '@/components/ui/chips';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
-import { useTracks } from '@/features/tracks/api';
+import { useTracksMap } from '@/features/tracks/api';
+import { TrackPicker } from '@/features/tracks/components/track-picker';
 import { colors, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
 
@@ -23,7 +23,7 @@ export default function EditProfileScreen() {
 }
 
 function EditProfileForm({ profile }: { profile: Profile }) {
-  const tracks = useTracks();
+  const tracks = useTracksMap();
   const update = useUpdateProfile();
   const [username, setUsername] = useState(profile.username);
   const [kartNumber, setKartNumber] = useState(profile.kart_number ? String(profile.kart_number) : '');
@@ -67,14 +67,9 @@ function EditProfileForm({ profile }: { profile: Profile }) {
 
       <View style={styles.form}>
         <Text variant="label">Circuit favori</Text>
-        <Chips
-          options={[
-            { value: null as string | null, label: 'Aucun' },
-            ...(tracks.data ?? []).map((t) => ({ value: t.id as string | null, label: `${t.name} · ${t.city}` })),
-          ]}
-          value={homeTrackId}
-          onChange={setHomeTrackId}
-        />
+        {tracks.data ? (
+          <TrackPicker tracks={tracks.data} value={homeTrackId} onChange={setHomeTrackId} />
+        ) : null}
       </View>
 
       <Card style={styles.switchRow}>
