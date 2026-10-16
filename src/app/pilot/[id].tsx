@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
+import { useUserGear } from '@/features/garage/api';
+import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
 import {
   useBadgeStats,
   useEloHistory,
@@ -28,6 +30,7 @@ export default function PilotScreen() {
   const h2h = useHeadToHead(id);
   const badges = useBadgeStats(id);
   const laps = usePilotLapRecords(id);
+  const gear = useUserGear(id);
   const isMe = id === userId;
 
   return (
@@ -41,6 +44,7 @@ export default function PilotScreen() {
         h2h.refetch();
         badges.refetch();
         laps.refetch();
+        gear.refetch();
       }}>
       <Stack.Screen options={{ title: profile.data?.username ?? 'Pilote' }} />
       {profile.isPending ? <Loading /> : null}
@@ -61,6 +65,7 @@ export default function PilotScreen() {
               }
             />
           ) : null}
+          {gear.data ? <VirtualGarage gear={gear.data} editable={isMe} /> : null}
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
           {laps.data ? <LapRecordsCard records={laps.data} isMe={isMe} /> : null}

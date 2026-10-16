@@ -43,6 +43,12 @@ Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Accoun
 (clé gratuite sur ocr.space/ocrapi). Le Time Attack reste masqué dans l'app tant que `TIME_ATTACK_ENABLED`
 (`src/features/time-attack/config.ts`) vaut false.
 
+Garage virtuel (migration `…_user_gear.sql`) : table `user_gear` (une ligne par pilote) avec 5 slots typés par des
+enums Postgres — `helmet` (`helmet_brand`), `suit` / `gloves` / `shoes` (`apparel_brand`), `rib_protector`
+(`rib_protector_brand`). `null` = « Équipement de location ». Lisible par tous les pilotes connectés, modifiable
+uniquement par son propriétaire (RLS). Marques en texte brut, aucun logo : icônes génériques par catégorie.
+Catalogue côté app : `src/features/garage/catalog.ts` (à garder aligné sur les enums).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

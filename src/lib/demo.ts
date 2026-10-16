@@ -12,6 +12,7 @@ import type {
   TrackLapRecord,
   TrackRecord,
 } from '@/types/models';
+import type { UserGear } from '@/features/garage/catalog';
 
 /**
  * Mode démo : `EXPO_PUBLIC_DEMO_MODE=true` court-circuite Supabase et affiche des données
@@ -287,3 +288,10 @@ export const demoRaces: Race[] = [
     entries: [entry('p1', 'accepted', 2, true), entry('demo-me', 'accepted', 1), entry('p2', 'accepted', 3), entry('p4', 'accepted', 4)],
   },
 ];
+
+/** Garage virtuel par pilote (modifié en place quand le pilote démo change un slot). */
+export const demoGear: Record<string, Partial<UserGear>> = {
+  'demo-me': { helmet: 'stilo', gloves: 'alpinestars' },
+  p1: { helmet: 'arai', suit: 'sparco', gloves: 'sparco', shoes: 'sparco', rib_protector: 'bengio' },
+  p3: { helmet: 'bell', suit: 'omp' },
+};
