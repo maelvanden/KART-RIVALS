@@ -69,8 +69,9 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
   content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  title: { fontFamily: fonts.display, fontSize: 17, letterSpacing: 1.2, textTransform: 'uppercase' },
-  titleLarge: { fontSize: 21, letterSpacing: 1.6 },
+  // Hauteurs de ligne généreuses : Oswald est rogné en haut sur iOS si la ligne est trop juste.
+  title: { fontFamily: fonts.display, fontSize: 17, lineHeight: 24, letterSpacing: 1.2, textTransform: 'uppercase' },
+  titleLarge: { fontSize: 21, lineHeight: 30, letterSpacing: 1.6 },
   slashes: { position: 'absolute', right: 14, top: -10, bottom: -10, flexDirection: 'row', gap: 5 },
   slash: { width: 6, transform: [{ skewX: '-24deg' }] },
   slashOnVolt: { backgroundColor: 'rgba(22, 25, 32, 0.14)' },

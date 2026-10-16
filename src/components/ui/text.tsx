@@ -33,19 +33,22 @@ function resolveFont(variant: Variant, style: TextStyle): TextStyle {
 }
 
 /**
- * Oswald dépasse de sa boîte de ligne par défaut : sans hauteur de ligne explicite, iOS rogne le haut et
- * le bas des lettres (les « O » deviennent des « 0 »). On en fixe une proportionnelle à la taille.
+ * Oswald dépasse de sa boîte de ligne : avec une hauteur de ligne trop juste, iOS rogne le haut des lettres
+ * (les « O » deviennent des « 0 »). Quand l'appelant n'en fixe pas, celle héritée du style de base (21 px,
+ * prévue pour le texte courant) ne convient pas : on en met une proportionnelle à la taille.
  */
-function displayLineHeight(style: TextStyle, font: TextStyle): TextStyle {
-  const family = style.fontFamily ?? font.fontFamily;
-  if (style.lineHeight || (family !== fonts.display && family !== fonts.displayMedium)) return {};
-  return { lineHeight: Math.ceil((style.fontSize ?? 15) * 1.35) };
+function displayLineHeight(variant: Variant, own: TextStyle | undefined, flat: TextStyle, font: TextStyle): TextStyle {
+  const family = flat.fontFamily ?? font.fontFamily;
+  if (family !== fonts.display && family !== fonts.displayMedium) return {};
+  if (own?.lineHeight || DISPLAY_VARIANTS.includes(variant)) return {};
+  return { lineHeight: Math.ceil((flat.fontSize ?? 15) * 1.4) };
 }
 
 export function Text({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
   const flat = StyleSheet.flatten([styles.base, styles[variant], style]);
   const font = resolveFont(variant, flat);
-  return <RNText style={[flat, font, displayLineHeight(flat, font)]} {...rest} />;
+  const own = StyleSheet.flatten(style) as TextStyle | undefined;
+  return <RNText style={[flat, font, displayLineHeight(variant, own, flat, font)]} {...rest} />;
 }
 
 const styles = StyleSheet.create({
