@@ -77,6 +77,18 @@ EXPO_PUBLIC_DEMO_MODE=true npx expo start
 EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_DEMO_ONBOARDING=true npx expo start
 ```
 
+## Design system
+
+Direction « Motorsport / Gaming Premium », tout est centralisé dans [`src/theme/index.ts`](./src/theme/index.ts) :
+
+- **Couleurs** : fond `#161920` (jamais de noir pur), cartes `#212631`, accent Volt `#DEFF00` réservé aux actions
+  principales et aux onglets actifs (texte `#161920` dessus), texte `#FFFFFF` / `#8A95A5`, bordures 1px
+  `rgba(255, 255, 255, 0.08)`.
+- **Typo** : Oswald (condensée, majuscules) pour les titres et les gros chiffres, Inter pour le texte. Le composant
+  `Text` choisit la bonne famille à partir de la graisse demandée : utiliser `fontWeight`, jamais `fontFamily` Inter à la main.
+- **Formes** : boutons 6 px avec double barre oblique, cartes 12 px, étiquettes 4 px ; pas d'ombres ni de formes ovales.
+- **Texture** : fibre de carbone à 3 % sur le fond des écrans (`CarbonBackdrop`, tuile `assets/images/carbon.png`).
+
 ## Structure
 
 ```

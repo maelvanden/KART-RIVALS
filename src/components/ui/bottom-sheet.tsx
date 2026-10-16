@@ -39,7 +39,7 @@ export function BottomSheet({ visible, onClose, title, leading, children }: Prop
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  backdrop: { flex: 1, backgroundColor: colors.overlay },
   sheet: {
     maxHeight: '85%',
     backgroundColor: colors.surface,

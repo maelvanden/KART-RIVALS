@@ -4,10 +4,11 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
-import { colors, radius, rankMeta, rankThresholds, spacing } from '@/theme';
+import { colors, gradients, radius, rankMeta, rankThresholds, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
 
-function nextRankProgress(elo: number) {
+/** Progression vers le rang suivant (barre de la licence et du Paddock). */
+export function nextRankProgress(elo: number) {
   const idx = rankThresholds.findLastIndex((t) => elo >= t.min);
   const current = rankThresholds[idx];
   const next = rankThresholds[idx + 1];
@@ -28,7 +29,7 @@ export function LicenseCard({ profile }: { profile: Profile }) {
 
   return (
     <LinearGradient
-      colors={['#1A2A12', colors.surface, '#2A160C']}
+      colors={gradients.heat}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.card}>

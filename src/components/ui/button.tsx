@@ -1,32 +1,52 @@
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import type { ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { colors, radius, spacing } from '@/theme';
+import { colors, fonts, radius, spacing } from '@/theme';
 
 type Props = Omit<PressableProps, 'children'> & {
   title: string;
   variant?: 'primary' | 'secondary' | 'ghost' | 'quiet';
+  /** Bouton héros (plus haut, texte plus grand) pour l'action principale d'un écran. */
+  size?: 'md' | 'lg';
+  /** Icône affichée avant le libellé. */
+  icon?: ReactNode;
   loading?: boolean;
 };
 
-export function Button({ title, variant = 'primary', loading, disabled, style, ...rest }: Props) {
+/**
+ * Bouton du design system : aplat Volt pour l'action principale, angles vifs (6 px) et double
+ * barre oblique « racing » sur la droite en guise de découpe.
+ */
+export function Button({ title, variant = 'primary', size = 'md', icon, loading, disabled, style, ...rest }: Props) {
   const textColor = { primary: colors.onNeon, secondary: colors.text, ghost: colors.neon, quiet: colors.textMuted }[variant];
+  const slashes = variant === 'primary' || variant === 'secondary';
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled || loading}
       style={(state) => [
         styles.base,
+        size === 'lg' && styles.large,
         styles[variant],
         (disabled || loading) && styles.disabled,
         state.pressed && styles.pressed,
         typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}>
+      {slashes ? (
+        <View style={styles.slashes} pointerEvents="none">
+          <View style={[styles.slash, variant === 'primary' ? styles.slashOnVolt : styles.slashOnDark]} />
+          <View style={[styles.slash, variant === 'primary' ? styles.slashOnVolt : styles.slashOnDark]} />
+        </View>
+      ) : null}
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={[styles.title, { color: textColor }]}>{title}</Text>
+        <View style={styles.content}>
+          {icon}
+          <Text style={[styles.title, size === 'lg' && styles.titleLarge, { color: textColor }]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -35,16 +55,24 @@ export function Button({ title, variant = 'primary', loading, disabled, style, .
 const styles = StyleSheet.create({
   base: {
     minHeight: 50,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  large: { minHeight: 60 },
   primary: { backgroundColor: colors.neon },
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.borderStrong },
   ghost: { backgroundColor: 'transparent' },
   quiet: { backgroundColor: 'transparent' },
-  disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-  title: { fontSize: 15, fontWeight: '900', fontStyle: 'italic', letterSpacing: 0.6, textTransform: 'uppercase' },
+  disabled: { opacity: 0.45 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
+  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: { fontFamily: fonts.display, fontSize: 17, letterSpacing: 1.2, textTransform: 'uppercase' },
+  titleLarge: { fontSize: 21, letterSpacing: 1.6 },
+  slashes: { position: 'absolute', right: 14, top: -10, bottom: -10, flexDirection: 'row', gap: 5 },
+  slash: { width: 6, transform: [{ skewX: '-24deg' }] },
+  slashOnVolt: { backgroundColor: 'rgba(22, 25, 32, 0.14)' },
+  slashOnDark: { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
 });

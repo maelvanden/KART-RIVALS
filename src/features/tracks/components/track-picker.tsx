@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  selected: { borderColor: colors.neon, backgroundColor: '#12190F' },
+  selected: { borderColor: colors.neon, backgroundColor: colors.selected },
   radio: {
     width: 20,
     height: 20,

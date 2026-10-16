@@ -41,7 +41,7 @@ export default function SignInScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#13240D', colors.background, colors.background, '#2A1206']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#252C14', colors.background, colors.background, '#2A1A14']} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
           <View style={styles.hero}>

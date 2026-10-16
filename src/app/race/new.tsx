@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  candidateOn: { borderColor: colors.neon, backgroundColor: '#12190F' },
+  candidateOn: { borderColor: colors.neon, backgroundColor: colors.selected },
   disabled: { opacity: 0.4 },
   candidateBody: { flex: 1, gap: 2 },
   candidateName: { fontWeight: '800', fontSize: 15 },

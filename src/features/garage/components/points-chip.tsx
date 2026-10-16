@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.neonDim,
     borderWidth: 1,
-    borderColor: 'rgba(57, 255, 20, 0.35)',
+    borderColor: 'rgba(222, 255, 0, 0.35)',
   },
   large: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   value: { color: colors.neon, fontWeight: '900', fontSize: 15, fontVariant: ['tabular-nums'] },

@@ -9,9 +9,9 @@
   </defs>
   <ellipse cx="60" cy="112" rx="40" ry="5" fill="#000000" fill-opacity="0.35"/>
   <g clip-path="url(#clip-shoes-neon)">
-    <rect x="0" y="0" width="120" height="120" fill="#17191D"/>
-    <rect x="48" y="0" width="8" height="120" fill="#39FF14"/><rect x="62" y="0" width="8" height="120" fill="#39FF14"/>
-        <rect x="0" y="62" width="120" height="3" fill="#39FF14" fill-opacity="0.6"/>
+    <rect x="0" y="0" width="120" height="120" fill="#1B1E26"/>
+    <rect x="48" y="0" width="8" height="120" fill="#DEFF00"/><rect x="62" y="0" width="8" height="120" fill="#DEFF00"/>
+        <rect x="0" y="62" width="120" height="3" fill="#DEFF00" fill-opacity="0.6"/>
     <rect x="0" y="0" width="120" height="120" fill="url(#light-shoes-neon)"/>
   </g>
   <g fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.5"><path d="M30 16 L60 16 C62 16 63 18 63 20 L64 66 C78 68 94 73 103 81 C109 86 109 94 105 98 L26 98 C22 98 20 95 20 91 L22 24 C22 19 25 16 30 16 Z"/></g>
