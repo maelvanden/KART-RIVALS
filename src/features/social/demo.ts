@@ -1,6 +1,6 @@
 // Mode démo : coéquipiers, écurie et Radio Paddock avec des données d'exemple (mêmes règles que le SQL).
 import { demoProfile } from '@/lib/demo';
-import type { Conversation, Friendship, Message, PilotSummary, Team, TeamInvite } from '@/types/models';
+import type { Conversation, Friendship, Message, PilotSummary, Team, TeamApplication, TeamInvite, TeamSummary } from '@/types/models';
 
 const MINUTE = 60_000;
 const ago = (minutes: number) => new Date(Date.now() - minutes * MINUTE).toISOString();
@@ -32,6 +32,8 @@ export const demoSocial = {
     tag: 'VRA',
     logo_url: null,
     color: '#DEFF00',
+    recruiting: true,
+    recruiting_message: 'On roule tous les samedis à SpeedPark, niveau Argent minimum.',
     created_at: ago(20000),
     elo: 0,
     position: 3,
@@ -43,6 +45,24 @@ export const demoSocial = {
     ],
   } as Team | null,
   invites: [] as TeamInvite[],
+  /** Autres écuries (annuaire et pages publiques). */
+  directory: [
+    { id: 'team-2', name: 'Apex Predators', tag: 'APX', logo_url: null, color: '#FF3B5C', recruiting: true, recruiting_message: 'Pilotes motivés pour les guerres d’écuries du dimanche.', elo: 1198, position: 0, member_count: 1 },
+    { id: 'team-3', name: 'Kart Republic', tag: 'KRT', logo_url: null, color: '#22D3EE', recruiting: false, recruiting_message: null, elo: 1040, position: 0, member_count: 1 },
+  ] as TeamSummary[],
+  directoryMembers: { 'team-2': ['p2'], 'team-3': ['p4'] } as Record<string, string[]>,
+  /** Candidatures (une candidature reçue par mon écurie). */
+  applications: [
+    {
+      id: 'app-1',
+      team_id: 'team-1',
+      message: 'Je roule à SpeedPark chaque semaine, je cherche une écurie sérieuse 🏁',
+      status: 'pending',
+      created_at: ago(90),
+      applicant: demoPilots.p4,
+      team: { id: 'team-1', name: 'Volt Racing Angers', tag: 'VRA', logo_url: null, color: '#DEFF00' },
+    },
+  ] as TeamApplication[],
   sentInvites: [] as PilotSummary[],
   messages: {
     'conv-team': [

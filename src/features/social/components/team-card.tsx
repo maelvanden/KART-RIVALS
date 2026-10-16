@@ -16,7 +16,10 @@ type Props = {
   team: Team;
   /** Messages non lus sur le canal de l'écurie. */
   unread?: number;
-  onChat: () => void;
+  /** Libellé au-dessus du nom (« Mon écurie » par défaut). */
+  kicker?: string;
+  /** Absent sur la page publique d'une écurie dont on n'est pas membre. */
+  onChat?: () => void;
   /** Absent si le pilote ne peut pas recruter (seul le Team Principal recrute). */
   onInvite?: () => void;
 };
@@ -26,7 +29,7 @@ type Props = {
  * Radio Paddock et Recruter. Même construction que la carte héros du Paddock (lueur Volt,
  * bandes de livrée obliques, fibre de carbone).
  */
-export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
+export function TeamCard({ team, unread = 0, kicker = 'Mon écurie', onChat, onInvite }: Props) {
   const lineup = team.members.slice(0, 5);
   // Couleur de l'écurie : liseré, lueur, bandes de livrée, tag et ELO. Les actions restent en Volt.
   const accent = team.color;
@@ -49,7 +52,7 @@ export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
           <View style={styles.kicker}>
             <View style={[styles.kickerBar, { backgroundColor: accent }]} />
             <Text variant="label" style={{ color: accent }}>
-              Mon écurie
+              {kicker}
             </Text>
           </View>
           <Text style={styles.name} numberOfLines={2}>
@@ -85,24 +88,28 @@ export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
         </Text>
       </View>
 
-      <View style={styles.actions}>
-        <Button
-          title={unread > 0 ? `Radio Paddock · ${unread}` : 'Radio Paddock'}
-          size="lg"
-          icon={<Icon name={icons.radio} size={20} color={colors.onNeon} />}
-          onPress={onChat}
-          style={styles.action}
-        />
-        {onInvite ? (
-          <Button
-            title="Recruter"
-            variant="secondary"
-            icon={<Icon name={icons.recruit} size={18} color={colors.text} />}
-            onPress={onInvite}
-            style={styles.action}
-          />
-        ) : null}
-      </View>
+      {onChat || onInvite ? (
+        <View style={styles.actions}>
+          {onChat ? (
+            <Button
+              title={unread > 0 ? `Radio Paddock · ${unread}` : 'Radio Paddock'}
+              size="lg"
+              icon={<Icon name={icons.radio} size={20} color={colors.onNeon} />}
+              onPress={onChat}
+              style={styles.action}
+            />
+          ) : null}
+          {onInvite ? (
+            <Button
+              title="Recruter"
+              variant="secondary"
+              icon={<Icon name={icons.recruit} size={18} color={colors.text} />}
+              onPress={onInvite}
+              style={styles.action}
+            />
+          ) : null}
+        </View>
+      ) : null}
     </LinearGradient>
   );
 }

@@ -61,6 +61,9 @@ Dimension sociale (migration `…_social.sql`) :
 - **Écuries** (`teams`, `team_members`, `team_invites`, vue `team_standings`) : nom, tag (2 à 4 caractères, affiché à côté du pseudo), couleur (palette de 10, `update_team_color`), blason (bucket
   `team-logos`) ; Team Principal (créateur, recrute et libère) et Pilotes officiels ; 12 pilotes max, une écurie
   par pilote ; ELO d'écurie = moyenne de ses pilotes.
+  Directeur Sportif (nommé par le Team Principal) : recrute, traite les candidatures, libère les Pilotes officiels.
+  Recrutement ouvert (`set_team_recruiting`) : annuaire « Écuries qui recrutent », candidatures (`team_applications`,
+  `apply_to_team`, `respond_team_application`), 3 candidatures en attente max par pilote.
 - **Radio Paddock** (`conversations`, `conversation_members`, `messages`) : 1v1 entre coéquipiers
   (`get_direct_conversation`) et canal de chaque écurie, non-lus via `my_conversations`. Temps réel : canal
   Supabase `radio:<conversation>` sur les INSERT de `messages` filtrés par conversation (RLS appliquée).

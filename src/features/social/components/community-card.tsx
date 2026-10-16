@@ -3,9 +3,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, icons, type IconName } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { useAuth } from '@/features/auth/auth-provider';
 import { TeamCrest } from '@/features/social/components/team-crest';
 import { useFriendships } from '@/features/social/friends';
 import { useConversations } from '@/features/social/radio';
+import { useTeamApplications, useTeamsDirectory } from '@/features/social/recruitment';
+import { isStaff } from '@/features/social/roles';
 import { useMyTeam, useMyTeamInvites } from '@/features/social/teams';
 import { colors, fonts, radius, spacing } from '@/theme';
 
@@ -21,6 +24,12 @@ export function CommunityCard() {
   const requests = friendships.data?.filter((f) => f.status === 'pending' && !f.outgoing).length ?? 0;
   const unread = conversations.data?.reduce((n, c) => n + c.unread, 0) ?? 0;
   const pendingInvites = invites.data?.length ?? 0;
+  const { userId } = useAuth();
+  const directory = useTeamsDirectory();
+  const applications = useTeamApplications(t?.id);
+  const staff = isStaff(t?.members.find((m) => m.pilot.id === userId)?.role);
+  const pendingApplications = staff ? (applications.data?.length ?? 0) : 0;
+  const recruitingTeams = directory.data?.filter((x) => x.recruiting).length ?? 0;
 
   return (
     <View style={styles.wrap}>
@@ -47,10 +56,13 @@ export function CommunityCard() {
               ? `${t.tag} · ${t.members.length} pilote${t.members.length > 1 ? 's' : ''} · ${t.elo} ELO`
               : pendingInvites > 0
                 ? `${pendingInvites} invitation${pendingInvites > 1 ? 's' : ''} en attente`
-                : 'Crée ton équipe et recrute'}
+                : recruitingTeams > 0
+                  ? `${recruitingTeams} écurie${recruitingTeams > 1 ? 's' : ''} recrute${recruitingTeams > 1 ? 'nt' : ''}`
+                  : 'Crée ton équipe et recrute'}
           </Text>
         </View>
         {pendingInvites > 0 && !t ? <Badge value={pendingInvites} /> : null}
+        {pendingApplications > 0 ? <Badge value={pendingApplications} orange /> : null}
         <Icon name={icons.chevron} color={colors.textMuted} size={16} />
       </Pressable>
 

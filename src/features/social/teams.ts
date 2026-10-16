@@ -29,7 +29,8 @@ export function useMyTeam() {
       if (isDemoMode) {
         const t = demoSocial.team;
         if (!t) return null;
-        const members = t.members.map((m) => (m.pilot.id === me().id ? { ...m, pilot: me() } : m)).sort(byElo);
+        // Copies : la démo modifie ses objets sur place, React Query doit voir un changement.
+        const members = t.members.map((m) => ({ ...m, pilot: m.pilot.id === me().id ? me() : { ...m.pilot } })).sort(byElo);
         return { ...t, members, elo: teamElo(members) };
       }
       const { data: membership, error } = await supabase
@@ -44,9 +45,9 @@ export function useMyTeam() {
   });
 }
 
-async function fetchTeam(teamId: string): Promise<Team | null> {
+export async function fetchTeam(teamId: string): Promise<Team | null> {
   const [standing, members, conversation] = await Promise.all([
-    supabase.from('team_standings').select('id, name, tag, logo_url, color, created_at, elo, position').eq('id', teamId).maybeSingle(),
+    supabase.from('team_standings').select('id, name, tag, logo_url, color, recruiting, recruiting_message, created_at, elo, position').eq('id', teamId).maybeSingle(),
     supabase.from('team_members').select(`role, joined_at, pilot:profiles (${PILOT})`).eq('team_id', teamId),
     supabase.from('conversations').select('id').eq('team_id', teamId).maybeSingle(),
   ]);
@@ -123,6 +124,8 @@ export function useCreateTeam() {
           tag: tag.trim().toUpperCase(),
           logo_url: logoUri,
           color,
+          recruiting: false,
+          recruiting_message: null,
           created_at: new Date().toISOString(),
           elo: 0,
           position: 12,
@@ -221,6 +224,8 @@ export function useRespondTeamInvite() {
         if (accept && invite) {
           demoSocial.team = {
             ...invite.team,
+            recruiting: false,
+            recruiting_message: null,
             created_at: new Date().toISOString(),
             elo: 0,
             position: 1,

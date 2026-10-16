@@ -1,37 +1,48 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon, icons } from '@/components/ui/icon';
+import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
-import { TeamCard } from '@/features/social/components/team-card';
-import { TeamColorPicker } from '@/features/social/components/color-picker';
-import { TeamCrest } from '@/features/social/components/team-crest';
 import { pickSquarePhoto } from '@/features/profile/avatar';
+import { TeamColorPicker } from '@/features/social/components/color-picker';
+import { SectionTitle } from '@/features/social/components/section-title';
+import { TeamCard } from '@/features/social/components/team-card';
+import { TeamCrest } from '@/features/social/components/team-crest';
 import { useConversations } from '@/features/social/radio';
 import {
+  useCancelApplication,
+  useMyApplications,
+  useRespondApplication,
+  useSetMemberRole,
+  useSetRecruiting,
+  useTeamApplications,
+} from '@/features/social/recruitment';
+import { isStaff, roleLabel } from '@/features/social/roles';
+import {
   useKickTeamMember,
-  useSetTeamColor,
-  useSetTeamLogo,
   useLeaveTeam,
   useMyTeam,
   useMyTeamInvites,
   useRespondTeamInvite,
   useSentTeamInvites,
+  useSetTeamColor,
+  useSetTeamLogo,
 } from '@/features/social/teams';
+import { confirmAction } from '@/lib/confirm';
 import { colors, fonts, radius, spacing } from '@/theme';
 import type { Team, TeamMember } from '@/types/models';
 
 const podium = ['#FFC83D', '#C0C7D1', '#CD7F32'];
-const roleLabel = { team_principal: 'Team Principal', pilote_officiel: 'Pilote officiel' } as const;
 
-/** Écran « Mon Écurie » : carte héros, classement interne, invitations ; ou création / invitations reçues. */
+/** Écran « Mon Écurie » : carte héros, candidatures, classement interne, réglages ; ou création et candidatures. */
 export default function MyTeamScreen() {
   const team = useMyTeam();
   const invites = useMyTeamInvites();
@@ -55,10 +66,10 @@ export default function MyTeamScreen() {
 function TeamView({ team }: { team: Team }) {
   const { userId } = useAuth();
   const conversations = useConversations();
-  const sent = useSentTeamInvites(team.id);
   const leave = useLeaveTeam();
-  const kick = useKickTeamMember();
-  const isPrincipal = team.members.some((m) => m.pilot.id === userId && m.role === 'team_principal');
+  const myRole = team.members.find((m) => m.pilot.id === userId)?.role;
+  const isPrincipal = myRole === 'team_principal';
+  const staff = isStaff(myRole);
   const unread = conversations.data?.find((c) => c.id === team.conversation_id)?.unread ?? 0;
 
   function confirmLeave() {
@@ -66,16 +77,10 @@ function TeamView({ team }: { team: Team }) {
     const message = last
       ? 'Tu es le dernier pilote : l’écurie sera dissoute.'
       : isPrincipal
-        ? 'Le pilote le plus ancien deviendra Team Principal.'
+        ? 'Un Directeur Sportif (ou à défaut le pilote le plus ancien) deviendra Team Principal.'
         : 'Tu pourras rejoindre une autre écurie.';
-    confirm(`Quitter ${team.name} ?`, message, 'Quitter', () => leave.mutate());
+    confirmAction(`Quitter ${team.name} ?`, message, 'Quitter', () => leave.mutate());
   }
-
-  function confirmKick(m: TeamMember) {
-    confirm(`Libérer ${m.pilot.username} ?`, 'Il quittera l’écurie et son canal radio.', 'Libérer', () => kick.mutate(m.pilot.id));
-  }
-
-  const error = (leave.error ?? kick.error) as Error | null;
 
   return (
     <>
@@ -83,12 +88,15 @@ function TeamView({ team }: { team: Team }) {
         team={team}
         unread={unread}
         onChat={() => team.conversation_id && router.push({ pathname: '/radio/[id]', params: { id: team.conversation_id } })}
-        onInvite={isPrincipal ? () => router.push('/team/invite') : undefined}
+        onInvite={staff ? () => router.push('/team/invite') : undefined}
       />
+
+      {staff ? <Applications team={team} /> : null}
 
       <SectionTitle
         title="Classement interne"
         detail={`${team.members.length} pilote${team.members.length > 1 ? 's' : ''}`}
+        accent={team.color}
       />
       <View style={styles.list}>
         {team.members.map((m, i) => (
@@ -104,7 +112,8 @@ function TeamView({ team }: { team: Team }) {
             leading={<Text style={[styles.position, { color: podium[i] ?? colors.textMuted }]}>{i + 1}</Text>}
             trailing={
               <View style={styles.trailing}>
-                {m.role === 'team_principal' ? <Icon name={icons.crown} size={16} color={colors.neon} /> : null}
+                {m.role === 'team_principal' ? <Icon name={icons.crown} size={16} color={team.color} /> : null}
+                {m.role === 'directeur_sportif' ? <Icon name={icons.premium} size={16} color={team.color} /> : null}
                 <Text style={styles.elo}>{m.pilot.elo}</Text>
               </View>
             }
@@ -112,38 +121,122 @@ function TeamView({ team }: { team: Team }) {
         ))}
       </View>
 
-      {isPrincipal && sent.data && sent.data.length > 0 ? (
-        <>
-          <SectionTitle title="Recrutement en cours" detail={`${sent.data.length}`} />
-          <Card style={styles.pending}>
-            {sent.data.map((p) => (
-              <View key={p.id} style={styles.pendingRow}>
-                <Icon name={icons.clock} size={14} color={colors.textMuted} />
-                <Text style={styles.pendingName}>{p.username}</Text>
-                <Text variant="caption">Invitation envoyée</Text>
-              </View>
-            ))}
-          </Card>
-        </>
-      ) : null}
-
+      {staff ? <SentInvites team={team} /> : null}
+      {isPrincipal ? <Recruitment team={team} /> : null}
       {isPrincipal ? <TeamLook team={team} /> : null}
+      {staff && team.members.length > 1 ? <Staffing team={team} myRole={myRole!} /> : null}
 
-      {isPrincipal && team.members.length > 1 ? (
-        <>
-          <SectionTitle title="Gestion de l’écurie" />
-          <View style={styles.list}>
-            {team.members
-              .filter((m) => m.pilot.id !== userId)
-              .map((m) => (
-                <Button key={m.pilot.id} title={`Libérer ${m.pilot.username}`} variant="quiet" onPress={() => confirmKick(m)} />
-              ))}
-          </View>
-        </>
-      ) : null}
-
-      {error ? <Text style={styles.error}>{error.message}</Text> : null}
+      {leave.error ? <Text style={styles.error}>{(leave.error as Error).message}</Text> : null}
       <Button title="Quitter l’écurie" variant="quiet" loading={leave.isPending} onPress={confirmLeave} />
+    </>
+  );
+}
+
+/** Candidatures reçues (staff). */
+function Applications({ team }: { team: Team }) {
+  const applications = useTeamApplications(team.id);
+  const respond = useRespondApplication();
+  const list = applications.data ?? [];
+  if (list.length === 0) return null;
+
+  return (
+    <>
+      <SectionTitle title="Candidatures" detail={`${list.length}`} accent={colors.orange} />
+      {list.map((a) => (
+        <Card key={a.id} style={styles.application}>
+          <PilotRow
+            pilotId={a.applicant.id}
+            username={a.applicant.username}
+            avatarUrl={a.applicant.avatar_url}
+            rank={a.applicant.rank}
+            elo={a.applicant.elo}
+            subtitle={`${a.applicant.elo} ELO`}
+          />
+          {a.message ? <Text style={styles.quote}>« {a.message} »</Text> : null}
+          <View style={styles.actions}>
+            <Button
+              title="Refuser"
+              variant="secondary"
+              style={styles.flex}
+              disabled={respond.isPending}
+              onPress={() => respond.mutate({ id: a.id, accept: false })}
+            />
+            <Button title="Signer" style={styles.flex} loading={respond.isPending} onPress={() => respond.mutate({ id: a.id, accept: true })} />
+          </View>
+        </Card>
+      ))}
+      {respond.error ? <Text style={styles.error}>{(respond.error as Error).message}</Text> : null}
+    </>
+  );
+}
+
+function SentInvites({ team }: { team: Team }) {
+  const sent = useSentTeamInvites(team.id);
+  if (!sent.data || sent.data.length === 0) return null;
+  return (
+    <>
+      <SectionTitle title="Recrutement en cours" detail={`${sent.data.length}`} accent={team.color} />
+      <Card style={styles.pending}>
+        {sent.data.map((p) => (
+          <View key={p.id} style={styles.pendingRow}>
+            <Icon name={icons.clock} size={14} color={colors.textMuted} />
+            <Text style={styles.pendingName}>{p.username}</Text>
+            <Text variant="caption">Invitation envoyée</Text>
+          </View>
+        ))}
+      </Card>
+    </>
+  );
+}
+
+/** Recrutement ouvert (Team Principal) : l'écurie apparaît dans « Écuries qui recrutent ». */
+function Recruitment({ team }: { team: Team }) {
+  const setRecruiting = useSetRecruiting();
+  const [message, setMessage] = useState(team.recruiting_message ?? '');
+  const dirty = message.trim() !== (team.recruiting_message ?? '');
+
+  return (
+    <>
+      <SectionTitle title="Recrutement ouvert" accent={team.color} />
+      <Card style={styles.look}>
+        <View style={styles.switchRow}>
+          <View style={styles.flex}>
+            <Text style={styles.switchTitle}>{team.recruiting ? 'L’écurie recrute' : 'Recrutement fermé'}</Text>
+            <Text variant="caption">
+              {team.recruiting
+                ? 'Les pilotes sans écurie te trouvent dans « Écuries qui recrutent » et peuvent postuler.'
+                : 'Ouvre le recrutement pour recevoir des candidatures.'}
+            </Text>
+          </View>
+          <Switch
+            value={team.recruiting}
+            disabled={setRecruiting.isPending}
+            onValueChange={(open) => setRecruiting.mutate({ open, message })}
+            trackColor={{ true: team.color, false: colors.surfaceAlt }}
+            thumbColor={colors.text}
+          />
+        </View>
+        {team.recruiting ? (
+          <>
+            <Input
+              label="Annonce (optionnel)"
+              value={message}
+              onChangeText={setMessage}
+              maxLength={140}
+              placeholder="On roule tous les samedis, niveau Argent minimum"
+            />
+            {dirty ? (
+              <Button
+                title="Publier l’annonce"
+                variant="secondary"
+                loading={setRecruiting.isPending}
+                onPress={() => setRecruiting.mutate({ open: true, message })}
+              />
+            ) : null}
+          </>
+        ) : null}
+        {setRecruiting.error ? <Text style={styles.error}>{(setRecruiting.error as Error).message}</Text> : null}
+      </Card>
     </>
   );
 }
@@ -167,7 +260,7 @@ function TeamLook({ team }: { team: Team }) {
   const error = (setColor.error ?? setLogo.error) as Error | null;
   return (
     <>
-      <SectionTitle title="Couleurs et blason" />
+      <SectionTitle title="Couleurs et blason" accent={team.color} />
       <Card style={styles.look}>
         <TeamColorPicker
           value={team.color}
@@ -187,9 +280,67 @@ function TeamLook({ team }: { team: Team }) {
   );
 }
 
+/**
+ * Gestion des pilotes. Le Team Principal nomme ou rétrograde les Directeurs Sportifs et libère n'importe qui ;
+ * un Directeur Sportif ne libère que des Pilotes officiels.
+ */
+function Staffing({ team, myRole }: { team: Team; myRole: TeamMember['role'] }) {
+  const { userId } = useAuth();
+  const setRole = useSetMemberRole();
+  const kick = useKickTeamMember();
+  const isPrincipal = myRole === 'team_principal';
+  const others = team.members.filter((m) => m.pilot.id !== userId && m.role !== 'team_principal');
+  if (others.length === 0) return null;
+
+  function confirmKick(m: TeamMember) {
+    confirmAction(`Libérer ${m.pilot.username} ?`, 'Il quittera l’écurie et son canal radio.', 'Libérer', () => kick.mutate(m.pilot.id));
+  }
+
+  const error = (setRole.error ?? kick.error) as Error | null;
+  return (
+    <>
+      <SectionTitle title="Gestion des pilotes" accent={team.color} />
+      <Card style={styles.staffing}>
+        {others.map((m) => {
+          const canKick = isPrincipal || m.role === 'pilote_officiel';
+          return (
+            <View key={m.pilot.id} style={styles.staffRow}>
+              <View style={styles.flex}>
+                <Text style={styles.staffName} numberOfLines={1}>
+                  {m.pilot.username}
+                </Text>
+                <Text variant="caption">{roleLabel[m.role]}</Text>
+              </View>
+              {isPrincipal ? (
+                <Chip
+                  title={m.role === 'directeur_sportif' ? 'Rétrograder' : 'Nommer DS'}
+                  color={team.color}
+                  disabled={setRole.isPending}
+                  onPress={() =>
+                    setRole.mutate({ pilotId: m.pilot.id, role: m.role === 'directeur_sportif' ? 'pilote_officiel' : 'directeur_sportif' })
+                  }
+                />
+              ) : null}
+              {canKick ? <Chip title="Libérer" danger disabled={kick.isPending} onPress={() => confirmKick(m)} /> : null}
+            </View>
+          );
+        })}
+        <Text variant="caption">
+          {isPrincipal
+            ? 'Un Directeur Sportif recrute, traite les candidatures et libère les Pilotes officiels. Couleurs, blason et rôles restent entre tes mains.'
+            : 'En tant que Directeur Sportif, tu peux libérer les Pilotes officiels.'}
+        </Text>
+      </Card>
+      {error ? <Text style={styles.error}>{error.message}</Text> : null}
+    </>
+  );
+}
+
 function NoTeam() {
   const invites = useMyTeamInvites();
   const respond = useRespondTeamInvite();
+  const applications = useMyApplications();
+  const cancel = useCancelApplication();
   const [answering, setAnswering] = useState<string | null>(null);
 
   return (
@@ -200,14 +351,19 @@ function NoTeam() {
           Sans écurie
         </Text>
         <Text variant="caption" style={styles.emptyText}>
-          Fonde ton écurie, choisis ton tag et ton blason, puis recrute tes coéquipiers. L’ELO de l’écurie est la
-          moyenne de ses pilotes.
+          Fonde ton écurie ou postule dans une écurie qui recrute. L’ELO de l’écurie est la moyenne de ses pilotes.
         </Text>
       </View>
       <Button
-        title="Fonder une écurie"
+        title="Écuries qui recrutent"
         size="lg"
-        icon={<Icon name={icons.team} size={20} color={colors.onNeon} />}
+        icon={<Icon name={icons.recruit} size={20} color={colors.onNeon} />}
+        onPress={() => router.push('/teams')}
+      />
+      <Button
+        title="Fonder une écurie"
+        variant="secondary"
+        icon={<Icon name={icons.team} size={18} color={colors.text} />}
         onPress={() => router.push('/team/new')}
       />
 
@@ -215,7 +371,7 @@ function NoTeam() {
         <>
           <SectionTitle title="Invitations reçues" detail={`${invites.data.length}`} />
           {invites.data.map((inv) => (
-            <Card key={inv.id} style={styles.invite}>
+            <Card key={inv.id} style={[styles.invite, { borderLeftColor: inv.team.color }]}>
               <View style={styles.inviteHeader}>
                 <TeamCrest tag={inv.team.tag} logoUrl={inv.team.logo_url} color={inv.team.color} size={48} />
                 <View style={styles.inviteText}>
@@ -228,7 +384,7 @@ function NoTeam() {
                   </Text>
                 </View>
               </View>
-              <View style={styles.inviteActions}>
+              <View style={styles.actions}>
                 <Button
                   title="Décliner"
                   variant="secondary"
@@ -254,32 +410,47 @@ function NoTeam() {
           {respond.error ? <Text style={styles.error}>{(respond.error as Error).message}</Text> : null}
         </>
       ) : null}
+
+      {applications.data && applications.data.length > 0 ? (
+        <>
+          <SectionTitle title="Mes candidatures" detail={`${applications.data.length}/3`} />
+          {applications.data.map((a) => (
+            <View key={a.id} style={[styles.applicationRow, { borderLeftColor: a.team.color }]}>
+              {/* Deux zones distinctes : ouvrir l'écurie, ou retirer la candidature (pas de bouton dans un bouton). */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Voir ${a.team.name}`}
+                onPress={() => router.push({ pathname: '/team/[id]', params: { id: a.team.id } })}
+                style={({ pressed }) => [styles.applicationLink, pressed && styles.pressed]}>
+                <TeamCrest tag={a.team.tag} logoUrl={a.team.logo_url} color={a.team.color} size={40} />
+                <View style={styles.flex}>
+                  <Text style={styles.staffName} numberOfLines={1}>
+                    {a.team.name}
+                  </Text>
+                  <Text variant="caption">En attente de réponse du staff</Text>
+                </View>
+              </Pressable>
+              <Chip title="Retirer" disabled={cancel.isPending} onPress={() => cancel.mutate(a.id)} danger />
+            </View>
+          ))}
+        </>
+      ) : null}
     </>
   );
 }
 
-function SectionTitle({ title, detail }: { title: string; detail?: string }) {
+function Chip({ title, onPress, disabled, color, danger }: { title: string; onPress: () => void; disabled?: boolean; color?: string; danger?: boolean }) {
+  const tone = danger ? colors.danger : (color ?? colors.neon);
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionBar} />
-      <Text variant="label" style={styles.sectionTitle}>
-        {title}
-      </Text>
-      {detail ? <Text variant="label">{detail}</Text> : null}
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [styles.chip, { borderColor: tone }, (pressed || disabled) && styles.pressed]}>
+      <Text style={[styles.chipText, { color: tone }]}>{title}</Text>
+    </Pressable>
   );
-}
-
-/** Confirmation native (Alert) ; sur le web, window.confirm. */
-function confirm(title: string, message: string, action: string, onConfirm: () => void) {
-  if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n${message}`)) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: 'Annuler', style: 'cancel' },
-    { text: action, style: 'destructive', onPress: onConfirm },
-  ]);
 }
 
 const styles = StyleSheet.create({
@@ -287,20 +458,39 @@ const styles = StyleSheet.create({
   position: { width: 26, textAlign: 'center', fontFamily: fonts.display, fontSize: 22 },
   trailing: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   elo: { fontFamily: fonts.display, fontSize: 20, color: colors.text, fontVariant: ['tabular-nums'] },
-  section: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  sectionBar: { width: 10, height: 3, backgroundColor: colors.neon },
-  sectionTitle: { flex: 1, color: colors.text },
+  application: { gap: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.orange },
+  quote: { fontStyle: 'italic', color: colors.textMuted },
   pending: { gap: spacing.md },
-  look: { gap: spacing.md },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pendingName: { flex: 1, fontWeight: '700' },
+  look: { gap: spacing.md },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  switchTitle: { fontWeight: '800', fontSize: 16 },
+  staffing: { gap: spacing.md },
+  staffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  staffName: { fontWeight: '800' },
+  chip: { borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 6 },
+  chipText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase' },
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   emptyTitle: { textAlign: 'center' },
   emptyText: { textAlign: 'center', maxWidth: 320 },
-  invite: { gap: spacing.lg, borderLeftWidth: 3, borderLeftColor: colors.neon, borderRadius: radius.lg },
+  invite: { gap: spacing.lg, borderLeftWidth: 3, borderRadius: radius.lg },
   inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   inviteText: { flex: 1, gap: 2 },
-  inviteActions: { flexDirection: 'row', gap: spacing.md },
+  applicationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderLeftWidth: 3,
+  },
+  applicationLink: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  actions: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },
+  pressed: { opacity: 0.7 },
   error: { color: colors.danger },
 });

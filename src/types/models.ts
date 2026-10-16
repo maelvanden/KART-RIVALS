@@ -203,7 +203,7 @@ export type Friendship = {
   pilot: PilotSummary;
 };
 
-export type TeamRole = 'team_principal' | 'pilote_officiel';
+export type TeamRole = 'team_principal' | 'directeur_sportif' | 'pilote_officiel';
 
 export type TeamMember = { role: TeamRole; joined_at: string; pilot: PilotSummary };
 
@@ -214,6 +214,9 @@ export type Team = {
   logo_url: string | null;
   /** Couleur de l'écurie (palette TEAM_COLORS). */
   color: string;
+  /** Recrutement ouvert : les pilotes sans écurie peuvent postuler. */
+  recruiting: boolean;
+  recruiting_message: string | null;
   created_at: string;
   /** ELO moyen des pilotes. */
   elo: number;
@@ -250,4 +253,19 @@ export type Message = {
   body: string;
   created_at: string;
   sender?: Pick<Profile, 'username' | 'avatar_url'>;
+};
+
+/** Écurie vue de l'extérieur (classement des écuries, page publique). */
+export type TeamSummary = Pick<Team, 'id' | 'name' | 'tag' | 'logo_url' | 'color' | 'recruiting' | 'recruiting_message' | 'elo' | 'position'> & {
+  member_count: number;
+};
+
+export type TeamApplication = {
+  id: string;
+  team_id: string;
+  message: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  created_at: string;
+  applicant: PilotSummary;
+  team: Pick<Team, 'id' | 'name' | 'tag' | 'logo_url' | 'color'>;
 };
