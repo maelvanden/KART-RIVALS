@@ -212,6 +212,8 @@ export type Team = {
   name: string;
   tag: string;
   logo_url: string | null;
+  /** Couleur de l'écurie (palette TEAM_COLORS). */
+  color: string;
   created_at: string;
   /** ELO moyen des pilotes. */
   elo: number;
@@ -224,7 +226,7 @@ export type Team = {
 export type TeamInvite = {
   id: string;
   created_at: string;
-  team: { id: string; name: string; tag: string; logo_url: string | null };
+  team: { id: string; name: string; tag: string; logo_url: string | null; color: string };
   invited_by: { username: string } | null;
 };
 

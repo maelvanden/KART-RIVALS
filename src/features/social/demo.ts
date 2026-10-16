@@ -31,6 +31,7 @@ export const demoSocial = {
     name: 'Volt Racing Angers',
     tag: 'VRA',
     logo_url: null,
+    color: '#DEFF00',
     created_at: ago(20000),
     elo: 0,
     position: 3,

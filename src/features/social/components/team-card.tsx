@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { CarbonBackdrop } from '@/components/ui/carbon-backdrop';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { withAlpha } from '@/features/social/colors';
 import { TeamCrest } from '@/features/social/components/team-crest';
 import { TEAM_MAX_MEMBERS } from '@/features/social/teams';
-import { colors, fonts, gradients, radius, rankMeta, spacing } from '@/theme';
+import { colors, fonts, radius, rankMeta, spacing } from '@/theme';
 import type { Team } from '@/types/models';
 
 type Props = {
@@ -27,35 +28,41 @@ type Props = {
  */
 export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
   const lineup = team.members.slice(0, 5);
+  // Couleur de l'écurie : liseré, lueur, bandes de livrée, tag et ELO. Les actions restent en Volt.
+  const accent = team.color;
   return (
-    <LinearGradient colors={gradients.voltGlow} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+    <LinearGradient
+      colors={[withAlpha(accent, 0.16), withAlpha(accent, 0.02), withAlpha(accent, 0)]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.card, { borderTopColor: accent }]}>
       <CarbonBackdrop opacity={0.05} />
       <View style={styles.livery} pointerEvents="none">
-        <View style={[styles.band, styles.bandWide]} />
-        <View style={[styles.band, styles.bandThin]} />
-        <View style={[styles.band, styles.bandThin]} />
+        <View style={[styles.band, styles.bandWide, { backgroundColor: withAlpha(accent, 0.09) }]} />
+        <View style={[styles.band, styles.bandThin, { backgroundColor: withAlpha(accent, 0.06) }]} />
+        <View style={[styles.band, styles.bandThin, { backgroundColor: withAlpha(accent, 0.06) }]} />
       </View>
 
       <View style={styles.header}>
-        <TeamCrest tag={team.tag} logoUrl={team.logo_url} size={78} />
+        <TeamCrest tag={team.tag} logoUrl={team.logo_url} color={accent} size={78} />
         <View style={styles.identity}>
           <View style={styles.kicker}>
-            <View style={styles.kickerBar} />
-            <Text variant="label" style={styles.kickerText}>
+            <View style={[styles.kickerBar, { backgroundColor: accent }]} />
+            <Text variant="label" style={{ color: accent }}>
               Mon écurie
             </Text>
           </View>
           <Text style={styles.name} numberOfLines={2}>
             {team.name}
           </Text>
-          <View style={styles.tagChip}>
+          <View style={[styles.tagChip, { backgroundColor: accent }]}>
             <Text style={styles.tagText}>{team.tag}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.stats}>
-        <Stat label="ELO écurie" value={team.elo} accent />
+        <Stat label="ELO écurie" value={team.elo} color={accent} />
         <View style={styles.divider} />
         <Stat label="Pilotes" value={`${team.members.length}/${TEAM_MAX_MEMBERS}`} />
         <View style={styles.divider} />
@@ -100,10 +107,10 @@ export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+function Stat({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, accent && { color: colors.neon }]}>{value}</Text>
+      <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text variant="label" numberOfLines={1} adjustsFontSizeToFit>
         {label}
       </Text>
@@ -117,23 +124,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderTopWidth: 3,
-    borderTopColor: colors.neon,
+    backgroundColor: colors.surface,
     padding: spacing.xl,
     gap: spacing.xl,
     overflow: 'hidden',
   },
   livery: { position: 'absolute', top: -60, right: 6, bottom: -60, flexDirection: 'row', gap: 8 },
   band: { transform: [{ skewX: '-22deg' }] },
-  bandWide: { width: 46, backgroundColor: 'rgba(222, 255, 0, 0.08)' },
-  bandThin: { width: 7, backgroundColor: 'rgba(222, 255, 0, 0.05)' },
+  bandWide: { width: 46 },
+  bandThin: { width: 7 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   identity: { flex: 1, gap: spacing.xs, alignItems: 'flex-start' },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  kickerBar: { width: 14, height: 3, backgroundColor: colors.neon },
-  kickerText: { color: colors.neon },
+  kickerBar: { width: 14, height: 3 },
   name: { fontFamily: fonts.display, fontSize: 30, lineHeight: 34, color: colors.text, textTransform: 'uppercase' },
   tagChip: {
-    backgroundColor: colors.neon,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 1,

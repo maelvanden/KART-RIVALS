@@ -11,10 +11,14 @@ import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
 import { TeamCard } from '@/features/social/components/team-card';
+import { TeamColorPicker } from '@/features/social/components/color-picker';
 import { TeamCrest } from '@/features/social/components/team-crest';
+import { pickSquarePhoto } from '@/features/profile/avatar';
 import { useConversations } from '@/features/social/radio';
 import {
   useKickTeamMember,
+  useSetTeamColor,
+  useSetTeamLogo,
   useLeaveTeam,
   useMyTeam,
   useMyTeamInvites,
@@ -123,6 +127,8 @@ function TeamView({ team }: { team: Team }) {
         </>
       ) : null}
 
+      {isPrincipal ? <TeamLook team={team} /> : null}
+
       {isPrincipal && team.members.length > 1 ? (
         <>
           <SectionTitle title="Gestion de l’écurie" />
@@ -138,6 +144,45 @@ function TeamView({ team }: { team: Team }) {
 
       {error ? <Text style={styles.error}>{error.message}</Text> : null}
       <Button title="Quitter l’écurie" variant="quiet" loading={leave.isPending} onPress={confirmLeave} />
+    </>
+  );
+}
+
+/** Couleurs et blason de l'écurie (Team Principal). */
+function TeamLook({ team }: { team: Team }) {
+  const setColor = useSetTeamColor();
+  const setLogo = useSetTeamLogo();
+  const [pickError, setPickError] = useState<string | null>(null);
+
+  async function changeLogo() {
+    setPickError(null);
+    try {
+      const uri = await pickSquarePhoto();
+      if (uri) setLogo.mutate({ teamId: team.id, logoUri: uri });
+    } catch (e) {
+      setPickError(e instanceof Error ? e.message : 'Impossible d’ouvrir les photos.');
+    }
+  }
+
+  const error = (setColor.error ?? setLogo.error) as Error | null;
+  return (
+    <>
+      <SectionTitle title="Couleurs et blason" />
+      <Card style={styles.look}>
+        <TeamColorPicker
+          value={team.color}
+          disabled={setColor.isPending}
+          onChange={(color) => color !== team.color && setColor.mutate({ teamId: team.id, color })}
+        />
+        <Text variant="caption">Les couleurs habillent le blason et le tag affiché à côté du pseudo de tes pilotes.</Text>
+        <Button
+          title={team.logo_url ? 'Changer le blason' : 'Ajouter un blason'}
+          variant="secondary"
+          loading={setLogo.isPending}
+          onPress={changeLogo}
+        />
+        {pickError || error ? <Text style={styles.error}>{pickError ?? error?.message}</Text> : null}
+      </Card>
     </>
   );
 }
@@ -172,7 +217,7 @@ function NoTeam() {
           {invites.data.map((inv) => (
             <Card key={inv.id} style={styles.invite}>
               <View style={styles.inviteHeader}>
-                <TeamCrest tag={inv.team.tag} logoUrl={inv.team.logo_url} size={48} />
+                <TeamCrest tag={inv.team.tag} logoUrl={inv.team.logo_url} color={inv.team.color} size={48} />
                 <View style={styles.inviteText}>
                   <Text variant="heading" numberOfLines={1}>
                     {inv.team.name}
@@ -246,6 +291,7 @@ const styles = StyleSheet.create({
   sectionBar: { width: 10, height: 3, backgroundColor: colors.neon },
   sectionTitle: { flex: 1, color: colors.text },
   pending: { gap: spacing.md },
+  look: { gap: spacing.md },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pendingName: { flex: 1, fontWeight: '700' },
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },

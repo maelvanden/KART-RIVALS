@@ -21,6 +21,7 @@ export function useSocialRealtime(userId: string | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_invites' }, refresh('team-invites'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, refresh('team', 'team-tags', 'conversations'))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refresh('conversations'))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, refresh('team', 'team-tags'))
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

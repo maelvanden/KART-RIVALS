@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { TeamCrest } from '@/features/social/components/team-crest';
 import { TeamTag } from '@/features/social/components/team-tag';
 import { useConversations } from '@/features/social/radio';
+import { useMyTeam } from '@/features/social/teams';
 import { formatMessageTime } from '@/lib/format';
 import { colors, fonts, radius, spacing } from '@/theme';
 import type { Conversation } from '@/types/models';
@@ -40,6 +41,8 @@ export default function RadioListScreen() {
 }
 
 function ConversationRow({ conversation: c }: { conversation: Conversation }) {
+  // Le seul canal d'écurie de la liste est celui de mon écurie : on reprend sa couleur.
+  const team = useMyTeam().data;
   const unread = c.unread > 0;
   return (
     <Pressable
@@ -47,7 +50,7 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
       onPress={() => router.push({ pathname: '/radio/[id]', params: { id: c.id } })}
       style={({ pressed }) => [styles.row, unread && styles.rowUnread, pressed && styles.pressed]}>
       {c.kind === 'team' ? (
-        <TeamCrest tag={c.tag ?? '?'} logoUrl={c.avatar_url} size={42} />
+        <TeamCrest tag={c.tag ?? '?'} logoUrl={c.avatar_url} color={team?.id === c.team_id ? team.color : null} size={42} />
       ) : (
         <Avatar username={c.title} url={c.avatar_url} size={44} borderColor={colors.borderStrong} />
       )}

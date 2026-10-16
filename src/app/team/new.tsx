@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { pickSquarePhoto } from '@/features/profile/avatar';
+import { DEFAULT_TEAM_COLOR } from '@/features/social/colors';
+import { TeamColorPicker } from '@/features/social/components/color-picker';
 import { TeamCrest } from '@/features/social/components/team-crest';
 import { useCreateTeam } from '@/features/social/teams';
 import { colors, spacing } from '@/theme';
@@ -20,6 +22,7 @@ export default function NewTeamScreen() {
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
+  const [color, setColor] = useState<string>(DEFAULT_TEAM_COLOR);
   const [pickError, setPickError] = useState<string | null>(null);
 
   const cleanTag = tag.trim().toUpperCase();
@@ -37,7 +40,7 @@ export default function NewTeamScreen() {
   }
 
   async function submit() {
-    await create.mutateAsync({ name, tag: cleanTag, logoUri });
+    await create.mutateAsync({ name, tag: cleanTag, logoUri, color });
     router.replace('/team');
   }
 
@@ -45,7 +48,7 @@ export default function NewTeamScreen() {
     <Screen safeTop={false}>
       <View style={styles.preview}>
         <Pressable accessibilityRole="button" accessibilityLabel="Choisir le blason" onPress={pickLogo}>
-          <TeamCrest tag={cleanTag || 'TAG'} logoUrl={logoUri} size={110} />
+          <TeamCrest tag={cleanTag || 'TAG'} logoUrl={logoUri} color={color} size={110} />
         </Pressable>
         <Text variant="title" style={styles.previewName} numberOfLines={2}>
           {name.trim() || 'Ton écurie'}
@@ -69,6 +72,12 @@ export default function NewTeamScreen() {
           Le tag s’affiche à côté du pseudo de chaque pilote de l’écurie, comme RBR pour Red Bull Racing. Tu deviens Team Principal :
           toi seul recrutes et gères les pilotes.
         </Text>
+      </Card>
+
+      <Card style={styles.form}>
+        <Text variant="label">Couleurs de l’écurie</Text>
+        <TeamColorPicker value={color} onChange={setColor} />
+        <Text variant="caption">Elles habillent le blason et le tag affiché à côté du pseudo de tes pilotes.</Text>
       </Card>
 
       {create.error ? <Text style={styles.error}>{(create.error as Error).message}</Text> : null}

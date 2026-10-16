@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
+import { DEFAULT_TEAM_COLOR } from '@/features/social/colors';
 import { demoPilots, demoSocial, me } from '@/features/social/demo';
 import { socialError } from '@/features/social/errors';
 import { isDemoMode } from '@/lib/demo';
@@ -45,7 +46,7 @@ export function useMyTeam() {
 
 async function fetchTeam(teamId: string): Promise<Team | null> {
   const [standing, members, conversation] = await Promise.all([
-    supabase.from('team_standings').select('id, name, tag, logo_url, created_at, elo, position').eq('id', teamId).maybeSingle(),
+    supabase.from('team_standings').select('id, name, tag, logo_url, color, created_at, elo, position').eq('id', teamId).maybeSingle(),
     supabase.from('team_members').select(`role, joined_at, pilot:profiles (${PILOT})`).eq('team_id', teamId),
     supabase.from('conversations').select('id').eq('team_id', teamId).maybeSingle(),
   ]);
@@ -69,7 +70,7 @@ export function useMyTeamInvites() {
       if (isDemoMode) return [...demoSocial.invites];
       const { data, error } = await supabase
         .from('team_invites')
-        .select('id, created_at, team:teams (id, name, tag, logo_url), invited_by:profiles!team_invites_invited_by_fkey (username)')
+        .select('id, created_at, team:teams (id, name, tag, logo_url, color), invited_by:profiles!team_invites_invited_by_fkey (username)')
         .eq('invitee_id', userId!)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -108,12 +109,12 @@ function useInvalidateTeam() {
     ]);
 }
 
-export type NewTeam = { name: string; tag: string; logoUri: string | null };
+export type NewTeam = { name: string; tag: string; logoUri: string | null; color: string };
 
 export function useCreateTeam() {
   const invalidate = useInvalidateTeam();
   return useMutation({
-    mutationFn: async ({ name, tag, logoUri }: NewTeam): Promise<string> => {
+    mutationFn: async ({ name, tag, logoUri, color }: NewTeam): Promise<string> => {
       if (isDemoMode) {
         if (demoSocial.team) throw new Error('Tu fais déjà partie d’une écurie.');
         demoSocial.team = {
@@ -121,6 +122,7 @@ export function useCreateTeam() {
           name: name.trim(),
           tag: tag.trim().toUpperCase(),
           logo_url: logoUri,
+          color,
           created_at: new Date().toISOString(),
           elo: 0,
           position: 12,
@@ -132,6 +134,10 @@ export function useCreateTeam() {
       }
       const { data: teamId, error } = await supabase.rpc('create_team', { p_name: name.trim(), p_tag: tag.trim().toUpperCase() });
       if (error) throw socialError(error);
+      if (color !== DEFAULT_TEAM_COLOR) {
+        const { error: colorError } = await supabase.rpc('update_team_color', { p_team_id: teamId, p_color: color });
+        if (colorError) throw socialError(colorError);
+      }
       // Le blason s'envoie une fois l'écurie créée (seul son Team Principal peut écrire dans son dossier).
       if (logoUri) {
         const url = await uploadTeamLogo(teamId as string, logoUri);
@@ -167,6 +173,22 @@ export function useSetTeamLogo() {
       }
       const url = await uploadTeamLogo(teamId, logoUri);
       const { error } = await supabase.rpc('update_team_logo', { p_team_id: teamId, p_logo_url: url });
+      if (error) throw socialError(error);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Change la couleur de l'écurie (Team Principal). */
+export function useSetTeamColor() {
+  const invalidate = useInvalidateTeam();
+  return useMutation({
+    mutationFn: async ({ teamId, color }: { teamId: string; color: string }) => {
+      if (isDemoMode) {
+        if (demoSocial.team) demoSocial.team.color = color;
+        return;
+      }
+      const { error } = await supabase.rpc('update_team_color', { p_team_id: teamId, p_color: color });
       if (error) throw socialError(error);
     },
     onSuccess: invalidate,
@@ -231,7 +253,7 @@ export function useLeaveTeam() {
           {
             id: 'inv-demo',
             created_at: new Date().toISOString(),
-            team: { id: 'team-2', name: 'Apex Predators', tag: 'APX', logo_url: null },
+            team: { id: 'team-2', name: 'Apex Predators', tag: 'APX', logo_url: null, color: '#FF3B5C' },
             invited_by: { username: demoPilots.p3.username },
           },
         ];

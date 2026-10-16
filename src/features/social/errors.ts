@@ -9,6 +9,7 @@ const messages: Record<string, string> = {
   'Team name already taken': 'Ce nom d’écurie est déjà pris.',
   'Team tag already taken': 'Ce tag est déjà pris par une autre écurie.',
   'Only the Team Principal can change the crest': 'Seul le Team Principal peut changer le blason.',
+  'Only the Team Principal can change the colors': 'Seul le Team Principal peut changer les couleurs.',
   'Only the Team Principal can recruit': 'Seul le Team Principal peut recruter.',
   'Pilot already belongs to a team': 'Ce pilote court déjà pour une écurie.',
   'Team is full': 'L’écurie est complète (12 pilotes maximum).',

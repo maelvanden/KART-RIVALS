@@ -58,7 +58,7 @@ Dimension sociale (migration `…_social.sql`) :
 
 - **Coéquipiers** (`friendships`) : recherche par @pseudo, demande en attente → acceptée / refusée
   (`send_friend_request`, `respond_friend_request`, `remove_friend`) ; défi et radio en un geste depuis la liste.
-- **Écuries** (`teams`, `team_members`, `team_invites`, vue `team_standings`) : nom, tag (2 à 4 caractères, affiché à côté du pseudo), blason (bucket
+- **Écuries** (`teams`, `team_members`, `team_invites`, vue `team_standings`) : nom, tag (2 à 4 caractères, affiché à côté du pseudo), couleur (palette de 10, `update_team_color`), blason (bucket
   `team-logos`) ; Team Principal (créateur, recrute et libère) et Pilotes officiels ; 12 pilotes max, une écurie
   par pilote ; ELO d'écurie = moyenne de ses pilotes.
 - **Radio Paddock** (`conversations`, `conversation_members`, `messages`) : 1v1 entre coéquipiers

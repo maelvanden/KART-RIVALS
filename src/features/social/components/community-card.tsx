@@ -34,9 +34,9 @@ export function CommunityCard() {
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/team')}
-        style={({ pressed }) => [styles.team, pressed && styles.pressed]}>
+        style={({ pressed }) => [styles.team, t ? { borderLeftColor: t.color } : null, pressed && styles.pressed]}>
         <View style={styles.teamBand} pointerEvents="none" />
-        <TeamCrest tag={t?.tag ?? '?'} logoUrl={t?.logo_url ?? null} size={52} />
+        <TeamCrest tag={t?.tag ?? '?'} logoUrl={t?.logo_url ?? null} color={t?.color} size={52} />
         <View style={styles.teamText}>
           <Text variant="label">{t ? 'Mon écurie' : 'Écurie'}</Text>
           <Text style={styles.teamName} numberOfLines={1}>
