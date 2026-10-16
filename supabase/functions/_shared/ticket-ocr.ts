@@ -13,7 +13,7 @@ export function normalize(text: string): string {
 }
 
 /** Lettres et chiffres seulement : « Jean-Dupont » et « JEAN DUPONT » deviennent « jeandupont ». */
-const compact = (text: string) => normalize(text).replace(/[^a-z0-9]/g, '');
+export const compact = (text: string) => normalize(text).replace(/[^a-z0-9]/g, '');
 
 /**
  * Distance d'édition minimale entre `needle` et une sous-chaîne quelconque de `haystack`
@@ -32,15 +32,19 @@ function substringDistance(needle: string, haystack: string): number {
   return Math.min(...prev);
 }
 
+/** `target` figure-t-il dans `text` (1 erreur de lecture tolérée tous les 6 caractères) ? */
+function fuzzyIncludes(text: string, target: string): boolean {
+  const tolerance = Math.floor(target.length / 6);
+  return text.includes(target) || (tolerance > 0 && substringDistance(target, text) <= tolerance);
+}
+
 /** Lignes du ticket où figure le nom déclaré (1 erreur de lecture tolérée tous les 6 caractères). */
 export function linesWithName(lines: string[], name: string): number[] {
   const target = compact(name);
   if (target.length < 2) return [];
-  const tolerance = Math.floor(target.length / 6);
   const found: number[] = [];
   lines.forEach((line, i) => {
-    const text = compact(line);
-    if (text.includes(target) || (tolerance > 0 && substringDistance(target, text) <= tolerance)) found.push(i);
+    if (fuzzyIncludes(compact(line), target)) found.push(i);
   });
   return found;
 }
@@ -109,22 +113,73 @@ export function clockTimesIn(text: string): string[] {
   return times;
 }
 
+/** Mots qu'on trouve sur un ticket de chronométrage de karting (français et anglais). */
+const KARTING_WORDS = [
+  'kart', 'tour', 'lap', 'best', 'meilleur', 'session', 'pilote', 'driver', 'temps', 'time',
+  'classement', 'position', 'pos', 'manche', 'heat', 'race', 'course', 'chrono', 'ecart', 'gap',
+];
+
+/**
+ * Le texte ressemble-t-il à un vrai ticket de chronométrage ?
+ * Au moins 3 temps au tour imprimés et 2 mots du vocabulaire du karting.
+ */
+export function looksLikeTimingTicket(lines: string[]): boolean {
+  const lapCount = lines.reduce((n, line) => n + lapTimesIn(line).length, 0);
+  const words = new Set(lines.join(' ').split(/[^a-z]+/));
+  const vocabulary = KARTING_WORDS.filter((w) => [...words].some((word) => word.startsWith(w))).length;
+  return lapCount >= 3 && vocabulary >= 2;
+}
+
+/** Mots trop génériques pour identifier un circuit. */
+const GENERIC_TRACK_WORDS = new Set([
+  'karting', 'kart', 'karts', 'circuit', 'piste', 'racing', 'race', 'park', 'indoor', 'outdoor', 'club', 'loisirs',
+  'loisir', 'center', 'centre', 'sport', 'sports', 'speed', 'land', 'world', 'arena', 'saint', 'sainte', 'sur', 'les',
+]);
+
+/**
+ * Le ticket mentionne-t-il le circuit du check-in (nom ou ville) ?
+ * Si le nom du circuit n'a aucun mot distinctif, le contrôle est ignoré.
+ */
+export function mentionsTrack(lines: string[], trackName: string, city: string): boolean {
+  const keys = `${trackName} ${city}`
+    .split(/[\s\-'’·,()]+/)
+    .map(compact)
+    .filter((w) => w.length >= 4 && !GENERIC_TRACK_WORDS.has(w));
+  if (keys.length === 0) return true;
+  const text = lines.map(compact).join('');
+  return keys.some((k) => fuzzyIncludes(text, k));
+}
+
 export type TicketCheck =
   | { ok: true; date: string; time: string; lapMs: number }
-  | { ok: false; code: 'NOT_A_TICKET' | 'NAME_NOT_FOUND' | 'LAP_NOT_FOUND' | 'TICKET_DATE_UNREADABLE' | 'TICKET_TIME_UNREADABLE' };
+  | {
+      ok: false;
+      code: 'NOT_A_TICKET' | 'TRACK_NOT_FOUND' | 'NAME_NOT_FOUND' | 'LAP_NOT_FOUND' | 'TICKET_DATE_UNREADABLE' | 'TICKET_TIME_UNREADABLE';
+    };
+
+export type TicketClaim = {
+  /** Nom imprimé sur le ticket, déclaré par le pilote. */
+  name: string;
+  /** Meilleur tour déclaré par le pilote. */
+  lapMs: number;
+  /** Circuit choisi au check-in. */
+  trackName: string;
+  trackCity: string;
+};
 
 /**
  * Contrôle du texte OCR face aux déclarations du pilote.
  * L'heure retenue est la PLUS TÔT imprimée : l'heure de session précède toujours l'heure d'impression,
  * et en cas de doute c'est le joueur, pas le tricheur, qui doit reprendre sa photo.
  */
-export function checkTicketText(ocrText: string, claimedName: string, claimedLapMs: number): TicketCheck {
+export function checkTicketText(ocrText: string, claim: TicketClaim): TicketCheck {
   const lines = ocrText.split(/\r?\n/).map(normalize).filter(Boolean);
-  if (lines.join('').replace(/\s/g, '').length < 10) return { ok: false, code: 'NOT_A_TICKET' };
+  if (!looksLikeTimingTicket(lines)) return { ok: false, code: 'NOT_A_TICKET' };
+  if (!mentionsTrack(lines, claim.trackName, claim.trackCity)) return { ok: false, code: 'TRACK_NOT_FOUND' };
 
-  const nameLines = linesWithName(lines, claimedName);
+  const nameLines = linesWithName(lines, claim.name);
   if (nameLines.length === 0) return { ok: false, code: 'NAME_NOT_FOUND' };
-  if (!lapMatches(lines, nameLines, claimedLapMs)) return { ok: false, code: 'LAP_NOT_FOUND' };
+  if (!lapMatches(lines, nameLines, claim.lapMs)) return { ok: false, code: 'LAP_NOT_FOUND' };
 
   const all = lines.join('\n');
   const date = findDate(all);
@@ -134,5 +189,5 @@ export function checkTicketText(ocrText: string, claimedName: string, claimedLap
   const times = (datedTimes.length > 0 ? datedTimes : clockTimesIn(all)).sort();
   if (times.length === 0) return { ok: false, code: 'TICKET_TIME_UNREADABLE' };
 
-  return { ok: true, date, time: times[0], lapMs: claimedLapMs };
+  return { ok: true, date, time: times[0], lapMs: claim.lapMs };
 }

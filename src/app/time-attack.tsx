@@ -12,7 +12,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile } from '@/features/profile/api';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
-import { pickTicketPhoto, useStartTimeAttack, useSubmitTicket, useTimeAttackSessions } from '@/features/time-attack/api';
+import { takeTicketPhoto, useStartTimeAttack, useSubmitTicket, useTimeAttackSessions } from '@/features/time-attack/api';
 import {
   TicketRejectedError,
   describeTicketRejection,
@@ -70,7 +70,7 @@ function CheckIn() {
         </Text>
         <Text variant="heading">Engage-toi avant de rouler</Text>
         <Rule n={1} text="Appuie sur « Je pars rouler » avant le briefing : l’heure du check-in est enregistrée par le serveur." />
-        <Rule n={2} text="Après ta session, envoie dans les 90 minutes la photo du ticket imprimé, avec le nom et le meilleur tour qui y figurent." />
+        <Rule n={2} text="Après ta session, prends ton ticket en photo depuis l’app dans les 90 minutes, avec le nom et le meilleur tour qui y figurent." />
         <Rule n={3} text="L’heure de session imprimée sur le ticket doit être postérieure à ton check-in, sinon il est refusé." />
         <Rule n={4} text="Pas de ticket valide au bout de 90 minutes : abandon (DNF) et perte d’ELO." />
       </Card>
@@ -104,10 +104,10 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
     setPickError(null);
     submit.reset();
     try {
-      const photo = await pickTicketPhoto();
+      const photo = await takeTicketPhoto();
       if (photo) submit.mutate({ sessionId: s.id, photo, ticketName: ticketName.trim(), bestLapMs });
     } catch (e) {
-      setPickError(e instanceof Error ? e.message : 'Impossible d’ouvrir les photos.');
+      setPickError(e instanceof Error ? e.message : 'Impossible d’ouvrir l’appareil photo.');
     }
   }
 
@@ -148,7 +148,7 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
 
       {!expired ? (
         <Card style={styles.block}>
-          <Text variant="caption">Recopie ce qui est imprimé sur ton ticket : on vérifie que ça figure bien sur la photo.</Text>
+          <Text variant="caption">Recopie ce qui est imprimé sur ton ticket, puis photographie-le en entier, à plat et bien éclairé : on vérifie le circuit, ton nom, ton temps et l’heure de la session.</Text>
           <Input
             label="Nom sur le ticket"
             value={ticketName}
@@ -176,7 +176,7 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
 
       {!expired ? (
         <Button
-          title={submit.isPending ? 'Lecture du ticket…' : 'Envoyer la photo du ticket'}
+          title={submit.isPending ? 'Lecture du ticket…' : 'Prendre le ticket en photo'}
           loading={submit.isPending}
           disabled={!canSend}
           onPress={sendTicket}

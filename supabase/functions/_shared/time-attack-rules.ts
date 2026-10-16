@@ -9,6 +9,7 @@ export type TicketErrorCode =
   | 'SESSION_CLOSED'
   | 'DEADLINE_PASSED'
   | 'NOT_A_TICKET'
+  | 'TRACK_NOT_FOUND'
   | 'NAME_NOT_FOUND'
   | 'LAP_NOT_FOUND'
   | 'TICKET_TIME_UNREADABLE'

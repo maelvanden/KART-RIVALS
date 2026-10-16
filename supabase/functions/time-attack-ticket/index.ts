@@ -14,7 +14,7 @@
 // par le serveur. La décision finale est prise en SQL (record_time_attack_ticket).
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
 
-import { checkTicketText } from '../_shared/ticket-ocr.ts';
+import { checkTicketText, compact } from '../_shared/ticket-ocr.ts';
 import { checkTicketTiming, wallClockToUtc, type TicketErrorCode } from '../_shared/time-attack-rules.ts';
 import { readTicketText } from './ocr-space.ts';
 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
   // ---------- Session : contrôles avant de lire le ticket ----------
   const { data: session, error: sessionError } = await admin
     .from('time_attack_sessions')
-    .select('id, pilot_id, status, check_in_at, deadline_at')
+    .select('id, pilot_id, status, check_in_at, deadline_at, track:tracks (name, city)')
     .eq('id', sessionId)
     .maybeSingle();
   if (sessionError) throw sessionError;
@@ -93,6 +93,11 @@ Deno.serve(async (req) => {
   const { data: file, error: fileError } = await admin.storage.from(BUCKET).download(ticketPath);
   if (fileError || !file) return refuse(400, 'BAD_REQUEST', times);
 
+  // Empreinte de la photo : une même image ne peut valider qu'une seule session.
+  const photoSha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
   let ocrText: string;
   try {
     ocrText = await readTicketText(file, OCR_SPACE_API_KEY);
@@ -101,9 +106,15 @@ Deno.serve(async (req) => {
     return refuse(503, 'OCR_UNAVAILABLE', times);
   }
 
-  // Le nom et le temps déclarés doivent figurer sur le ticket ; la date est exigée
-  // (sans elle, un vieux ticket « 15:00 » passerait pour une session du jour).
-  const reading = checkTicketText(ocrText, ticketName, claimedLapMs);
+  // Vrai ticket de chronométrage, du circuit du check-in, où figurent le nom et le temps déclarés ;
+  // la date est exigée (sans elle, un vieux ticket « 15:00 » passerait pour une session du jour).
+  const track = session.track as unknown as { name: string; city: string } | null;
+  const reading = checkTicketText(ocrText, {
+    name: ticketName,
+    lapMs: claimedLapMs,
+    trackName: track?.name ?? '',
+    trackCity: track?.city ?? '',
+  });
   if (!reading.ok) return refuse(422, reading.code, times);
   const ticketAt = wallClockToUtc(reading.date, reading.time, TICKET_TIME_ZONE);
   if (!ticketAt) return refuse(422, 'TICKET_TIME_UNREADABLE', times);
@@ -119,6 +130,10 @@ Deno.serve(async (req) => {
     p_best_lap_ms: claimedLapMs,
     p_ticket_path: ticketPath,
     p_received_at: receivedAt.toISOString(),
+    p_ticket_name: ticketName,
+    p_ticket_name_key: compact(ticketName),
+    p_photo_sha256: photoSha256,
+    p_ocr_text: ocrText,
   });
   if (recordError) throw recordError;
 
@@ -130,7 +145,5 @@ Deno.serve(async (req) => {
     return refuse(status, code, { ...details, status: result.status });
   }
 
-  // Trace du ticket retenu (en cas de contestation).
-  await admin.from('time_attack_sessions').update({ ticket_name: ticketName, ocr_text: ocrText.slice(0, 5000) }).eq('id', sessionId);
   return json(200, { ok: true, ...details, best_lap_ms: claimedLapMs });
 });

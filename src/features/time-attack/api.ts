@@ -61,9 +61,16 @@ export function useStartTimeAttack() {
   });
 }
 
-/** Photo du ticket depuis la galerie (prise avec l'appareil photo une fois le téléphone récupéré). */
-export async function pickTicketPhoto(): Promise<TicketPhoto | null> {
-  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+/**
+ * Photo du ticket prise avec l'appareil photo, depuis l'app (la galerie n'est pas proposée :
+ * pas de vieille photo ni d'image retouchée). Null si le pilote annule.
+ */
+export async function takeTicketPhoto(): Promise<TicketPhoto | null> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Autorise l’accès à l’appareil photo dans les réglages pour photographier ton ticket.');
+  }
+  const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
   if (result.canceled) return null;
   const { uri, width } = result.assets[0];
   return { uri, width };

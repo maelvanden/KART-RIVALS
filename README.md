@@ -29,9 +29,11 @@ Flux d'un défi :
 Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `time-attack-ticket`) :
 
 1. Check-in « Je pars rouler » (`start_time_attack`) : l'heure est celle du serveur ; le pilote a 90 min.
-2. Le pilote recopie le nom et le meilleur tour imprimés, puis envoie la photo du ticket → bucket privé
-   `time-attack-tickets` → Edge Function : le texte est lu par OCR (OCR.space, gratuit) ; le nom et le temps déclarés
-   doivent y figurer (sur la même ligne pour une feuille de classement), la date et l'heure de session sont repérées. **L'heure de session du ticket doit être strictement postérieure au check-in**, sinon refus
+2. Le pilote recopie le nom et le meilleur tour imprimés, puis photographie le ticket depuis l'app (appareil photo
+   uniquement) → bucket privé `time-attack-tickets` → Edge Function : le texte est lu par OCR (OCR.space, gratuit).
+   Contrôles : vrai ticket de chronométrage (≥ 3 temps au tour + vocabulaire du karting), circuit du check-in
+   (nom ou ville), nom et temps déclarés présents (sur la même ligne pour une feuille de classement), date et heure
+   de session repérées. Un ticket ou une photo ne valide qu'une session, tous pilotes confondus. **L'heure de session du ticket doit être strictement postérieure au check-in**, sinon refus
    (`TICKET_BEFORE_CHECK_IN`). Décision finale sous verrou en SQL (`record_time_attack_ticket`), un ticket ne sert qu'une fois.
 3. Sans ticket valide 90 min après le check-in : DNF et −15 ELO (`expire_time_attack_sessions`, pg_cron toutes les 5 min).
 

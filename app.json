@@ -45,7 +45,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Kart Rivals accède à tes photos pour choisir ta photo de profil.",
-          "cameraPermission": false
+          "cameraPermission": "Kart Rivals utilise l'appareil photo pour photographier ton ticket de karting."
         }
       ]
     ],

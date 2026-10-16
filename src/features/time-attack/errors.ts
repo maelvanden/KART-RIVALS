@@ -61,8 +61,9 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
       return {
         severe: true,
         title: 'Ticket déjà utilisé',
-        message: 'Ce ticket a déjà validé une autre de tes sessions Time Attack. Chaque ticket ne compte qu’une fois.',
-        hint: 'Envoie le ticket de la session que tu viens de courir.',
+        message:
+          'Ce ticket (ou cette photo) a déjà validé une session Time Attack, la tienne ou celle d’un autre pilote. Chaque ticket ne compte qu’une fois.',
+        hint: 'Photographie le ticket de la session que tu viens de courir.',
       };
     case 'TICKET_IN_FUTURE':
       return {
@@ -88,7 +89,8 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
     case 'NOT_A_TICKET':
       return {
         title: 'Ce n’est pas un ticket de chronométrage',
-        message: 'La photo doit montrer le ticket imprimé remis par le circuit après ta session (heure de session et meilleur tour).',
+        message:
+          'La photo doit montrer le ticket imprimé remis par le circuit après ta session : on doit y lire tes temps au tour (au moins 3), la date et l’heure de la session.',
         hint: RETAKE,
       };
     case 'DEADLINE_PASSED':
@@ -102,6 +104,12 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
       return { title: 'Session déjà clôturée', message: 'Cette session Time Attack est déjà validée ou terminée.' };
     case 'SESSION_NOT_FOUND':
       return { title: 'Session introuvable', message: 'Cette session Time Attack n’existe pas ou ne t’appartient pas.' };
+    case 'TRACK_NOT_FOUND':
+      return {
+        title: 'Circuit introuvable sur le ticket',
+        message: 'Le nom ou la ville du circuit choisi au check-in n’apparaît pas sur le ticket. Seuls les tickets du circuit où tu as fait ton check-in comptent.',
+        hint: 'Photographie le ticket en entier, en-tête compris (c’est là que le circuit est imprimé).',
+      };
     case 'NAME_NOT_FOUND':
       return {
         title: 'Nom introuvable sur le ticket',
