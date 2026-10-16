@@ -82,7 +82,10 @@ function TeamView({ team }: { team: Team }) {
         onInvite={isPrincipal ? () => router.push('/team/invite') : undefined}
       />
 
-      <SectionTitle title="Classement interne" detail={`${team.members.length} pilotes`} />
+      <SectionTitle
+        title="Classement interne"
+        detail={`${team.members.length} pilote${team.members.length > 1 ? 's' : ''}`}
+      />
       <View style={styles.list}>
         {team.members.map((m, i) => (
           <PilotRow

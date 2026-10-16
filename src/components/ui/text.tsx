@@ -32,9 +32,20 @@ function resolveFont(variant: Variant, style: TextStyle): TextStyle {
   return { fontFamily: family, fontWeight: 'normal', fontStyle: 'normal' };
 }
 
+/**
+ * Oswald dépasse de sa boîte de ligne par défaut : sans hauteur de ligne explicite, iOS rogne le haut et
+ * le bas des lettres (les « O » deviennent des « 0 »). On en fixe une proportionnelle à la taille.
+ */
+function displayLineHeight(style: TextStyle, font: TextStyle): TextStyle {
+  const family = style.fontFamily ?? font.fontFamily;
+  if (style.lineHeight || (family !== fonts.display && family !== fonts.displayMedium)) return {};
+  return { lineHeight: Math.ceil((style.fontSize ?? 15) * 1.35) };
+}
+
 export function Text({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
   const flat = StyleSheet.flatten([styles.base, styles[variant], style]);
-  return <RNText style={[flat, resolveFont(variant, flat)]} {...rest} />;
+  const font = resolveFont(variant, flat);
+  return <RNText style={[flat, font, displayLineHeight(flat, font)]} {...rest} />;
 }
 
 const styles = StyleSheet.create({

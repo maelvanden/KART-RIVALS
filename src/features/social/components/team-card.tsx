@@ -59,7 +59,7 @@ export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
         <View style={styles.divider} />
         <Stat label="Pilotes" value={`${team.members.length}/${TEAM_MAX_MEMBERS}`} />
         <View style={styles.divider} />
-        <Stat label="Classement" value={`#${team.position}`} />
+        <Stat label="Rang" value={`#${team.position}`} />
       </View>
 
       <View style={styles.lineup}>
@@ -104,7 +104,9 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
   return (
     <View style={styles.stat}>
       <Text style={[styles.statValue, accent && { color: colors.neon }]}>{value}</Text>
-      <Text variant="label">{label}</Text>
+      <Text variant="label" numberOfLines={1} adjustsFontSizeToFit>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -147,7 +149,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: spacing.md,
   },
-  stat: { flex: 1, alignItems: 'center', gap: 2 },
+  stat: { flex: 1, alignItems: 'center', gap: 2, paddingHorizontal: spacing.xs },
   statValue: { fontFamily: fonts.display, fontSize: 30, lineHeight: 34, color: colors.text, fontVariant: ['tabular-nums'] },
   divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
   lineup: { flexDirection: 'row', alignItems: 'center' },
