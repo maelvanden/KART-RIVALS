@@ -43,3 +43,9 @@ export const rankThresholds: { tier: RankTier; min: number }[] = [
 export function rankForElo(elo: number): RankTier {
   return rankThresholds.findLast((t) => elo >= t.min)?.tier ?? 'novice';
 }
+
+/** Vrai si `rank` est au moins `min` (même ordre que l'enum rank_tier en base). */
+export function rankAtLeast(rank: RankTier, min: RankTier): boolean {
+  const index = (tier: RankTier) => rankThresholds.findIndex((t) => t.tier === tier);
+  return index(rank) >= index(min);
+}

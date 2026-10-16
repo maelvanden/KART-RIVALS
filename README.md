@@ -43,6 +43,17 @@ Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Accoun
 (clé gratuite sur ocr.space/ocrapi). Le Time Attack reste masqué dans l'app tant que `TIME_ATTACK_ENABLED`
 (`src/features/time-attack/config.ts`) vaut false.
 
+Garage virtuel + boutique (migration `…_user_gear.sql`, écran `src/app/shop.tsx`) :
+
+- **Points** : 200 à l'inscription, puis gagnés en roulant — défi ou course validé +20 (+30 de plus en cas de victoire),
+  Time Attack validé +30. Solde `profiles.points`, journal `point_transactions` (alimentés uniquement par des triggers).
+- **Catalogue** `gear_items` : 5 slots (casque, combinaison, gants, bottines, protège-côtes), raretés Location / Commun /
+  Rare / Épique / Légendaire. Les objets s'achètent en points ou se **gagnent** en atteignant un rang (Argent, Or…).
+- **Collection** `user_items` + **équipement porté** `user_gear` (pas de ligne = équipement de location), modifiés
+  uniquement par `buy_gear_item()` et `equip_gear_item()`.
+- **Visuels** : SVG génériques et fictifs (aucune marque ni logo) dans `assets/gear/`, générés par
+  `node scripts/generate-gear-art.mjs` (à relancer après avoir ajouté un objet, en plus de la ligne SQL).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

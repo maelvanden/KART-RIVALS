@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
+import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
 import {
   useBadgeStats,
   useEloHistory,
@@ -61,6 +62,7 @@ export default function PilotScreen() {
               }
             />
           ) : null}
+          <VirtualGarage profileId={profile.data.id} editable={isMe} />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
           {laps.data ? <LapRecordsCard records={laps.data} isMe={isMe} /> : null}
