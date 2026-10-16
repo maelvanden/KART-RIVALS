@@ -9,6 +9,7 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { nextRankProgress } from '@/features/profile/components/license-card';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { colors, fonts, gradients, radius, rankMeta, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
@@ -33,7 +34,10 @@ export function PaddockHero({ profile }: { profile: Profile }) {
           <Text variant="heading" numberOfLines={1} style={styles.username}>
             {profile.username}
           </Text>
-          <RankBadge rank={profile.rank} size="sm" />
+          <View style={styles.badges}>
+            <TeamTag pilotId={profile.id} />
+            <RankBadge rank={profile.rank} size="sm" />
+          </View>
         </View>
         {profile.kart_number ? (
           <View style={styles.plate}>
@@ -84,6 +88,7 @@ const styles = StyleSheet.create({
   bandThin: { width: 8, backgroundColor: 'rgba(222, 255, 0, 0.05)' },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   identityText: { flex: 1, gap: spacing.xs },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   username: { fontSize: 24, lineHeight: 28 },
   plate: {
     backgroundColor: colors.text,

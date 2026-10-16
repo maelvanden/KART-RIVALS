@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { colors, gradients, radius, rankMeta, rankThresholds, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
 
@@ -47,7 +48,10 @@ export function LicenseCard({ profile }: { profile: Profile }) {
         <Avatar username={profile.username} url={profile.avatar_url} size={64} borderColor={accent} />
         <View style={styles.identityText}>
           <Text variant="title" numberOfLines={1}>{profile.username}</Text>
-          <RankBadge rank={profile.rank} />
+          <View style={styles.badges}>
+            <TeamTag pilotId={profile.id} size="md" />
+            <RankBadge rank={profile.rank} />
+          </View>
           {profile.home_track ? (
             <Text variant="caption" numberOfLines={1}>
               Circuit favori : {profile.home_track.name} · {profile.home_track.city}
@@ -98,6 +102,7 @@ function Stat({ label, value, color }: { label: string; value: number | string; 
 }
 
 const styles = StyleSheet.create({
+  badges: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   card: {
     borderRadius: radius.lg,
     borderWidth: 1,

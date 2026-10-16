@@ -67,7 +67,7 @@ export default function NearbyScreen() {
               avatarUrl={p.avatar_url}
               rank={p.rank}
               elo={p.elo}
-              subtitle={`${p.elo} ELO · ${p.wins}V ${p.losses}D`}
+              subtitle={`${p.elo} ELO`}
               trailing={<Button title="Défier" style={styles.challenge} onPress={() => challenge(p.id, p.username)} />}
             />
           ))}
@@ -103,7 +103,7 @@ export default function NearbyScreen() {
               avatarUrl={p.avatar_url}
               rank={p.rank}
               elo={p.elo}
-              subtitle={`${formatKm(Number(p.distance_km))} · ${p.elo} ELO · ${p.wins}V ${p.losses}D`}
+              subtitle={`${formatKm(Number(p.distance_km))} · ${p.elo} ELO`}
               trailing={<Button title="Défier" style={styles.challenge} onPress={() => challenge(p.id, p.username)} />}
             />
           ))}

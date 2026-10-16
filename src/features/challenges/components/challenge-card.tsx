@@ -6,6 +6,7 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { challengeStep, needsMe, stepLabel } from '@/features/challenges/state';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { dateTimeFormat } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { Challenge } from '@/types/models';
@@ -35,7 +36,12 @@ export function ChallengeCard({ challenge, myId, linked }: Props) {
       <View style={styles.versus}>
         <Text variant="heading" style={styles.vs}>VS</Text>
         <View style={styles.rival}>
-          <Text variant="heading">{rival.username}</Text>
+          <View style={styles.rivalName}>
+            <TeamTag pilotId={rival.id} />
+            <Text variant="heading" numberOfLines={1} style={styles.rivalUsername}>
+              {rival.username}
+            </Text>
+          </View>
           <View style={styles.rivalMeta}>
             <RankBadge rank={rival.rank} size="sm" />
             <Text variant="caption">{rival.elo} ELO</Text>
@@ -73,6 +79,8 @@ function Detail({ icon, text }: { icon: (typeof icons)[keyof typeof icons]; text
 }
 
 const styles = StyleSheet.create({
+  rivalName: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rivalUsername: { flexShrink: 1 },
   card: { gap: spacing.md },
   highlight: { borderColor: colors.orange },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

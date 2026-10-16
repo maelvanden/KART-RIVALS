@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { TeamCrest } from '@/features/social/components/team-crest';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { useConversations } from '@/features/social/radio';
 import { formatMessageTime } from '@/lib/format';
 import { colors, fonts, radius, spacing } from '@/theme';
@@ -52,6 +53,7 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
       )}
       <View style={styles.body}>
         <View style={styles.titleRow}>
+          {c.kind === 'direct' ? <TeamTag pilotId={c.other_id} /> : null}
           <Text variant="heading" numberOfLines={1} style={styles.title}>
             {c.kind === 'team' ? `[${c.tag}] ${c.title}` : c.title}
           </Text>

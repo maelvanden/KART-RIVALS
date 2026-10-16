@@ -47,7 +47,7 @@ export default function LeaderboardScreen() {
           avatarUrl={entry.avatar_url}
           rank={entry.rank}
           elo={entry.elo}
-          subtitle={`${entry.wins} victoires · ${entry.losses} défaites`}
+          subtitle={`${entry.wins} V · ${entry.losses} D`}
           highlighted={entry.id === userId}
           leading={
             <Text style={[styles.position, { color: podium[entry.position - 1] ?? colors.textMuted }]}>

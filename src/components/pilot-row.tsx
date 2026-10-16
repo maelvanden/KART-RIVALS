@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { colors, rankMeta, spacing } from '@/theme';
 import type { RankTier } from '@/types/models';
 
@@ -28,10 +29,14 @@ export function PilotRow({ pilotId, username, avatarUrl = null, rank, elo, subti
       <Avatar username={username} url={avatarUrl} size={42} borderColor={rankMeta[rank].color} />
       <View style={styles.body}>
         <View style={styles.nameRow}>
+          <TeamTag pilotId={pilotId} />
           <Text variant="heading" numberOfLines={1} style={styles.name}>{username}</Text>
-          <RankBadge rank={rank} size="sm" />
         </View>
-        <Text variant="caption">{subtitle}</Text>
+        {/* Rang sur la 2e ligne : le pseudo (et le tag d'écurie) gardent toute la largeur. */}
+        <View style={styles.metaRow}>
+          <RankBadge rank={rank} size="sm" />
+          <Text variant="caption" numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
+        </View>
       </View>
       {trailing ?? <Text style={styles.elo}>{elo}</Text>}
     </View>
@@ -48,6 +53,8 @@ export function PilotRow({ pilotId, username, avatarUrl = null, rank, elo, subti
 }
 
 const styles = StyleSheet.create({
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  subtitle: { flexShrink: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

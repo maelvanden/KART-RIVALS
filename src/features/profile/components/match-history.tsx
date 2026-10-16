@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { colors, radius, spacing } from '@/theme';
 import type { PilotMatch } from '@/types/models';
 
@@ -30,10 +31,11 @@ export function MatchHistory({ matches, title = 'Derniers matchs' }: { matches: 
               </View>
               <View style={styles.body}>
                 <Link href={{ pathname: '/pilot/[id]', params: { id: m.opponent_id } }} asChild>
-                  <Pressable hitSlop={6}>
+                  <Pressable hitSlop={6} style={styles.opponentRow}>
                     <Text style={styles.opponent} numberOfLines={1}>
                       vs {m.opponent_username}
                     </Text>
+                    <TeamTag pilotId={m.opponent_id} />
                   </Pressable>
                 </Link>
                 <Text variant="caption" numberOfLines={1}>
@@ -56,6 +58,7 @@ export function MatchHistory({ matches, title = 'Derniers matchs' }: { matches: 
 }
 
 const styles = StyleSheet.create({
+  opponentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   card: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   outcome: { width: 32, height: 32, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },

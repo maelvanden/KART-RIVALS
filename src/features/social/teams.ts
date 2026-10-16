@@ -104,6 +104,7 @@ function useInvalidateTeam() {
       queryClient.invalidateQueries({ queryKey: ['team'] }),
       queryClient.invalidateQueries({ queryKey: ['team-invites'] }),
       queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+      queryClient.invalidateQueries({ queryKey: ['team-tags'] }),
     ]);
 }
 

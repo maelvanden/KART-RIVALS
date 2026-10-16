@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { TeamTag } from '@/features/social/components/team-tag';
 import { formatLapTime } from '@/lib/format';
 import { colors, spacing } from '@/theme';
 import type { Challenge, Match } from '@/types/models';
@@ -27,9 +28,12 @@ export function ResultSummary({ challenge, match }: { challenge: Challenge; matc
         const won = match.winner_id === pilot.id;
         return (
           <View key={pilot.id} style={[styles.row, won && styles.winner]}>
-            <Text variant="heading" style={styles.name}>
-              {pilot.username}
-            </Text>
+            <View style={styles.pilot}>
+              <TeamTag pilotId={pilot.id} />
+              <Text variant="heading" numberOfLines={1} style={styles.name}>
+                {pilot.username}
+              </Text>
+            </View>
             <Text style={[styles.value, { color: won ? colors.neon : colors.text }]}>
               {value === null ? '—' : isLap ? formatLapTime(value) : `P${value}`}
             </Text>
@@ -42,6 +46,7 @@ export function ResultSummary({ challenge, match }: { challenge: Challenge; matc
 }
 
 const styles = StyleSheet.create({
+  pilot: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   card: { gap: spacing.md },
   row: {
     flexDirection: 'row',

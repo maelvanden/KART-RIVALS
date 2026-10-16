@@ -19,7 +19,7 @@ export function useSocialRealtime(userId: string | null) {
       .channel(`social:${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, refresh('friendships'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_invites' }, refresh('team-invites'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, refresh('team', 'conversations'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, refresh('team', 'team-tags', 'conversations'))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refresh('conversations'))
       .subscribe();
     return () => {
