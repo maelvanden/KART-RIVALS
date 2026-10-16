@@ -18,6 +18,7 @@ import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
+import { useSocialRealtime } from '@/features/social/realtime';
 import { useMyProfile } from '@/features/profile/api';
 import { colors } from '@/theme';
 
@@ -55,6 +56,7 @@ function RootNavigator() {
   const { isLoading, userId } = useAuth();
   const profile = useMyProfile();
   useChallengesRealtime(userId);
+  useSocialRealtime(userId);
 
   if (isLoading || (userId && profile.isPending)) {
     return (
@@ -87,6 +89,12 @@ function RootNavigator() {
         <Stack.Screen name="race/[id]" options={{ ...detailHeader, title: 'Course' }} />
         <Stack.Screen name="time-attack" options={{ ...detailHeader, title: 'Time Attack' }} />
         <Stack.Screen name="shop" options={{ ...detailHeader, title: 'Boutique' }} />
+        <Stack.Screen name="team/index" options={{ ...detailHeader, title: 'Mon Écurie' }} />
+        <Stack.Screen name="team/new" options={{ ...detailHeader, presentation: 'modal', title: 'Fonder une écurie' }} />
+        <Stack.Screen name="team/invite" options={{ ...detailHeader, presentation: 'modal', title: 'Recruter' }} />
+        <Stack.Screen name="friends" options={{ ...detailHeader, title: 'Coéquipiers' }} />
+        <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
+        <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen
           name="edit-profile"
           options={{ ...detailHeader, presentation: 'modal', title: 'Modifier ma licence' }}

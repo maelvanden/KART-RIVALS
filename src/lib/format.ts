@@ -29,3 +29,12 @@ export const dateTimeFormat = new Intl.DateTimeFormat('fr-FR', {
 export function formatKm(km: number): string {
   return `${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km`;
 }
+
+const messageTimeFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const messageDayFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+
+/** Heure d'un message aujourd'hui (« 14:25 »), sinon sa date (« 12 oct. »). */
+export function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toDateString() === new Date().toDateString() ? messageTimeFormat.format(d) : messageDayFormat.format(d);
+}

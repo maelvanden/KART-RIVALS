@@ -42,6 +42,11 @@ export const icons = {
   lock: { ios: 'lock.fill', material: 'lock' },
   group: { ios: 'person.3.fill', material: 'groups' },
   checkCircle: { ios: 'checkmark.circle.fill', material: 'check_circle' },
+  radio: { ios: 'antenna.radiowaves.left.and.right', material: 'cell_tower' },
+  recruit: { ios: 'person.badge.plus', material: 'person_add' },
+  teammates: { ios: 'person.2.fill', material: 'group' },
+  team: { ios: 'shield.checkered', material: 'shield_person' },
+  send: { ios: 'paperplane.fill', material: 'send' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

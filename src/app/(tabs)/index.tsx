@@ -10,6 +10,7 @@ import { useMyChallenges } from '@/features/challenges/api';
 import { challengeStep, needsMe } from '@/features/challenges/state';
 import { useMyPoints } from '@/features/garage/api';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
+import { CommunityCard } from '@/features/social/components/community-card';
 import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
 import { BadgesCard } from '@/features/profile/components/badges-card';
 import { EloChart } from '@/features/profile/components/elo-chart';
@@ -109,6 +110,7 @@ export default function PaddockScreen() {
             ]}
           />
 
+          <CommunityCard />
           <VirtualGarage profileId={p.id} editable />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}

@@ -54,6 +54,17 @@ Garage virtuel + boutique (migration `…_user_gear.sql`, écran `src/app/shop.t
 - **Visuels** : SVG génériques et fictifs (aucune marque ni logo) dans `assets/gear/`, générés par
   `node scripts/generate-gear-art.mjs` (à relancer après avoir ajouté un objet, en plus de la ligne SQL).
 
+Dimension sociale (migration `…_social.sql`) :
+
+- **Coéquipiers** (`friendships`) : recherche par @pseudo, demande en attente → acceptée / refusée
+  (`send_friend_request`, `respond_friend_request`, `remove_friend`) ; défi et radio en un geste depuis la liste.
+- **Écuries** (`teams`, `team_members`, `team_invites`, vue `team_standings`) : nom, tag [ABC], blason (bucket
+  `team-logos`) ; Team Principal (créateur, recrute et libère) et Pilotes officiels ; 12 pilotes max, une écurie
+  par pilote ; ELO d'écurie = moyenne de ses pilotes.
+- **Radio Paddock** (`conversations`, `conversation_members`, `messages`) : 1v1 entre coéquipiers
+  (`get_direct_conversation`) et canal de chaque écurie, non-lus via `my_conversations`. Temps réel : canal
+  Supabase `radio:<conversation>` sur les INSERT de `messages` filtrés par conversation (RLS appliquée).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

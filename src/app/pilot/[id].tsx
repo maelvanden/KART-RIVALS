@@ -19,6 +19,7 @@ import { EloChart } from '@/features/profile/components/elo-chart';
 import { HeadToHeadCard } from '@/features/profile/components/head-to-head-card';
 import { LicenseCard } from '@/features/profile/components/license-card';
 import { MatchHistory } from '@/features/profile/components/match-history';
+import { FollowButton } from '@/features/social/components/follow-button';
 
 export default function PilotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -62,6 +63,7 @@ export default function PilotScreen() {
               }
             />
           ) : null}
+          {!isMe ? <FollowButton pilotId={profile.data.id} username={profile.data.username} /> : null}
           <VirtualGarage profileId={profile.data.id} editable={isMe} />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}

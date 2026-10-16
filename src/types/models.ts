@@ -186,3 +186,66 @@ export type TimeAttackSession = {
   elo_penalty: number | null;
   track: Track;
 };
+
+// ---------- Social : coéquipiers, écuries, Radio Paddock ----------
+
+export type PilotSummary = Pick<Profile, 'id' | 'username' | 'avatar_url' | 'elo' | 'rank'>;
+
+export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
+
+/** Relation avec un autre pilote, vue depuis le pilote connecté. */
+export type Friendship = {
+  id: string;
+  status: FriendshipStatus;
+  /** true si c'est moi qui ai envoyé la demande. */
+  outgoing: boolean;
+  created_at: string;
+  pilot: PilotSummary;
+};
+
+export type TeamRole = 'team_principal' | 'pilote_officiel';
+
+export type TeamMember = { role: TeamRole; joined_at: string; pilot: PilotSummary };
+
+export type Team = {
+  id: string;
+  name: string;
+  tag: string;
+  logo_url: string | null;
+  created_at: string;
+  /** ELO moyen des pilotes. */
+  elo: number;
+  /** Place au classement des écuries. */
+  position: number;
+  members: TeamMember[];
+  conversation_id: string | null;
+};
+
+export type TeamInvite = {
+  id: string;
+  created_at: string;
+  team: { id: string; name: string; tag: string; logo_url: string | null };
+  invited_by: { username: string } | null;
+};
+
+export type Conversation = {
+  id: string;
+  kind: 'direct' | 'team';
+  team_id: string | null;
+  title: string;
+  tag: string | null;
+  avatar_url: string | null;
+  other_id: string | null;
+  last_message: string | null;
+  last_message_at: string | null;
+  unread: number;
+};
+
+export type Message = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  sender?: Pick<Profile, 'username' | 'avatar_url'>;
+};
