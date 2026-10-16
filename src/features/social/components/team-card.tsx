@@ -49,7 +49,7 @@ export function TeamCard({ team, unread = 0, onChat, onInvite }: Props) {
             {team.name}
           </Text>
           <View style={styles.tagChip}>
-            <Text style={styles.tagText}>[{team.tag}]</Text>
+            <Text style={styles.tagText}>{team.tag}</Text>
           </View>
         </View>
       </View>

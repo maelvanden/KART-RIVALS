@@ -66,7 +66,7 @@ export default function NewTeamScreen() {
           maxLength={4}
         />
         <Text variant="caption">
-          Le tag s’affiche entre crochets à côté du nom, comme [RBR] pour Red Bull Racing. Tu deviens Team Principal :
+          Le tag s’affiche à côté du pseudo de chaque pilote de l’écurie, comme RBR pour Red Bull Racing. Tu deviens Team Principal :
           toi seul recrutes et gères les pilotes.
         </Text>
       </Card>

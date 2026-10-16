@@ -27,7 +27,7 @@ export default function RadioScreen() {
   useRadioRealtime(id);
   useMarkRead(id, messages.data?.at(-1)?.id);
 
-  const title = conversation ? (isTeam ? `[${conversation.tag}] ${conversation.title}` : conversation.title) : 'Radio Paddock';
+  const title = conversation?.title ?? 'Radio Paddock';
   const canSend = draft.trim().length > 0 && !send.isPending;
 
   function submit() {

@@ -178,7 +178,8 @@ function NoTeam() {
                     {inv.team.name}
                   </Text>
                   <Text variant="caption">
-                    [{inv.team.tag}]{inv.invited_by ? ` · recruté par ${inv.invited_by.username}` : ''}
+                    {inv.team.tag}
+                    {inv.invited_by ? ` · recruté par ${inv.invited_by.username}` : ''}
                   </Text>
                 </View>
               </View>

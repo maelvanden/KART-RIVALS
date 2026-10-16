@@ -55,7 +55,7 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
         <View style={styles.titleRow}>
           {c.kind === 'direct' ? <TeamTag pilotId={c.other_id} /> : null}
           <Text variant="heading" numberOfLines={1} style={styles.title}>
-            {c.kind === 'team' ? `[${c.tag}] ${c.title}` : c.title}
+            {c.title}
           </Text>
           {c.last_message_at ? <Text variant="caption">{formatMessageTime(c.last_message_at)}</Text> : null}
         </View>

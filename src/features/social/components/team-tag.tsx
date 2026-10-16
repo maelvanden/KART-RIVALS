@@ -6,13 +6,13 @@ import { colors, fonts, radius } from '@/theme';
 
 type Props = { pilotId: string | null | undefined; size?: 'sm' | 'md' };
 
-/** Tag d'écurie à côté du pseudo : « [VRA] » en Volt, coupé en biais. Rien si le pilote n'a pas d'écurie. */
+/** Tag d'écurie à côté du pseudo : « VRA » en Volt, coupé en biais. Rien si le pilote n'a pas d'écurie. */
 export function TeamTag({ pilotId, size = 'sm' }: Props) {
   const tag = useTeamTag(pilotId);
   if (!tag) return null;
   return (
     <View style={[styles.chip, size === 'md' && styles.chipMd]} accessibilityLabel={`Écurie ${tag}`}>
-      <Text style={[styles.text, size === 'md' && styles.textMd]}>[{tag}]</Text>
+      <Text style={[styles.text, size === 'md' && styles.textMd]}>{tag}</Text>
     </View>
   );
 }

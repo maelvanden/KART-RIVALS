@@ -44,7 +44,7 @@ export function CommunityCard() {
           </Text>
           <Text variant="caption" numberOfLines={1}>
             {t
-              ? `[${t.tag}] · ${t.members.length} pilote${t.members.length > 1 ? 's' : ''} · ${t.elo} ELO`
+              ? `${t.tag} · ${t.members.length} pilote${t.members.length > 1 ? 's' : ''} · ${t.elo} ELO`
               : pendingInvites > 0
                 ? `${pendingInvites} invitation${pendingInvites > 1 ? 's' : ''} en attente`
                 : 'Crée ton équipe et recrute'}
