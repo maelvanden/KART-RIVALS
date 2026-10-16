@@ -12,7 +12,8 @@ import type {
   TrackLapRecord,
   TrackRecord,
 } from '@/types/models';
-import type { UserGear } from '@/features/garage/catalog';
+import type { Garage, GearItem } from '@/features/garage/catalog';
+import { rankAtLeast } from '@/theme';
 
 /**
  * Mode démo : `EXPO_PUBLIC_DEMO_MODE=true` court-circuite Supabase et affiche des données
@@ -289,9 +290,75 @@ export const demoRaces: Race[] = [
   },
 ];
 
-/** Garage virtuel par pilote (modifié en place quand le pilote démo change un slot). */
-export const demoGear: Record<string, Partial<UserGear>> = {
-  'demo-me': { helmet: 'stilo', gloves: 'alpinestars' },
-  p1: { helmet: 'arai', suit: 'sparco', gloves: 'sparco', shoes: 'sparco', rib_protector: 'bengio' },
-  p3: { helmet: 'bell', suit: 'omp' },
+/** Catalogue de la boutique (copie de la migration 20261020000016_user_gear.sql). */
+export const demoGearCatalog: GearItem[] = (
+  [
+    ['helmet-rental', 'helmet', 'Casque de location', 'starter', 0, null],
+    ['helmet-street', 'helmet', 'Casque Street', 'common', 150, null],
+    ['helmet-neon', 'helmet', 'Casque Néon Rush', 'rare', 400, null],
+    ['helmet-thunder', 'helmet', 'Casque Thunder', 'rare', 0, 'argent'],
+    ['helmet-inferno', 'helmet', 'Casque Inferno', 'epic', 900, null],
+    ['helmet-crown', 'helmet', "Casque Couronne d'Or", 'legendary', 0, 'or'],
+    ['suit-rental', 'suit', 'Combinaison de location', 'starter', 0, null],
+    ['suit-classic', 'suit', 'Combinaison Classic', 'common', 150, null],
+    ['suit-neon', 'suit', 'Combinaison Néon Rush', 'rare', 450, null],
+    ['suit-thunder', 'suit', 'Combinaison Thunder', 'rare', 0, 'argent'],
+    ['suit-carbon', 'suit', 'Combinaison Carbone', 'epic', 1000, null],
+    ['suit-champion', 'suit', 'Combinaison Champion', 'legendary', 0, 'platine'],
+    ['gloves-rental', 'gloves', 'Gants de location', 'starter', 0, null],
+    ['gloves-grip', 'gloves', 'Gants Grip', 'common', 100, null],
+    ['gloves-neon', 'gloves', 'Gants Néon Rush', 'rare', 300, null],
+    ['gloves-inferno', 'gloves', 'Gants Inferno', 'epic', 700, null],
+    ['gloves-gold', 'gloves', 'Gants Or Pur', 'legendary', 0, 'or'],
+    ['shoes-rental', 'shoes', 'Bottines de location', 'starter', 0, null],
+    ['shoes-sprint', 'shoes', 'Bottines Sprint', 'common', 100, null],
+    ['shoes-neon', 'shoes', 'Bottines Néon Rush', 'rare', 300, null],
+    ['shoes-thunder', 'shoes', 'Bottines Thunder', 'rare', 0, 'argent'],
+    ['shoes-carbon', 'shoes', 'Bottines Carbone', 'epic', 700, null],
+    ['rib-rental', 'rib_protector', 'Protège-côtes de location', 'starter', 0, null],
+    ['rib-shield', 'rib_protector', 'Protège-côtes Shield', 'common', 120, null],
+    ['rib-neon', 'rib_protector', 'Protège-côtes Néon', 'rare', 350, null],
+    ['rib-titan', 'rib_protector', 'Protège-côtes Titan', 'epic', 800, null],
+    ['rib-legend', 'rib_protector', 'Protège-côtes Légende', 'legendary', 0, 'diamant'],
+  ] as const
+).map(([id, slot, name, rarity, price, unlock_rank], sort) => ({ id, slot, name, rarity, price, unlock_rank, sort }));
+
+/** Solde du pilote démo (modifié en place par les achats). */
+export const demoWallet = { points: 640 };
+
+/** Garages des pilotes démo (modifiés en place par les achats et changements d'équipement). */
+const demoGarages: Record<string, Garage> = {
+  'demo-me': { owned: ['helmet-neon', 'gloves-grip'], equipped: { helmet: 'helmet-neon', gloves: 'gloves-grip' } },
+  p1: {
+    owned: ['helmet-inferno', 'suit-carbon', 'gloves-inferno', 'shoes-carbon', 'rib-titan', 'helmet-thunder'],
+    equipped: { helmet: 'helmet-inferno', suit: 'suit-carbon', gloves: 'gloves-inferno', shoes: 'shoes-carbon', rib_protector: 'rib-titan' },
+  },
+  p3: {
+    owned: ['helmet-crown', 'gloves-gold', 'suit-thunder'],
+    equipped: { helmet: 'helmet-crown', gloves: 'gloves-gold', suit: 'suit-thunder' },
+  },
 };
+
+export function demoGarageFor(profileId: string): Garage {
+  return (demoGarages[profileId] ??= { owned: [], equipped: {} });
+}
+
+/** Achat / récompense en démo, mêmes règles et codes d'erreur que buy_gear_item(). */
+export function demoBuyGearItem(profileId: string, item: GearItem) {
+  const garage = demoGarageFor(profileId);
+  const me = demoPilot(profileId);
+  if (item.rarity === 'starter' || garage.owned.includes(item.id)) throw new Error('ALREADY_OWNED');
+  if (item.unlock_rank && me && !rankAtLeast(me.rank, item.unlock_rank)) throw new Error('RANK_REQUIRED');
+  if (demoWallet.points < item.price) throw new Error('NOT_ENOUGH_POINTS');
+  demoWallet.points = demoWallet.points - item.price;
+  garage.owned.push(item.id);
+  garage.equipped[item.slot] = item.id;
+}
+
+/** Changement d'équipement en démo, mêmes règles que equip_gear_item(). */
+export function demoEquipGearItem(profileId: string, item: GearItem) {
+  const garage = demoGarageFor(profileId);
+  if (item.rarity === 'starter') delete garage.equipped[item.slot];
+  else if (garage.owned.includes(item.id)) garage.equipped[item.slot] = item.id;
+  else throw new Error('NOT_OWNED');
+}

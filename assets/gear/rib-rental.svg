@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="240" height="240">
+  <defs>
+    <clipPath id="clip-rib-rental"><path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18 L98 28 L98 92 C98 99 93 104 86 104 L34 104 C27 104 22 99 22 92 L22 28 Z"/></clipPath>
+    <linearGradient id="light-rib-rental" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="112" rx="40" ry="5" fill="#000000" fill-opacity="0.35"/>
+  <g clip-path="url(#clip-rib-rental)">
+    <rect x="0" y="0" width="120" height="120" fill="#7D838D"/>
+    <circle cx="38" cy="40" r="9" fill="#B9BEC6" fill-opacity="0.35"/><circle cx="84" cy="82" r="12" fill="#555B64" fill-opacity="0.5"/>
+        <path d="M26 70 L44 64 M70 30 L86 36" stroke="#555B64" stroke-width="2" stroke-linecap="round"/>
+        <rect x="68" y="76" width="22" height="12" rx="2" fill="#F2F4F7" fill-opacity="0.85"/>
+    <rect x="0" y="0" width="120" height="120" fill="url(#light-rib-rental)"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.5"><path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18 L98 28 L98 92 C98 99 93 104 86 104 L34 104 C27 104 22 99 22 92 L22 28 Z"/></g>
+  
+      <path d="M32 56 L50 58 M32 68 L50 70 M32 80 L50 82 M70 58 L88 56 M70 70 L88 68 M70 82 L88 80" stroke="#0E0F12" stroke-width="4" stroke-linecap="round"/>
+      <rect x="54" y="48" width="12" height="52" rx="4" fill="#0E0F12" fill-opacity="0.6"/>
+      <path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18" fill="none" stroke="#0E0F12" stroke-width="4" stroke-linejoin="round"/>
+</svg>

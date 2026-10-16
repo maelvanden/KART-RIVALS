@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="240" height="240">
+  <defs>
+    <clipPath id="clip-shoes-rental"><path d="M30 16 L60 16 C62 16 63 18 63 20 L64 66 C78 68 94 73 103 81 C109 86 109 94 105 98 L26 98 C22 98 20 95 20 91 L22 24 C22 19 25 16 30 16 Z"/></clipPath>
+    <linearGradient id="light-shoes-rental" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="112" rx="40" ry="5" fill="#000000" fill-opacity="0.35"/>
+  <g clip-path="url(#clip-shoes-rental)">
+    <rect x="0" y="0" width="120" height="120" fill="#7D838D"/>
+    <circle cx="38" cy="40" r="9" fill="#B9BEC6" fill-opacity="0.35"/><circle cx="84" cy="82" r="12" fill="#555B64" fill-opacity="0.5"/>
+        <path d="M26 70 L44 64 M70 30 L86 36" stroke="#555B64" stroke-width="2" stroke-linecap="round"/>
+        <rect x="68" y="76" width="22" height="12" rx="2" fill="#F2F4F7" fill-opacity="0.85"/>
+    <rect x="0" y="0" width="120" height="120" fill="url(#light-shoes-rental)"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.5"><path d="M30 16 L60 16 C62 16 63 18 63 20 L64 66 C78 68 94 73 103 81 C109 86 109 94 105 98 L26 98 C22 98 20 95 20 91 L22 24 C22 19 25 16 30 16 Z"/></g>
+  
+      <path d="M20 92 L106 92 C108 96 106 103 101 104 L25 104 C21 104 19 100 20 92 Z" fill="#0E0F12"/>
+      <rect x="22" y="40" width="42" height="9" rx="3" fill="#0E0F12"/>
+      <rect x="52" y="42" width="9" height="5" rx="1.5" fill="#FFFFFF" fill-opacity="0.35"/>
+      <path d="M64 70 L70 78 M72 72 L78 80 M80 75 L86 83" stroke="#000000" stroke-opacity="0.3" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="22" y="16" width="41" height="6" rx="3" fill="#000000" fill-opacity="0.2"/>
+</svg>

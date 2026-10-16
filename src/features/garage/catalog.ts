@@ -1,55 +1,67 @@
 import { icons, type IconName } from '@/components/ui/icon';
+import type { RankTier } from '@/types/models';
 
-/**
- * Catalogue du garage virtuel — doit rester aligné sur les enums de la migration
- * 20261020000016_user_gear.sql. Marques en texte brut uniquement : aucun logo officiel dans l'app.
- */
-export const HELMET_BRANDS = ['arai', 'bell', 'shoei', 'stilo', 'zamp', 'ls2', 'omp', 'sparco', 'autre'] as const;
-export const APPAREL_BRANDS = ['sparco', 'alpinestars', 'omp', 'freem', 'sabelt', 'puma', 'autre'] as const;
-export const RIB_PROTECTOR_BRANDS = ['bengio', 'tillett', 'sodi', 'omp', 'sparco', 'autre'] as const;
+/** Types alignés sur la migration 20261020000016_user_gear.sql (gear_slot, gear_rarity, gear_items). */
+export type GearSlot = 'helmet' | 'suit' | 'gloves' | 'shoes' | 'rib_protector';
+export type GearRarity = 'starter' | 'common' | 'rare' | 'epic' | 'legendary';
 
-export type HelmetBrand = (typeof HELMET_BRANDS)[number];
-export type ApparelBrand = (typeof APPAREL_BRANDS)[number];
-export type RibProtectorBrand = (typeof RIB_PROTECTOR_BRANDS)[number];
-export type GearBrand = HelmetBrand | ApparelBrand | RibProtectorBrand;
-
-/** Une ligne de la table user_gear (null = équipement de location). */
-export type UserGear = {
-  helmet: HelmetBrand | null;
-  suit: ApparelBrand | null;
-  gloves: ApparelBrand | null;
-  shoes: ApparelBrand | null;
-  rib_protector: RibProtectorBrand | null;
+export type GearItem = {
+  id: string;
+  slot: GearSlot;
+  name: string;
+  rarity: GearRarity;
+  /** Prix en points (0 pour la location et les récompenses de rang). */
+  price: number;
+  /** Rang requis : récompense gratuite si price = 0, sinon condition d'achat. */
+  unlock_rank: RankTier | null;
+  sort: number;
 };
 
-export type GearCategory = keyof UserGear;
-
-export const EMPTY_GEAR: UserGear = { helmet: null, suit: null, gloves: null, shoes: null, rib_protector: null };
-
-export const brandLabels: Record<GearBrand, string> = {
-  arai: 'Arai',
-  bell: 'Bell',
-  shoei: 'Shoei',
-  stilo: 'Stilo',
-  zamp: 'Zamp',
-  ls2: 'LS2',
-  omp: 'OMP',
-  sparco: 'Sparco',
-  alpinestars: 'Alpinestars',
-  freem: 'FreeM',
-  sabelt: 'Sabelt',
-  puma: 'Puma',
-  bengio: 'Bengio',
-  tillett: 'Tillett',
-  sodi: 'Sodi',
-  autre: 'Autre',
+/** Collection et équipement d'un pilote. Un slot absent de `equipped` = équipement de location. */
+export type Garage = {
+  owned: string[];
+  equipped: Partial<Record<GearSlot, string>>;
 };
 
-/** Les 5 slots, dans l'ordre d'affichage, avec une icône générique par catégorie. */
-export const gearSlots: { category: GearCategory; label: string; icon: IconName; brands: readonly GearBrand[] }[] = [
-  { category: 'helmet', label: 'Casque', icon: icons.helmet, brands: HELMET_BRANDS },
-  { category: 'suit', label: 'Combinaison', icon: icons.suit, brands: APPAREL_BRANDS },
-  { category: 'gloves', label: 'Gants', icon: icons.gloves, brands: APPAREL_BRANDS },
-  { category: 'shoes', label: 'Bottines', icon: icons.shoes, brands: APPAREL_BRANDS },
-  { category: 'rib_protector', label: 'Protège-côtes', icon: icons.ribProtector, brands: RIB_PROTECTOR_BRANDS },
+export const gearSlots: { slot: GearSlot; label: string; icon: IconName }[] = [
+  { slot: 'helmet', label: 'Casque', icon: icons.helmet },
+  { slot: 'suit', label: 'Combinaison', icon: icons.suit },
+  { slot: 'gloves', label: 'Gants', icon: icons.gloves },
+  { slot: 'shoes', label: 'Bottines', icon: icons.shoes },
+  { slot: 'rib_protector', label: 'Protège-côtes', icon: icons.ribProtector },
 ];
+
+export const slotLabels = Object.fromEntries(gearSlots.map((s) => [s.slot, s.label])) as Record<GearSlot, string>;
+
+export const rarityMeta: Record<GearRarity, { label: string; color: string }> = {
+  starter: { label: 'Location', color: '#8A93A3' },
+  common: { label: 'Commun', color: '#C0C7D1' },
+  rare: { label: 'Rare', color: '#5AA9FF' },
+  epic: { label: 'Épique', color: '#B26BFF' },
+  legendary: { label: 'Légendaire', color: '#FFC83D' },
+};
+
+/** Barème des points (appliqué côté base, voir la migration). */
+export const POINTS_RULES = [
+  { label: 'Victoire (défi ou course)', points: 50 },
+  { label: 'Défi ou course validé', points: 20 },
+  { label: 'Time Attack validé', points: 30 },
+];
+
+/** Équipement de location du slot (porté quand rien d'autre n'est équipé). */
+export function starterFor(catalog: GearItem[], slot: GearSlot) {
+  return catalog.find((i) => i.slot === slot && i.rarity === 'starter');
+}
+
+export function equippedItem(catalog: GearItem[], garage: Garage, slot: GearSlot) {
+  const id = garage.equipped[slot];
+  return (id && catalog.find((i) => i.id === id)) || starterFor(catalog, slot);
+}
+
+export function isOwned(item: GearItem, garage: Garage) {
+  return item.rarity === 'starter' || garage.owned.includes(item.id);
+}
+
+export function isEquipped(item: GearItem, garage: Garage) {
+  return garage.equipped[item.slot] ? garage.equipped[item.slot] === item.id : item.rarity === 'starter';
+}

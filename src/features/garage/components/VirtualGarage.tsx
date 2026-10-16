@@ -1,240 +1,233 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Icon, icons } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { useSetGear } from '@/features/garage/api';
-import { brandLabels, gearSlots, type GearBrand, type UserGear } from '@/features/garage/catalog';
+import { useEquipGearItem, useGarage, useGearCatalog, useMyPoints } from '@/features/garage/api';
+import {
+  equippedItem,
+  gearSlots,
+  isEquipped,
+  isOwned,
+  rarityMeta,
+  type Garage,
+  type GearItem,
+  type GearSlot,
+} from '@/features/garage/catalog';
+import { GearArt } from '@/features/garage/components/gear-art';
+import { PointsChip } from '@/features/garage/components/points-chip';
+import { gearErrorMessage } from '@/features/garage/errors';
 import { colors, radius, spacing } from '@/theme';
 
-const RENTAL_LABEL = 'Équipement de location';
-
-type Slot = (typeof gearSlots)[number];
-
 type Props = {
-  gear: UserGear;
-  /** Vrai sur le profil du pilote connecté : les slots s'ouvrent pour choisir une marque. */
+  profileId: string;
+  /** Vrai sur le profil du pilote connecté : changer d'équipement, accès à la boutique. */
   editable?: boolean;
 };
 
 /**
- * Garage virtuel : 5 slots d'équipement illustrés par des icônes génériques (aucun logo de marque).
- * Un slot vide affiche « Équipement de location ».
+ * Garage virtuel : les 5 équipements portés par le pilote, gagnés ou achetés avec ses points.
+ * Visuels génériques (aucun logo de marque) ; un slot vide affiche l'équipement de location.
  */
-export function VirtualGarage({ gear, editable = false }: Props) {
-  const [openSlot, setOpenSlot] = useState<Slot | null>(null);
+export function VirtualGarage({ profileId, editable = false }: Props) {
+  const catalog = useGearCatalog();
+  const garage = useGarage(profileId);
+  const points = useMyPoints();
+  const [openSlot, setOpenSlot] = useState<GearSlot | null>(null);
+
+  if (!catalog.data || !garage.data) return null;
+  const items = catalog.data;
+  const owned = garage.data;
+  const collectible = items.filter((i) => i.rarity !== 'starter');
+  const ownedCount = collectible.filter((i) => isOwned(i, owned)).length;
+
+  const [big, small] = [gearSlots.slice(0, 2), gearSlots.slice(2)];
+  const tile = (slot: GearSlot, size: number) => {
+    const item = equippedItem(items, owned, slot)!;
+    return (
+      <SlotTile
+        key={slot}
+        item={item}
+        label={gearSlots.find((s) => s.slot === slot)!.label}
+        artSize={size}
+        onPress={editable ? () => setOpenSlot(slot) : undefined}
+      />
+    );
+  };
 
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text variant="label">Garage virtuel</Text>
-        {editable ? <Text variant="caption">Touchez un slot pour le modifier</Text> : null}
+        <View style={styles.headerText}>
+          <Text variant="label">Garage virtuel</Text>
+          <Text variant="caption">
+            Collection : {ownedCount} / {collectible.length} objets
+          </Text>
+        </View>
+        {editable && points.data !== undefined ? <PointsChip points={points.data} /> : null}
       </View>
-      <View style={styles.grid}>
-        {gearSlots.map((slot) => (
-          <GearSlot
-            key={slot.category}
-            slot={slot}
-            brand={gear[slot.category]}
-            onPress={editable ? () => setOpenSlot(slot) : undefined}
-          />
-        ))}
-      </View>
+
+      <View style={styles.row}>{big.map((s) => tile(s.slot, 96))}</View>
+      <View style={styles.row}>{small.map((s) => tile(s.slot, 60))}</View>
+
       {editable ? (
-        <BrandSheet slot={openSlot} value={openSlot ? gear[openSlot.category] : null} onClose={() => setOpenSlot(null)} />
+        <Button title="Ouvrir la boutique" variant="secondary" onPress={() => router.push('/shop')} />
+      ) : null}
+
+      {editable ? (
+        <SlotSheet slot={openSlot} catalog={items} garage={owned} onClose={() => setOpenSlot(null)} />
       ) : null}
     </Card>
   );
 }
 
-function GearSlot({ slot, brand, onPress }: { slot: Slot; brand: GearBrand | null; onPress?: () => void }) {
-  const owned = brand !== null;
-  const value = owned ? brandLabels[brand] : RENTAL_LABEL;
+function SlotTile({
+  item,
+  label,
+  artSize,
+  onPress,
+}: {
+  item: GearItem;
+  label: string;
+  artSize: number;
+  onPress?: () => void;
+}) {
+  const rental = item.rarity === 'starter';
+  const rarity = rarityMeta[item.rarity];
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${slot.label} : ${value}`}
-      accessibilityHint={onPress ? 'Choisir la marque' : undefined}
+      accessibilityLabel={`${label} : ${item.name}`}
+      accessibilityHint={onPress ? "Changer d'équipement" : undefined}
       disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [styles.slot, owned && styles.slotOwned, pressed && styles.pressed]}>
-      <View style={[styles.slotIcon, owned && styles.slotIconOwned]}>
-        <Icon name={slot.icon} size={22} color={owned ? colors.neon : colors.textMuted} />
+      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
+      <GearArt item={item} size={artSize} showcase style={[styles.tileArt, rental && styles.rentalArt]} />
+      <View style={styles.tileText}>
+        <Text variant="label" style={styles.tileLabel} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={[styles.tileName, rental && styles.rentalName]} numberOfLines={1}>
+          {rental ? 'En location' : item.name}
+        </Text>
+        {!rental ? (
+          <Text style={[styles.rarity, { color: rarity.color }]} numberOfLines={1}>
+            {rarity.label}
+          </Text>
+        ) : null}
       </View>
-      <Text variant="label" style={styles.slotLabel} numberOfLines={1}>
-        {slot.label}
-      </Text>
-      <Text
-        style={[styles.slotValue, !owned && styles.slotRental]}
-        numberOfLines={owned ? 1 : 2}
-        adjustsFontSizeToFit={owned}
-        minimumFontScale={0.75}>
-        {value}
-      </Text>
     </Pressable>
   );
 }
 
-/** BottomSheet de sélection : liste des marques prédéfinies de la catégorie + « location ». */
-function BrandSheet({ slot, value, onClose }: { slot: Slot | null; value: GearBrand | null; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
-  const setGear = useSetGear();
-
-  const choose = (brand: GearBrand | null) => {
-    if (!slot) return;
-    if (brand === value) return onClose();
-    setGear.mutate({ category: slot.category, brand }, { onSuccess: onClose });
-  };
+/** Choix de l'équipement porté parmi sa collection, avec un raccourci vers la boutique. */
+function SlotSheet({
+  slot,
+  catalog,
+  garage,
+  onClose,
+}: {
+  slot: GearSlot | null;
+  catalog: GearItem[];
+  garage: Garage;
+  onClose: () => void;
+}) {
+  const equip = useEquipGearItem();
+  const meta = gearSlots.find((s) => s.slot === slot);
+  const ofSlot = catalog.filter((i) => i.slot === slot);
+  const mine = ofSlot.filter((i) => isOwned(i, garage));
+  const toUnlock = ofSlot.length - mine.length;
 
   const close = () => {
-    setGear.reset();
+    equip.reset();
     onClose();
   };
 
   return (
-    <Modal visible={slot !== null} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} accessibilityLabel="Fermer" onPress={close} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <View style={styles.grabber} />
-        <View style={styles.sheetHeader}>
-          {slot ? <Icon name={slot.icon} size={22} color={colors.neon} /> : null}
-          <Text variant="heading" style={styles.sheetTitle}>
-            {slot?.label}
-          </Text>
-          {setGear.isPending ? <ActivityIndicator color={colors.neon} /> : null}
-          <Pressable accessibilityLabel="Fermer" onPress={close} hitSlop={12}>
-            <Icon name={icons.close} color={colors.textMuted} />
-          </Pressable>
-        </View>
-        {setGear.error ? (
-          <Text variant="caption" style={styles.error}>
-            Enregistrement impossible : {setGear.error.message}
-          </Text>
-        ) : null}
-        <ScrollView contentContainerStyle={styles.options} accessibilityRole="radiogroup">
-          {slot?.brands.map((brand) => (
-            <BrandOption
-              key={brand}
-              label={brandLabels[brand]}
-              selected={value === brand}
-              disabled={setGear.isPending}
-              onPress={() => choose(brand)}
-            />
-          ))}
-          <BrandOption
-            label={RENTAL_LABEL}
-            muted
-            selected={value === null}
-            disabled={setGear.isPending}
-            onPress={() => choose(null)}
-          />
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-}
-
-function BrandOption({
-  label,
-  selected,
-  disabled,
-  muted,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  disabled: boolean;
-  muted?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected, disabled }}
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [styles.option, selected && styles.optionSelected, pressed && styles.pressed]}>
-      <View style={[styles.radio, selected && styles.radioOn]}>{selected ? <View style={styles.radioDot} /> : null}</View>
-      <Text style={[styles.optionLabel, muted && styles.optionMuted]}>{label}</Text>
-    </Pressable>
+    <BottomSheet
+      visible={slot !== null}
+      onClose={close}
+      title={meta ? `Mon ${meta.label.toLowerCase()}` : undefined}
+      leading={
+        equip.isPending ? (
+          <ActivityIndicator color={colors.neon} />
+        ) : meta ? (
+          <Icon name={meta.icon} color={colors.neon} />
+        ) : null
+      }>
+      {equip.error ? (
+        <Text variant="caption" style={styles.error}>
+          {gearErrorMessage(equip.error)}
+        </Text>
+      ) : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
+        {mine.map((item) => {
+          const on = isEquipped(item, garage);
+          return (
+            <Pressable
+              key={item.id}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on, disabled: equip.isPending }}
+              accessibilityLabel={item.name}
+              disabled={equip.isPending}
+              onPress={() => (on ? close() : equip.mutate(item, { onSuccess: close }))}
+              style={({ pressed }) => [styles.choice, on && styles.choiceOn, pressed && styles.pressed]}>
+              <GearArt item={item} size={84} showcase style={styles.choiceArt} />
+              <Text style={styles.choiceName} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={[styles.rarity, { color: on ? colors.neon : rarityMeta[item.rarity].color }]}>
+                {on ? 'Équipé' : rarityMeta[item.rarity].label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      {toUnlock > 0 ? (
+        <Button
+          title={`${toUnlock} autre${toUnlock > 1 ? 's' : ''} à débloquer dans la boutique`}
+          variant="ghost"
+          onPress={() => {
+            close();
+            router.push({ pathname: '/shop', params: { slot: slot! } });
+          }}
+        />
+      ) : null}
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   card: { gap: spacing.md },
-  header: { gap: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  slot: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    minHeight: 112,
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  slotOwned: { borderStyle: 'solid', borderColor: colors.neon, backgroundColor: '#12190F' },
-  slotIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  slotIconOwned: { backgroundColor: colors.neonDim },
-  slotLabel: { fontSize: 9, letterSpacing: 0.6 },
-  slotValue: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  slotRental: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  headerText: { gap: 2, flexShrink: 1 },
+  row: { flexDirection: 'row', gap: spacing.sm },
+  tile: { flex: 1, gap: spacing.sm },
+  tileArt: { paddingVertical: spacing.sm },
+  rentalArt: { borderStyle: 'dashed', borderColor: colors.border },
+  tileText: { gap: 1, alignItems: 'center' },
+  tileLabel: { fontSize: 9, letterSpacing: 0.6 },
+  tileName: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  rentalName: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  rarity: { fontSize: 11, fontWeight: '800' },
   pressed: { opacity: 0.7 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
-  sheet: {
-    maxHeight: '75%',
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    gap: spacing.md,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.border },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  sheetTitle: { flex: 1 },
   error: { color: colors.danger },
-  options: { gap: spacing.sm, paddingBottom: spacing.sm },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+  choices: { gap: spacing.sm, paddingBottom: spacing.xs },
+  choice: {
+    width: 116,
+    gap: spacing.xs,
+    padding: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
-  },
-  optionSelected: { borderColor: colors.neon, backgroundColor: '#12190F' },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.textMuted,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  radioOn: { borderColor: colors.neon },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.neon },
-  optionLabel: { fontSize: 16, fontWeight: '800' },
-  optionMuted: { color: colors.textMuted, fontWeight: '600' },
+  choiceOn: { borderColor: colors.neon },
+  choiceArt: { width: '100%', paddingVertical: spacing.xs },
+  choiceName: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
 });

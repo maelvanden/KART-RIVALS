@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="240" height="240">
+  <defs>
+    <clipPath id="clip-rib-legend"><path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18 L98 28 L98 92 C98 99 93 104 86 104 L34 104 C27 104 22 99 22 92 L22 28 Z"/></clipPath>
+    <linearGradient id="light-rib-legend" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="112" rx="40" ry="5" fill="#000000" fill-opacity="0.35"/>
+  <g clip-path="url(#clip-rib-legend)">
+    <rect x="0" y="0" width="120" height="120" fill="#FF6B1A"/>
+    <path d="M0 120 L0 70 C10 82 14 62 22 74 C28 54 36 70 40 58 C46 74 52 50 58 66 C64 52 70 70 76 60 C80 76 90 64 94 78 C100 70 108 84 120 76 L120 120 Z" fill="#7A2600"/>
+        <path d="M0 120 L0 86 C10 96 16 80 24 90 C30 76 38 90 44 80 C50 92 58 76 64 88 C70 80 78 94 86 86 C92 96 104 88 120 94 L120 120 Z" fill="#FFC83D"/>
+    <rect x="0" y="0" width="120" height="120" fill="url(#light-rib-legend)"/>
+  </g>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.5"><path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18 L98 28 L98 92 C98 99 93 104 86 104 L34 104 C27 104 22 99 22 92 L22 28 Z"/></g>
+  
+      <path d="M32 56 L50 58 M32 68 L50 70 M32 80 L50 82 M70 58 L88 56 M70 70 L88 68 M70 82 L88 80" stroke="#0E0F12" stroke-width="4" stroke-linecap="round"/>
+      <rect x="54" y="48" width="12" height="52" rx="4" fill="#0E0F12" fill-opacity="0.6"/>
+      <path d="M26 18 L46 18 L50 36 C54 44 66 44 70 36 L74 18 L94 18" fill="none" stroke="#0E0F12" stroke-width="4" stroke-linejoin="round"/>
+</svg>

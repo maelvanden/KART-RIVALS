@@ -1,0 +1,32 @@
+// Fichier généré par scripts/generate-gear-art.mjs — ne pas modifier à la main.
+import type { ImageSource } from 'expo-image';
+
+export const gearArt: Record<string, ImageSource> = {
+  'helmet-rental': require('../../../assets/gear/helmet-rental.svg'),
+  'helmet-street': require('../../../assets/gear/helmet-street.svg'),
+  'helmet-neon': require('../../../assets/gear/helmet-neon.svg'),
+  'helmet-thunder': require('../../../assets/gear/helmet-thunder.svg'),
+  'helmet-inferno': require('../../../assets/gear/helmet-inferno.svg'),
+  'helmet-crown': require('../../../assets/gear/helmet-crown.svg'),
+  'suit-rental': require('../../../assets/gear/suit-rental.svg'),
+  'suit-classic': require('../../../assets/gear/suit-classic.svg'),
+  'suit-neon': require('../../../assets/gear/suit-neon.svg'),
+  'suit-thunder': require('../../../assets/gear/suit-thunder.svg'),
+  'suit-carbon': require('../../../assets/gear/suit-carbon.svg'),
+  'suit-champion': require('../../../assets/gear/suit-champion.svg'),
+  'gloves-rental': require('../../../assets/gear/gloves-rental.svg'),
+  'gloves-grip': require('../../../assets/gear/gloves-grip.svg'),
+  'gloves-neon': require('../../../assets/gear/gloves-neon.svg'),
+  'gloves-inferno': require('../../../assets/gear/gloves-inferno.svg'),
+  'gloves-gold': require('../../../assets/gear/gloves-gold.svg'),
+  'shoes-rental': require('../../../assets/gear/shoes-rental.svg'),
+  'shoes-sprint': require('../../../assets/gear/shoes-sprint.svg'),
+  'shoes-neon': require('../../../assets/gear/shoes-neon.svg'),
+  'shoes-thunder': require('../../../assets/gear/shoes-thunder.svg'),
+  'shoes-carbon': require('../../../assets/gear/shoes-carbon.svg'),
+  'rib-rental': require('../../../assets/gear/rib-rental.svg'),
+  'rib-shield': require('../../../assets/gear/rib-shield.svg'),
+  'rib-neon': require('../../../assets/gear/rib-neon.svg'),
+  'rib-titan': require('../../../assets/gear/rib-titan.svg'),
+  'rib-legend': require('../../../assets/gear/rib-legend.svg'),
+};

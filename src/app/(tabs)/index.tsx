@@ -5,7 +5,6 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
-import { useUserGear } from '@/features/garage/api';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
 import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
 import { LapRecordsCard } from '@/features/profile/components/lap-records-card';
@@ -22,7 +21,6 @@ export default function LicenseScreen() {
   const matches = usePilotMatches(profile.data?.id);
   const badges = useBadgeStats(profile.data?.id);
   const laps = usePilotLapRecords(profile.data?.id);
-  const gear = useUserGear(profile.data?.id);
 
   return (
     <Screen
@@ -35,7 +33,6 @@ export default function LicenseScreen() {
         matches.refetch();
         badges.refetch();
         laps.refetch();
-        gear.refetch();
       }}
       right={
         <View style={styles.headerActions}>
@@ -50,7 +47,7 @@ export default function LicenseScreen() {
       {profile.isPending ? <Loading /> : null}
       {profile.error ? <ErrorState error={profile.error} /> : null}
       {profile.data ? <LicenseCard profile={profile.data} /> : null}
-      {gear.data ? <VirtualGarage gear={gear.data} editable /> : null}
+      {profile.data ? <VirtualGarage profileId={profile.data.id} editable /> : null}
       {badges.data ? <BadgesCard stats={badges.data} /> : null}
       {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
       {laps.data ? <LapRecordsCard records={laps.data} isMe /> : null}
