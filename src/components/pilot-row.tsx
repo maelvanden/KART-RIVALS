@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  highlighted: { borderColor: colors.neon, backgroundColor: '#12190F' },
+  highlighted: { borderColor: colors.neon, backgroundColor: colors.selected },
   pressed: { opacity: 0.85 },
   body: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

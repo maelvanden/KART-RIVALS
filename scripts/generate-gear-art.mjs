@@ -14,7 +14,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Doit rester aligné sur la table gear_items (migration 20261020000016_user_gear.sql).
 const RENTAL = { base: '#7D838D', secondary: '#555B64', accent: '#B9BEC6', pattern: 'worn' };
-const NEON = { base: '#17191D', secondary: '#39FF14', accent: '#39FF14', pattern: 'racing' };
+const NEON = { base: '#1B1E26', secondary: '#DEFF00', accent: '#DEFF00', pattern: 'racing' };
 const THUNDER = { base: '#1D3B8F', secondary: '#5AA9FF', accent: '#FFC83D', pattern: 'bolt' };
 const INFERNO = { base: '#1A1A1C', secondary: '#FF6B1A', accent: '#FFC83D', pattern: 'flame' };
 const CARBON = { base: '#2B2E34', secondary: '#16181B', accent: '#FF6B1A', pattern: 'carbon' };

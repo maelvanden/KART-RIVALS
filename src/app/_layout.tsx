@@ -1,14 +1,28 @@
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Inter_800ExtraBold } from '@expo-google-fonts/inter/800ExtraBold';
+import { Oswald_600SemiBold } from '@expo-google-fonts/oswald/600SemiBold';
+import { Oswald_700Bold } from '@expo-google-fonts/oswald/700Bold';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router/stack';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { Loading } from '@/components/ui/state-views';
+import { Text } from '@/components/ui/text';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { useMyProfile } from '@/features/profile/api';
 import { colors } from '@/theme';
+
+// L'écran de lancement reste affiché jusqu'au chargement des polices (pas de saut de typo).
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } });
 
@@ -28,7 +42,12 @@ const detailHeader = {
   headerShown: true,
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.text,
-  headerTitleStyle: { fontWeight: '800' as const },
+  // Titre en Oswald majuscules, comme le reste des titres de l'app.
+  headerTitle: ({ children }: { children: string }) => (
+    <Text variant="heading" numberOfLines={1}>
+      {children}
+    </Text>
+  ),
   headerBackButtonDisplayMode: 'minimal' as const,
 };
 
@@ -78,6 +97,24 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
+  });
+  // En cas d'échec, on continue avec les polices système plutôt que de bloquer l'app.
+  const ready = fontsLoaded || !!fontError;
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

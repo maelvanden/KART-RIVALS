@@ -36,6 +36,6 @@ const styles = StyleSheet.create({
   },
   item: { flex: 1, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, alignItems: 'center' },
   active: { backgroundColor: colors.neon },
-  text: { fontWeight: '800', fontSize: 13, color: colors.textMuted },
+  text: { fontWeight: '800', fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.textMuted },
   activeText: { color: colors.onNeon },
 });

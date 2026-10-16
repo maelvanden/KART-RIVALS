@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 2,
   },
-  active: { backgroundColor: colors.neonDim, borderColor: colors.neon },
-  text: { fontWeight: '700', fontSize: 14, color: colors.textMuted },
-  activeText: { color: colors.neon },
+  active: { backgroundColor: colors.neon, borderColor: colors.neon },
+  text: { fontWeight: '800', fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.textMuted },
+  activeText: { color: colors.onNeon, fontWeight: '800' },
 });

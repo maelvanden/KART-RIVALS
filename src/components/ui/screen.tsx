@@ -1,5 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+
+import { CarbonBackdrop } from '@/components/ui/carbon-backdrop';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -18,6 +20,7 @@ type Props = PropsWithChildren<{
 export function Screen({ title, subtitle, right, refreshing = false, onRefresh, safeTop = true, children }: Props) {
   return (
     <SafeAreaView edges={safeTop ? ['top'] : []} style={styles.safe}>
+      <CarbonBackdrop />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

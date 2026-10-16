@@ -7,7 +7,7 @@ import { useMyChallenges } from '@/features/challenges/api';
 import { challengeStep, needsMe } from '@/features/challenges/state';
 import { useMyRaces } from '@/features/races/api';
 import { raceNeedsMe, raceStep } from '@/features/races/state';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 const tabIcon = (name: IconName) =>
   function TabIcon({ color, size }: { color: ColorValue; size: number }) {
@@ -36,17 +36,17 @@ export default function TabsLayout() {
           // Sur le web, pas d'inset bas : on laisse de la place au libellé sous l'icône.
           ...(Platform.OS === 'web' ? { height: 60, paddingBottom: 6 } : {}),
         },
-        tabBarLabelStyle: { fontWeight: '700', fontSize: 11, lineHeight: 14 },
+        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, letterSpacing: 0.3 },
         sceneStyle: { backgroundColor: colors.background },
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Licence', tabBarIcon: tabIcon(icons.license) }} />
+      <Tabs.Screen name="index" options={{ title: 'Paddock', tabBarIcon: tabIcon(icons.license) }} />
       <Tabs.Screen
         name="challenges"
         options={{
           title: 'Défis',
           tabBarIcon: tabIcon(icons.challenge),
           tabBarBadge: todo > 0 ? todo : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.orange, color: colors.background, fontWeight: '800' },
+          tabBarBadgeStyle: { backgroundColor: colors.orange, color: colors.background, fontFamily: fonts.extrabold },
         }}
       />
       <Tabs.Screen name="nearby" options={{ title: 'Pilotes', tabBarIcon: tabIcon(icons.nearby) }} />

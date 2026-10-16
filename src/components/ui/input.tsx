@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { colors, radius, spacing } from '@/theme';
+import { colors, fonts, radius, spacing } from '@/theme';
 
 export function Input({ label, style, ...rest }: TextInputProps & { label: string }) {
   return (
@@ -19,8 +19,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     color: colors.text,
+    fontFamily: fonts.medium,
     paddingHorizontal: spacing.lg,
     fontSize: 16,
     ...(Platform.OS === 'web' ? { outlineWidth: 0 } : {}),
