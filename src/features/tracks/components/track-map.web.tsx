@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { markerColor, type TrackMapProps } from '@/features/tracks/components/track-map.types';
+import { markerColor, regionLabel, type TrackMapProps } from '@/features/tracks/components/track-map.types';
 import { colors, radius, spacing } from '@/theme';
 
 const PAD = 0.14;
@@ -55,9 +55,11 @@ export function TrackMap({ tracks, height, selectedId, onSelect }: TrackMapProps
       {[1, 2, 3].map((i) => (
         <View key={`v${i}`} style={[styles.gridV, { left: `${i * 25}%` }]} />
       ))}
-      <Text variant="label" style={styles.watermark}>
-        Maine-et-Loire
-      </Text>
+      {regionLabel(tracks) ? (
+        <Text variant="label" style={styles.watermark}>
+          {regionLabel(tracks)}
+        </Text>
+      ) : null}
 
       {tracks.map((t, i) => {
         const selected = t.id === selectedId;

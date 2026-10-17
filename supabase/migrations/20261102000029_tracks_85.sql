@@ -1,0 +1,43 @@
+-- Kart Rivals : les 8 kartings en activité en Vendée (85), d'après le recensement du 17 octobre 2026
+-- (coordonnées GPS cartographiques, piste la plus longue retenue, sites saisonniers inclus).
+insert into public.tracks (name, address, postal_code, city, region, is_indoor, length_m, kart_power, is_verified, location, created_by,
+                           website, phone, facebook_url, description)
+values
+  ('Atlantic Kart System (AKS)', 'D36A, Le Coudriou', '85180', 'Les Sables-d''Olonne', 'Vendée', false, 1000, '200 / 270 / 390cc', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.6839534, 46.5094472), 4326)::extensions.geography, null,
+   'https://www.akskart.fr/', '02 51 32 52 52', null,
+   'Piste extérieure de 1 000 m près des Sables-d''Olonne, karts 4 temps de 200, 270 et 390cc selon le niveau. Ouvert toute l''année : horaires réduits en automne et en hiver, 7 j/7 pendant les vacances scolaires.'),
+  ('Circuit Philippe Alliot', '11 rue Denis Papin, ZI Le Petit Bourbon', '85170', 'Bellevigny', 'Vendée', false, 916, '270cc (9 ch) · enfant 5 ch', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.42973, 46.77349), 4326)::extensions.geography, null,
+   'https://karting-philippealliot.com/', '02 51 41 05 05', null,
+   'Le circuit de l''ancien pilote de F1 Philippe Alliot : jusqu''à 916 m de piste extérieure, karts 270cc de 9 ch pour les adultes et 5 ch pour les enfants. Ouvert toute l''année du mardi au dimanche, et le lundi pendant les vacances scolaires.'),
+  ('Mecamax Karting & Quad', 'D32, Route de Challans, Les Gâches', '85340', 'L''Île-d''Olonne', 'Vendée', false, 850, '270cc · mini-karts électriques', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.7732405, 46.5767805), 4326)::extensions.geography, null,
+   'https://mecamax.com/', '02 51 33 11 82', null,
+   'Piste extérieure de 850 m et mini-piste électrique pour les plus jeunes, avec quads. Ouvert toute l''année avec des horaires réduits en automne et en hiver ; groupes sur réservation.'),
+  ('Vendée Kart', '16 rue des Artisans, ZA Ténement', '85540', 'La Jonchère', 'Vendée', false, 780, '270cc · enfant 160cc', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.3916635, 46.4219447), 4326)::extensions.geography, null,
+   'https://vendeekart.fr/', '02 51 30 89 96', null,
+   'Piste principale de 780 m, piste électrique pour les enfants, karts biplaces et handi-kart. Saisonnier : ouvert du 1er avril au 30 novembre.'),
+  ('Karting de Challans', '4 rue Ayrton Senna, route de Cholet', '85300', 'Challans', 'Vendée', false, 700, '270cc · Rotax 125 · enfant électrique', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.84946, 46.85167), 4326)::extensions.geography, null,
+   'https://www.karting-challans.fr/', '02 51 93 33 44', null,
+   'Martini Racing Kart : circuit de 700 m avec karts 4 temps de 9 ch, Rotax 125 de 22 ch sur réservation et piste électrique pour les enfants. Ouvert toute l''année, horaires d''hiver et d''été différents.'),
+  ('West Aventure', 'Le Pâtis Viaud, rue du Point du Jour', '85220', 'Saint-Révérend', 'Vendée', false, 500, '270cc · enfant 160cc', true,
+   extensions.st_setsrid(extensions.st_makepoint(-1.8446221, 46.6992108), 4326)::extensions.geography, null,
+   'https://west-aventure.com/', '02 51 54 66 93', null,
+   'Piste extérieure de 500 m dans un parc de loisirs près de Saint-Gilles-Croix-de-Vie. Saisonnier : d''avril à septembre, et réouverture pendant les vacances de la Toussaint.'),
+  ('Circuits de Vendée – Kart Center Indoor', '60 rue de Chambouin', '85200', 'Fontenay-le-Comte', 'Vendée', true, 350, 'Électrique', true,
+   extensions.st_setsrid(extensions.st_makepoint(-0.7905319, 46.4370405), 4326)::extensions.geography, null,
+   'https://www.circuitsdevendee.com/', '02 51 69 00 78', null,
+   'Piste couverte de 350 m en karts 100 % électriques. Ouvert toute l''année, horaires variables selon les semaines et les vacances scolaires.'),
+  ('Kart''One', '7 avenue des Demoiselles', '85160', 'Saint-Jean-de-Monts', 'Vendée', false, 300, 'Électrique', true,
+   extensions.st_setsrid(extensions.st_makepoint(-2.07046, 46.7868), 4326)::extensions.geography, null,
+   null, '06 49 61 61 35', 'https://www.facebook.com/kartingkartone/',
+   'Piste de 300 m en karts électriques à deux pas de la plage. Saisonnier : l''été (du 1er juillet au 30 août, de 11 h à minuit) ; appelle avant de venir hors saison.')
+on conflict ((lower(name)), (lower(city))) do update set
+  address = excluded.address, postal_code = excluded.postal_code, region = excluded.region, is_indoor = excluded.is_indoor,
+  length_m = excluded.length_m, kart_power = excluded.kart_power, is_verified = true, location = excluded.location,
+  website = coalesce(public.tracks.website, excluded.website), phone = coalesce(public.tracks.phone, excluded.phone),
+  facebook_url = coalesce(public.tracks.facebook_url, excluded.facebook_url),
+  description = coalesce(public.tracks.description, excluded.description);

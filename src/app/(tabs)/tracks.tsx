@@ -13,23 +13,40 @@ import { distanceKm } from '@/lib/geo';
 
 type Filter = 'all' | 'indoor' | 'outdoor';
 
+/** Numéro de département (« 49 ») tiré du code postal. */
+const department = (postalCode: string | null) => postalCode?.slice(0, 2) ?? null;
+
 export default function TracksScreen() {
   const tracks = useTracksMap();
   const location = useApproxLocation();
   const profile = useMyProfile();
   const records = useTrackRecords();
   const [filter, setFilter] = useState<Filter>('all');
+  const [dept, setDept] = useState('all');
+
+  // Départements présents (49, 85, 86…) avec leur nom, pour le filtre et le sous-titre.
+  const departments = useMemo(() => {
+    const byCode = new Map<string, string>();
+    for (const t of tracks.data ?? []) {
+      const code = department(t.postal_code);
+      if (code && !byCode.has(code)) byCode.set(code, t.region ?? code);
+    }
+    return [...byCode.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [tracks.data]);
 
   const list = useMemo(() => {
     const here = location.data;
     return (tracks.data ?? [])
       .filter((t) => filter === 'all' || (filter === 'indoor') === t.is_indoor)
+      .filter((t) => dept === 'all' || department(t.postal_code) === dept)
       .map((t) => ({ track: t, km: here ? distanceKm(here, t) : null }))
       .sort((a, b) => (a.km ?? 0) - (b.km ?? 0) || a.track.name.localeCompare(b.track.name));
-  }, [tracks.data, location.data, filter]);
+  }, [tracks.data, location.data, filter, dept]);
+  const subtitle =
+    dept === 'all' ? departments.map(([, name]) => name).join(' · ') : (departments.find(([c]) => c === dept)?.[1] ?? '');
 
   return (
-    <Screen subtitle="Maine-et-Loire" title="Circuits" refreshing={tracks.isRefetching} onRefresh={tracks.refetch}>
+    <Screen subtitle={subtitle} title="Circuits" refreshing={tracks.isRefetching} onRefresh={tracks.refetch}>
       {tracks.isPending ? <Loading /> : null}
       {tracks.error ? <ErrorState error={tracks.error} /> : null}
       {tracks.data ? (
@@ -38,6 +55,13 @@ export default function TracksScreen() {
           height={260}
           selectedId={profile.data?.home_track_id ?? undefined}
           onSelect={(t) => router.push({ pathname: '/track/[id]', params: { id: t.id } })}
+        />
+      ) : null}
+      {departments.length > 1 ? (
+        <Segmented
+          options={[{ value: 'all', label: 'Partout' }, ...departments.map(([code]) => ({ value: code, label: code }))]}
+          value={dept}
+          onChange={setDept}
         />
       ) : null}
       <Segmented
