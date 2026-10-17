@@ -57,7 +57,9 @@ export const demoTrackDetails: TrackDetails[] = [
     description: 'La plus grande piste indoor des Pays de la Loire : 600 m de virages serrés sur deux niveaux d’épingles, ouverte depuis 1996. Séries adultes de 10 min (dès 14 ans) et séries enfants de 6 min (dès 7 ans, 1,25 m). Casque et charlotte prêtés ; présente-toi à l’accueil 30 min avant ta première série.',
     booking_url: 'https://www.inwallkart.com/reservations-en-ligne/', website: 'https://www.inwallkart.com/', phone: '02 41 44 94 94', facebook_url: 'https://www.facebook.com/p/Inwall-Kart-100063520241809/' },
   { id: 't4', name: 'L’Autre Usine', city: 'Cholet', address: '88 rue Bourgneuf', postal_code: '49300', region: 'Maine-et-Loire', is_indoor: true, length_m: 400, kart_power: 'Électrique RTX', is_verified: true, lat: 47.0579, lng: -0.8586 },
-  { id: 't5', name: 'Karting de Loudun', city: 'Bournand', address: 'Route de Saumur (RD 147)', postal_code: '86120', region: 'Vienne', is_indoor: false, length_m: 1150, kart_power: '270 / 390cc', is_verified: true, lat: 47.0873, lng: 0.0841 },
+  { id: 't5', name: 'Karting de Loudun', city: 'Bournand', address: 'Circuit de la Boule d’Or, RD 147', postal_code: '86120', region: 'Vienne', is_indoor: false, length_m: 1150, kart_power: '270 / 390cc', is_verified: true, lat: 47.0862, lng: 0.0781,
+    description: 'Circuit outdoor en pleine nature, au milieu d’un parc boisé, avec deux tracés : 1 150 m et 800 m. Location par sessions de 10 minutes, compétition et entraînement. Fermé de début janvier à début février ; les horaires changent selon les vacances scolaires, appelle avant de venir.',
+    website: 'https://www.loudun-karting.com/', phone: '05 49 98 75 12', facebook_url: 'https://www.facebook.com/kartingdeloudun/' },
 ];
 
 export const demoTracks: Track[] = demoTrackDetails.map(({ id, name, city }) => ({ id, name, city }));
