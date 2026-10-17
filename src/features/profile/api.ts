@@ -17,7 +17,7 @@ import type { BadgeStats, EloPoint, HeadToHead, PilotLapRecord, PilotMatch, Prof
 
 const PROFILE_COLUMNS = `
   id, username, avatar_url, kart_number, home_track_id, elo, rank, wins, losses, draws, matches_played,
-  is_discoverable, race_count, race_wins, race_podiums, home_track:tracks (id, name, city)
+  is_discoverable, race_count, race_wins, race_podiums, home_track:tracks!profiles_home_track_id_fkey (id, name, city)
 `;
 
 async function fetchProfile(id: string): Promise<Profile | null> {

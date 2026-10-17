@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,18 @@ export default function OnboardingScreen() {
   const parsedNumber = kartNumber ? Number(kartNumber) : null;
   const numberValid = parsedNumber === null || (Number.isInteger(parsedNumber) && parsedNumber >= 1 && parsedNumber <= 999);
 
+  const queryClient = useQueryClient();
   const error = createProfile.error as { code?: string; message?: string } | null;
-  const errorText = error?.code === '23505' ? 'Ce pseudo est déjà pris.' : error?.message;
+  // La licence existe déjà (profil non chargé à cause du réseau) : on la recharge au lieu de la recréer.
+  const alreadyExists = error?.code === '23505' && !!error.message?.includes('profiles_pkey');
+  useEffect(() => {
+    if (alreadyExists) queryClient.invalidateQueries({ queryKey: ['profile'] });
+  }, [alreadyExists, queryClient]);
+  const errorText = alreadyExists
+    ? 'Ta licence existe déjà, chargement…'
+    : error?.code === '23505'
+      ? 'Ce pseudo est déjà pris.'
+      : error?.message;
 
   return (
     <Screen subtitle="Étape 1 / 1" title="Ta licence de pilote">

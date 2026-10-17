@@ -14,7 +14,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { Loading } from '@/components/ui/state-views';
+import { Button } from '@/components/ui/button';
+import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
@@ -62,6 +63,16 @@ function RootNavigator() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
         <Loading />
+      </View>
+    );
+  }
+
+  // Profil impossible à charger (réseau…) : on ne renvoie surtout pas vers la création de licence.
+  if (userId && profile.error && profile.data === undefined) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: colors.background }}>
+        <ErrorState error={profile.error} />
+        <Button title="Réessayer" loading={profile.isFetching} onPress={() => profile.refetch()} />
       </View>
     );
   }
