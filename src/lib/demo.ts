@@ -47,7 +47,9 @@ const pilot = (id: string, username: string, elo: number, rank: Profile['rank'])
 
 /** Les circuits réels de la migration 20261015000007_tracks_49.sql. */
 export const demoTrackDetails: TrackDetails[] = [
-  { id: 't1', name: 'SpeedPark Angers', city: 'Beaucouzé', address: 'Centre commercial L’Atoll, 1 avenue de l’Europe', postal_code: '49070', region: 'Maine-et-Loire', is_indoor: true, length_m: 300, kart_power: '270cc', is_verified: true, lat: 47.4846, lng: -0.6201 },
+  { id: 't1', name: 'SpeedPark Angers', city: 'Beaucouzé', address: 'Centre commercial L’Atoll, Ecoparc du Buisson', postal_code: '49070', region: 'Maine-et-Loire', is_indoor: true, length_m: 230, kart_power: '270cc', is_verified: true, lat: 47.4846, lng: -0.628,
+    description: 'Piste indoor de 230 m signée 360 Karting (2024) au cœur de L’Atoll, avec une partie en étage et son pont au-dessus de la piste. Sessions adultes dès 15 ans et sessions enfants de 11 à 14 ans (1,40 m minimum), jamais mélangées. Réservation conseillée le soir, le week-end et pendant les vacances ; sinon, sur place selon les places disponibles. Bowling, laser game et bar sur place.',
+    booking_url: 'https://speedpark.fr/angers-beaucouze/reservation-angers/', website: 'https://speedpark.fr/angers-beaucouze/karting/', phone: '02 44 51 24 55', instagram_url: 'https://www.instagram.com/speedparkfrance/' },
   { id: 't2', name: 'MK Racing', city: 'Saint-Christophe-du-Bois', address: 'La Malmongère', postal_code: '49280', region: 'Maine-et-Loire', is_indoor: false, length_m: 816, kart_power: '270cc', is_verified: true, lat: 47.0164, lng: -0.9416 },
   { id: 't3', name: 'Inwall Kart', city: 'Les Ponts-de-Cé', address: '17 Rue Joseph Cugnot', postal_code: '49130', region: 'Maine-et-Loire', is_indoor: true, length_m: 600, kart_power: '270cc', is_verified: true, lat: 47.4284, lng: -0.5434,
     description: 'La plus grande piste indoor des Pays de la Loire : 600 m de virages serrés sur deux niveaux d’épingles, ouverte depuis 1996. Séries adultes de 10 min (dès 14 ans) et séries enfants de 6 min (dès 7 ans, 1,25 m). Casque et charlotte prêtés ; présente-toi à l’accueil 30 min avant ta première série.',

@@ -12,10 +12,10 @@ import type { TrackDetails } from '@/types/models';
 
 /** Tracé du circuit ; touche pour l'agrandir. */
 export function TrackLayoutCard({ track }: { track: TrackDetails }) {
-  const source = trackLayout(track);
+  const layout = trackLayout(track);
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  if (!source) return null;
+  if (!layout) return null;
 
   return (
     <Card style={styles.card}>
@@ -27,14 +27,14 @@ export function TrackLayoutCard({ track }: { track: TrackDetails }) {
         {track.length_m ? <Text variant="label">{track.length_m.toLocaleString('fr-FR')} m</Text> : null}
       </View>
       <Pressable accessibilityRole="imagebutton" accessibilityLabel="Agrandir le tracé" onPress={() => setOpen(true)}>
-        <Image source={source} style={styles.layout} contentFit="contain" transition={150} />
+        <Image source={layout.source} style={[styles.layout, { aspectRatio: layout.ratio }]} contentFit="contain" transition={150} />
       </Pressable>
       <Text variant="caption" style={styles.hint}>
         Sens de la course : suis les flèches. Touche pour agrandir.
       </Text>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.viewer}>
-          <Image source={source} style={styles.full} contentFit="contain" />
+          <Image source={layout.source} style={styles.full} contentFit="contain" />
           <Pressable
             accessibilityLabel="Fermer"
             onPress={() => setOpen(false)}
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { flex: 1, color: colors.text },
-  layout: { width: '100%', aspectRatio: 1.1 },
+  layout: { width: '100%' },
   hint: { textAlign: 'center' },
   viewer: { flex: 1, backgroundColor: 'rgba(10, 12, 16, 0.97)', justifyContent: 'center' },
   full: { width: '100%', height: '85%' },
