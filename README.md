@@ -87,6 +87,16 @@ Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`
 - **Photos des pilotes** : `track_photos` + bucket public `track-photos` (`<circuit>/<pilote>/…`), 10 photos par jour et par
   pilote, suppression par l'auteur, signalement (`report_track_photo`) et masquage après 3 signalements.
 
+Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier dans le Paddock) :
+
+- **Admin appli** (`app_admins`) : toutes les fiches circuit, admins karting, demandes de gestion, signalements
+  (`admin_reports`, `resolve_report` : traiter, rejeter, masquer ou rétablir un message ou une photo) et autres admins
+  appli (`set_app_admin`, jamais moins d'un). Le premier se déclare depuis l'app tant qu'aucun admin n'existe
+  (`claim_app_admin`).
+- **Admin karting** (`track_admins`) : modifie la fiche de son circuit (`update_track_page` : infos, présentation, liens,
+  téléphone, position GPS, tracé envoyé dans le bucket public `track-layouts`) et modère ses photos. Un exploitant le
+  demande depuis la fiche (`request_track_admin`), un admin appli valide (`respond_track_admin_request`).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

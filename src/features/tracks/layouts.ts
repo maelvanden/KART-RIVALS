@@ -11,7 +11,8 @@ const BUNDLED: Record<string, TrackLayout> = {
   'speedpark angers': { source: require('../../../assets/tracks/speedpark-angers.png'), ratio: 1200 / 667 },
 };
 
-/** Image du tracé : embarquée dans l'app, sinon adresse renseignée dans la base. */
+/** Image du tracé : celle envoyée par les admins du karting, sinon celle embarquée dans l'app. */
 export function trackLayout(track: Pick<TrackDetails, 'name' | 'layout_url'>): TrackLayout | null {
-  return BUNDLED[track.name.trim().toLowerCase()] ?? (track.layout_url ? { source: { uri: track.layout_url }, ratio: 4 / 3 } : null);
+  if (track.layout_url) return { source: { uri: track.layout_url }, ratio: 0 };
+  return BUNDLED[track.name.trim().toLowerCase()] ?? null;
 }

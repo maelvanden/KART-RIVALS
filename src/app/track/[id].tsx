@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { useTrack, useTrackLapRecords, useTrackLeaderboard } from '@/features/tracks/api';
+import { TrackManageLink } from '@/features/admin/components/track-manage-link';
 import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
@@ -132,6 +133,7 @@ export default function TrackScreen() {
           {board.data && board.data.length > 0 ? (
             <Button title="Défier un pilote" variant="ghost" onPress={() => router.push('/nearby')} />
           ) : null}
+          <TrackManageLink trackId={t.id} trackName={t.name} />
         </>
       ) : null}
     </Screen>

@@ -95,6 +95,9 @@ function RootNavigator() {
         <Stack.Screen name="team/[id]" options={{ ...detailHeader, title: 'Écurie' }} />
         <Stack.Screen name="teams" options={{ ...detailHeader, title: 'Écuries' }} />
         <Stack.Screen name="friends" options={{ ...detailHeader, title: 'Coéquipiers' }} />
+        <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administration' }} />
+        <Stack.Screen name="admin/reports" options={{ ...detailHeader, title: 'Signalements' }} />
+        <Stack.Screen name="admin/track/[id]" options={{ ...detailHeader, title: 'Gérer la fiche' }} />
         <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen

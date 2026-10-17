@@ -38,6 +38,16 @@ const messages: Record<string, string> = {
   'Photo not found': 'Photo introuvable.',
   'Too many photos today': 'Tu as déjà posté 10 photos aujourd’hui, réessaie demain.',
   'Track gallery is full': 'La galerie de ce circuit est complète.',
+  'An app admin already exists': 'Un admin appli existe déjà : demande-lui de te nommer.',
+  'Admins only': 'Réservé aux admins.',
+  'The last app admin cannot be removed': 'Il faut garder au moins un admin appli.',
+  'You already manage this track': 'Tu gères déjà ce circuit.',
+  'Too many pending requests': 'Tu as déjà 3 demandes en attente.',
+  'Only the track admins can edit this page': 'Seuls les admins de ce karting peuvent modifier la fiche.',
+  'Invalid coordinates': 'Coordonnées GPS invalides.',
+  'Report not found': 'Signalement introuvable.',
+  'violates check constraint "tracks_': 'Valeur refusée : vérifie les liens (https://…) et la longueur des textes.',
+  'invalid input syntax for type integer': 'La longueur de piste doit être un nombre.',
 };
 
 /** Erreur Supabase → Error avec un message en français si on le connaît. */

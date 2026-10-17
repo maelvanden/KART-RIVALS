@@ -14,6 +14,8 @@ import type { TrackDetails } from '@/types/models';
 export function TrackLayoutCard({ track }: { track: TrackDetails }) {
   const layout = trackLayout(track);
   const [open, setOpen] = useState(false);
+  // Tracé envoyé depuis l'app : proportions lues au chargement de l'image.
+  const [measured, setMeasured] = useState<number | null>(null);
   const insets = useSafeAreaInsets();
   if (!layout) return null;
 
@@ -27,7 +29,13 @@ export function TrackLayoutCard({ track }: { track: TrackDetails }) {
         {track.length_m ? <Text variant="label">{track.length_m.toLocaleString('fr-FR')} m</Text> : null}
       </View>
       <Pressable accessibilityRole="imagebutton" accessibilityLabel="Agrandir le tracé" onPress={() => setOpen(true)}>
-        <Image source={layout.source} style={[styles.layout, { aspectRatio: layout.ratio }]} contentFit="contain" transition={150} />
+        <Image
+          source={layout.source}
+          style={[styles.layout, { aspectRatio: layout.ratio || measured || 4 / 3 }]}
+          contentFit="contain"
+          transition={150}
+          onLoad={(e) => !layout.ratio && e.source.height > 0 && setMeasured(e.source.width / e.source.height)}
+        />
       </Pressable>
       <Text variant="caption" style={styles.hint}>
         Sens de la course : suis les flèches. Touche pour agrandir.

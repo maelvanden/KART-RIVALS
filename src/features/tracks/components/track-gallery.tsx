@@ -8,6 +8,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { useCanManageTrack } from '@/features/admin/api';
 import { useAuth } from '@/features/auth/auth-provider';
 import { ReportSheet } from '@/features/social/components/report-sheet';
 import { useAddTrackPhoto, useDeleteTrackPhoto, useTrackPhotos } from '@/features/tracks/photos';
@@ -22,6 +23,7 @@ export function TrackGallery({ trackId, trackName }: { trackId: string; trackNam
   const add = useAddTrackPhoto(trackId);
   const remove = useDeleteTrackPhoto(trackId);
   const insets = useSafeAreaInsets();
+  const canModerate = useCanManageTrack(trackId);
   const [picking, setPicking] = useState(false);
   const [viewing, setViewing] = useState<TrackPhoto | null>(null);
   const [reporting, setReporting] = useState<TrackPhoto | null>(null);
@@ -109,7 +111,7 @@ export function TrackGallery({ trackId, trackName }: { trackId: string; trackNam
                   {trackName} · {new Date(viewing.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                 </Text>
               </View>
-              {viewing.author_id === userId ? (
+              {viewing.author_id === userId || canModerate ? (
                 <Pressable accessibilityRole="button" accessibilityLabel="Supprimer la photo" hitSlop={10} onPress={() => askDelete(viewing)}>
                   <Icon name={icons.trash} size={22} color={colors.danger} />
                 </Pressable>
