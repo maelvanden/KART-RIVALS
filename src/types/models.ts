@@ -246,14 +246,41 @@ export type Conversation = {
   unread: number;
 };
 
+export type ShareType = 'challenge' | 'race' | 'lap_record' | 'time_attack';
+
+/** Carte partagée dans la Radio : défi, course, record du tour ou session Time Attack. */
+export type SharePayload = {
+  type: ShareType;
+  /** Id de l'objet partagé (circuit pour un record). */
+  id: string;
+  title: string;
+  subtitle?: string;
+  /** Chiffre mis en avant (chrono, position…). */
+  highlight?: string;
+};
+
+export type PollPayload = { question: string; options: string[] };
+
+export type ImagePayload = { path: string; width?: number; height?: number };
+
+export type MessageKind = 'text' | 'share' | 'poll' | 'image';
+
 export type Message = {
   id: string;
   conversation_id: string;
   sender_id: string;
-  body: string;
+  kind: MessageKind;
+  /** Texte, ou légende d'une photo ; null pour un partage ou un sondage. */
+  body: string | null;
+  payload: SharePayload | PollPayload | ImagePayload | null;
   created_at: string;
   sender?: Pick<Profile, 'username' | 'avatar_url'>;
 };
+
+export type PollVote = { message_id: string; profile_id: string; option_index: number };
+
+/** Membre d'une conversation et jusqu'où il a lu (indicateur « Vu »). */
+export type ConversationReader = { profile_id: string; last_read_at: string; username: string };
 
 /** Écurie vue de l'extérieur (classement des écuries, page publique). */
 export type TeamSummary = Pick<Team, 'id' | 'name' | 'tag' | 'logo_url' | 'color' | 'recruiting' | 'recruiting_message' | 'elo' | 'position'> & {

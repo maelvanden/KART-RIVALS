@@ -47,6 +47,13 @@ export const icons = {
   teammates: { ios: 'person.2.fill', material: 'group' },
   team: { ios: 'shield.checkered', material: 'shield_person' },
   send: { ios: 'paperplane.fill', material: 'send' },
+  plus: { ios: 'plus', material: 'add' },
+  camera: { ios: 'camera.fill', material: 'photo_camera' },
+  gallery: { ios: 'photo.on.rectangle', material: 'photo_library' },
+  share: { ios: 'square.and.arrow.up', material: 'ios_share' },
+  poll: { ios: 'chart.bar.fill', material: 'bar_chart' },
+  pinned: { ios: 'pin.fill', material: 'push_pin' },
+  seen: { ios: 'checkmark.circle', material: 'done_all' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

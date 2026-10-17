@@ -1,9 +1,20 @@
 // Mode démo : coéquipiers, écurie et Radio Paddock avec des données d'exemple (mêmes règles que le SQL).
+import { messagePreview } from '@/features/social/messages';
 import { demoProfile } from '@/lib/demo';
 import type { Conversation, Friendship, Message, PilotSummary, Team, TeamApplication, TeamInvite, TeamSummary } from '@/types/models';
 
 const MINUTE = 60_000;
 const ago = (minutes: number) => new Date(Date.now() - minutes * MINUTE).toISOString();
+
+const text = (id: string, conversationId: string, senderId: string, body: string, minutesAgo: number): Message => ({
+  id,
+  conversation_id: conversationId,
+  sender_id: senderId,
+  kind: 'text',
+  body,
+  payload: null,
+  created_at: ago(minutesAgo),
+});
 
 export const demoPilots: Record<string, PilotSummary> = {
   p1: { id: 'p1', username: 'TurboLéa', avatar_url: null, elo: 1342, rank: 'argent' },
@@ -66,16 +77,41 @@ export const demoSocial = {
   sentInvites: [] as PilotSummary[],
   messages: {
     'conv-team': [
-      { id: 'm1', conversation_id: 'conv-team', sender_id: 'p3', body: 'Session à SpeedPark samedi 14h, qui est chaud ?', created_at: ago(180) },
-      { id: 'm2', conversation_id: 'conv-team', sender_id: 'p1', body: 'Présente ! Objectif : passer sous les 47 secondes 🔥', created_at: ago(170) },
-      { id: 'm3', conversation_id: 'conv-team', sender_id: demoProfile.id, body: 'Go, je réserve 3 karts.', created_at: ago(160) },
-      { id: 'm4', conversation_id: 'conv-team', sender_id: 'p3', body: 'Radio check : briefing 13h45 au paddock.', created_at: ago(12) },
+      text('m1', 'conv-team', 'p3', 'Session à SpeedPark samedi 14h, qui est chaud ?', 180),
+      text('m2', 'conv-team', 'p1', 'Présente ! Objectif : passer sous les 47 secondes 🔥', 170),
+      {
+        id: 'm2b',
+        conversation_id: 'conv-team',
+        sender_id: 'p3',
+        kind: 'poll',
+        body: null,
+        payload: { question: 'Prochaine session d’écurie ?', options: ['Samedi 14h', 'Dimanche 10h', 'Mercredi soir'] },
+        created_at: ago(165),
+      },
+      text('m3', 'conv-team', demoProfile.id, 'Go, je réserve 3 karts.', 160),
+      {
+        id: 'm3b',
+        conversation_id: 'conv-team',
+        sender_id: 'p1',
+        kind: 'share',
+        body: null,
+        payload: { type: 'lap_record', id: 't1', title: 'Record · SpeedPark Angers', subtitle: 'TurboLéa', highlight: '46.874' },
+        created_at: ago(40),
+      },
+      text('m4', 'conv-team', 'p3', 'Radio check : briefing 13h45 au paddock.', 12),
     ],
-    'conv-p1': [
-      { id: 'm5', conversation_id: 'conv-p1', sender_id: 'p1', body: 'Revanche quand tu veux 😏', created_at: ago(300) },
-    ],
+    'conv-p1': [text('m5', 'conv-p1', 'p1', 'Revanche quand tu veux 😏', 300)],
   } as Record<string, Message[]>,
+  /** Votes des sondages (id du message → id du pilote → option). */
+  votes: { m2b: { p3: 0, p1: 0 } } as Record<string, Record<string, number>>,
+  /** Message épinglé par conversation. */
+  pinned: { 'conv-team': 'm2b' } as Record<string, string | null>,
   read: { 'conv-team': ago(100), 'conv-p1': ago(400) } as Record<string, string>,
+  /** Jusqu'où chaque coéquipier a lu (« Vu »). */
+  readers: {
+    'conv-team': { p1: ago(5), p3: ago(11) },
+    'conv-p1': { p1: ago(299) },
+  } as Record<string, Record<string, string>>,
 };
 
 /** Conversations de la démo (écurie + 1v1 existants). */
@@ -95,7 +131,7 @@ export function demoConversations(): Conversation[] {
       tag: isTeam ? t!.tag : null,
       avatar_url: isTeam ? t!.logo_url : (other?.avatar_url ?? null),
       other_id: other?.id ?? null,
-      last_message: last?.body ?? null,
+      last_message: last ? messagePreview(last) : null,
       last_message_at: last?.created_at ?? null,
       unread: messages.filter((m) => m.sender_id !== demoProfile.id && m.created_at > (demoSocial.read[id] ?? '')).length,
     });

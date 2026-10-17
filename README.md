@@ -67,6 +67,9 @@ Dimension sociale (migration `…_social.sql`) :
 - **Radio Paddock** (`conversations`, `conversation_members`, `messages`) : 1v1 entre coéquipiers
   (`get_direct_conversation`) et canal de chaque écurie, non-lus via `my_conversations`. Temps réel : canal
   Supabase `radio:<conversation>` sur les INSERT de `messages` filtrés par conversation (RLS appliquée).
+  Messages typés (`kind` : texte, partage de défi / course / record / session Time Attack, sondage, photo du bucket
+  privé `radio-photos`), sondages (`poll_votes`, `vote_poll`), message épinglé (`pin_message`, staff dans le canal
+  d'écurie), « Vu » (`last_read_at` des membres, en temps réel) et « en train d'écrire » (diffusion Realtime, sans table).
 
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
