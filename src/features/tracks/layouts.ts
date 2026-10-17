@@ -7,6 +7,7 @@ export type TrackLayout = { source: ImageSourcePropType; /** largeur / hauteur *
 /** Tracés fournis avec l'app (nom du circuit en minuscules → image). */
 const BUNDLED: Record<string, TrackLayout> = {
   'inwall kart': { source: require('../../../assets/tracks/inwall-kart.png'), ratio: 856 / 780 },
+  'mk racing': { source: require('../../../assets/tracks/mk-racing.png'), ratio: 1200 / 916 },
   'speedpark angers': { source: require('../../../assets/tracks/speedpark-angers.png'), ratio: 1200 / 667 },
 };
 

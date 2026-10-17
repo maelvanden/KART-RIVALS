@@ -14,10 +14,14 @@ const SOCIALS = [
   { key: 'youtube_url', label: 'YouTube' },
 ] as const;
 
-/** Réservation / billetterie en un geste, puis site, téléphone et réseaux sociaux du complexe. */
+/**
+ * Réservation / billetterie en un geste (en ligne, sinon par téléphone), puis site, téléphone et réseaux sociaux.
+ */
 export function TrackLinks({ track }: { track: TrackDetails }) {
   const socials = SOCIALS.flatMap((s) => (track[s.key] ? [{ label: s.label, url: track[s.key]! }] : []));
-  const contact = track.website || track.phone;
+  // Sans réservation en ligne, le téléphone devient l'action principale.
+  const bookByPhone = !track.booking_url && !!track.phone;
+  const contact = track.website || (track.phone && !bookByPhone);
   if (!track.booking_url && !contact && socials.length === 0) return null;
 
   return (
@@ -29,13 +33,20 @@ export function TrackLinks({ track }: { track: TrackDetails }) {
           icon={<Icon name={icons.ticket} size={20} color={colors.onNeon} />}
           onPress={() => openLink(track.booking_url!)}
         />
+      ) : bookByPhone ? (
+        <Button
+          title="Réserver par téléphone"
+          size="lg"
+          icon={<Icon name={icons.phone} size={20} color={colors.onNeon} />}
+          onPress={() => callPhone(track.phone!)}
+        />
       ) : null}
       {contact ? (
         <View style={styles.row}>
           {track.website ? (
             <LinkTile icon={icons.globe} label="Site officiel" onPress={() => openLink(track.website!)} />
           ) : null}
-          {track.phone ? <LinkTile icon={icons.phone} label={track.phone} onPress={() => callPhone(track.phone!)} /> : null}
+          {track.phone && !bookByPhone ? <LinkTile icon={icons.phone} label={track.phone} onPress={() => callPhone(track.phone!)} /> : null}
         </View>
       ) : null}
       {socials.length > 0 ? (

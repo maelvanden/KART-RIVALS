@@ -86,7 +86,7 @@ export default function TrackScreen() {
             <Button
               title={isFavorite ? '★ Favori' : '☆ Favori'}
               // Une seule action Volt quand la réservation est proposée.
-              variant={isFavorite ? 'ghost' : t.booking_url ? 'secondary' : 'primary'}
+              variant={isFavorite ? 'ghost' : t.booking_url || t.phone ? 'secondary' : 'primary'}
               style={styles.action}
               loading={update.isPending}
               disabled={isFavorite}
