@@ -20,10 +20,12 @@ import type { TrackDetails } from '@/types/models';
 
 const podium = ['#FFC83D', '#C0C7D1', '#CD7F32'];
 
+/** Itinéraire vers le complexe : recherche par nom + adresse (le GPS tombe sur l'entrée), sinon les coordonnées. */
 function directionsUrl(t: TrackDetails) {
-  const dest = `${t.lat},${t.lng}`;
+  const place = t.address ? [t.name, t.address, [t.postal_code, t.city].filter(Boolean).join(' ')].join(', ') : null;
+  const dest = encodeURIComponent(place ?? `${t.lat},${t.lng}`);
   return Platform.OS === 'ios'
-    ? `https://maps.apple.com/?daddr=${dest}&q=${encodeURIComponent(t.name)}`
+    ? `https://maps.apple.com/?daddr=${dest}`
     : `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
 }
 
