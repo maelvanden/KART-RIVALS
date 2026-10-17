@@ -35,6 +35,9 @@ const messages: Record<string, string> = {
   'You cannot report yourself': 'Tu ne peux pas te signaler toi-même.',
   'Message not found': 'Message introuvable.',
   'Too many reports': 'Trop de signalements aujourd’hui, réessaie demain.',
+  'Photo not found': 'Photo introuvable.',
+  'Too many photos today': 'Tu as déjà posté 10 photos aujourd’hui, réessaie demain.',
+  'Track gallery is full': 'La galerie de ce circuit est complète.',
 };
 
 /** Erreur Supabase → Error avec un message en français si on le connaît. */

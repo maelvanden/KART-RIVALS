@@ -59,6 +59,7 @@ export function useCreateTrack() {
 
 const TRACK_MAP_COLUMNS =
   'id, name, address, postal_code, city, region, is_indoor, length_m, kart_power, is_verified, lat, lng';
+const TRACK_PAGE_COLUMNS = `${TRACK_MAP_COLUMNS}, description, booking_url, website, phone, instagram_url, facebook_url, tiktok_url, youtube_url, layout_url`;
 
 /** Tous les circuits avec leurs coordonnées, pour la carte. */
 export function useTracksMap() {
@@ -80,7 +81,7 @@ export function useTrack(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<TrackDetails | null> => {
       if (isDemoMode) return demoTrackDetails.find((t) => t.id === id) ?? null;
-      const { data, error } = await supabase.from('tracks_map').select(TRACK_MAP_COLUMNS).eq('id', id!).maybeSingle();
+      const { data, error } = await supabase.from('tracks_map').select(TRACK_PAGE_COLUMNS).eq('id', id!).maybeSingle();
       if (error) throw error;
       return data;
     },

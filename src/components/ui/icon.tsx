@@ -58,6 +58,12 @@ export const icons = {
   block: { ios: 'nosign', material: 'block' },
   more: { ios: 'ellipsis', material: 'more_horiz' },
   hidden: { ios: 'eye.slash', material: 'visibility_off' },
+  ticket: { ios: 'ticket.fill', material: 'confirmation_number' },
+  globe: { ios: 'globe', material: 'language' },
+  phone: { ios: 'phone.fill', material: 'call' },
+  route: { ios: 'point.topleft.down.to.point.bottomright.curvepath', material: 'route' },
+  link: { ios: 'link', material: 'link' },
+  trash: { ios: 'trash', material: 'delete' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

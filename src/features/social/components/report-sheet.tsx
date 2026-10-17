@@ -7,10 +7,11 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { REPORT_REASONS, useReport } from '@/features/social/safety';
+import { useReportTrackPhoto } from '@/features/tracks/photos';
 import { colors, radius, spacing } from '@/theme';
 import type { ReportReason } from '@/types/models';
 
-type Target = { pilotId: string; username: string; messageId?: string; preview?: string };
+type Target = { pilotId: string; username: string; messageId?: string; photoId?: string; preview?: string };
 
 type Props = {
   target: Target | null;
@@ -19,9 +20,11 @@ type Props = {
   onBlock?: () => void;
 };
 
-/** Signaler un pilote ou un message : motif, précisions facultatives, puis confirmation. */
+/** Signaler un pilote, un message ou une photo de circuit : motif, précisions facultatives, puis confirmation. */
 export function ReportSheet({ target, onClose, onBlock }: Props) {
-  const report = useReport();
+  const reportPilot = useReport();
+  const reportPhoto = useReportTrackPhoto();
+  const report = target?.photoId ? reportPhoto : reportPilot;
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [sent, setSent] = useState(false);
@@ -30,19 +33,23 @@ export function ReportSheet({ target, onClose, onBlock }: Props) {
     setReason(null);
     setDetails('');
     setSent(false);
-    report.reset();
+    reportPilot.reset();
+    reportPhoto.reset();
     onClose();
   }
 
   function submit() {
     if (!target || !reason) return;
-    report.mutate(
-      { pilotId: target.pilotId, reason, details, messageId: target.messageId },
-      { onSuccess: () => setSent(true) },
-    );
+    const onSuccess = () => setSent(true);
+    if (target.photoId) reportPhoto.mutate({ photoId: target.photoId, reason, details }, { onSuccess });
+    else reportPilot.mutate({ pilotId: target.pilotId, reason, details, messageId: target.messageId }, { onSuccess });
   }
 
-  const title = target?.messageId ? 'Signaler le message' : `Signaler ${target?.username ?? ''}`;
+  const title = target?.photoId
+    ? 'Signaler la photo'
+    : target?.messageId
+      ? 'Signaler le message'
+      : `Signaler ${target?.username ?? ''}`;
 
   return (
     <BottomSheet visible={!!target} onClose={close} title={title} leading={<Icon name={icons.report} color={colors.danger} />}>

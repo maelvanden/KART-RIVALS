@@ -9,7 +9,10 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { useTrack, useTrackLapRecords, useTrackLeaderboard } from '@/features/tracks/api';
+import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
+import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
+import { TrackLinks } from '@/features/tracks/components/track-links';
 import { TrackMap } from '@/features/tracks/components/track-map';
 import { TrackTypeBadge } from '@/features/tracks/components/track-row';
 import { colors, spacing } from '@/theme';
@@ -66,7 +69,10 @@ export default function TrackScreen() {
               <Fact label="Karts" value={t.kart_power ?? '—'} />
               <Fact label="Département" value={t.region ?? '—'} />
             </View>
+            {t.description ? <Text style={styles.description}>{t.description}</Text> : null}
           </Card>
+
+          <TrackLinks track={t} />
 
           <View style={styles.actions}>
             <Button
@@ -76,14 +82,18 @@ export default function TrackScreen() {
               onPress={() => Linking.openURL(directionsUrl(t))}
             />
             <Button
-              title={isFavorite ? '★ Favori' : 'Circuit favori'}
-              variant={isFavorite ? 'ghost' : 'primary'}
+              title={isFavorite ? '★ Favori' : '☆ Favori'}
+              // Une seule action Volt quand la réservation est proposée.
+              variant={isFavorite ? 'ghost' : t.booking_url ? 'secondary' : 'primary'}
               style={styles.action}
               loading={update.isPending}
               disabled={isFavorite}
               onPress={() => update.mutate({ home_track_id: t.id })}
             />
           </View>
+
+          <TrackLayoutCard track={t} />
+          <TrackGallery trackId={t.id} trackName={t.name} />
 
           <Text variant="label">Records du tour</Text>
           {laps.isPending ? <Loading /> : null}
@@ -142,6 +152,7 @@ const styles = StyleSheet.create({
   facts: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   fact: { gap: 2, minWidth: 80 },
   factValue: { fontSize: 16, fontWeight: '800' },
+  description: { color: colors.textMuted, lineHeight: 21 },
   actions: { flexDirection: 'row', gap: spacing.md },
   action: { flex: 1 },
   position: { width: 28, textAlign: 'center', fontSize: 20, fontWeight: '900', fontStyle: 'italic' },

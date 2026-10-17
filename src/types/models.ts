@@ -34,6 +34,31 @@ export type TrackDetails = Track & {
   is_verified: boolean;
   lat: number;
   lng: number;
+  /** Fiche complète (renseignée par l'équipe depuis le tableau de bord). */
+  description?: string | null;
+  booking_url?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  tiktok_url?: string | null;
+  youtube_url?: string | null;
+  layout_url?: string | null;
+};
+
+/** Photo d'un circuit postée par un pilote (bucket public track-photos). */
+export type TrackPhoto = {
+  id: string;
+  track_id: string;
+  author_id: string;
+  path: string;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
+  created_at: string;
+  /** Adresse de l'image (publique, ou locale en démo). */
+  url: string;
+  author?: Pick<Profile, 'username'> | null;
 };
 
 export type TrackLeaderboardEntry = Pick<Profile, 'id' | 'username' | 'elo' | 'rank'> & {

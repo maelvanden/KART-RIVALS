@@ -77,6 +77,16 @@ Dimension sociale (migration `…_social.sql`) :
   uniquement depuis le tableau de bord Supabase (colonne `status` : open / reviewed / dismissed) ; 20 signalements par jour
   max, un message signalé par 3 pilotes différents est masqué pour tous (`messages.hidden_at`).
 
+Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`) :
+
+- **Infos pratiques** sur `tracks` : `description`, `booking_url` (bouton « Réserver une session »), `website`, `phone`,
+  `instagram_url`, `facebook_url`, `tiktok_url`, `youtube_url` (adresses en https). Elles se renseignent depuis le tableau
+  de bord Supabase (Table Editor > tracks) et apparaissent dans l'app sans mise à jour.
+- **Tracé** : image embarquée dans `assets/tracks/` (déclarée dans `src/features/tracks/layouts.ts`, par nom de circuit) ou
+  adresse publique dans `tracks.layout_url`.
+- **Photos des pilotes** : `track_photos` + bucket public `track-photos` (`<circuit>/<pilote>/…`), 10 photos par jour et par
+  pilote, suppression par l'auteur, signalement (`report_track_photo`) et masquage après 3 signalements.
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
