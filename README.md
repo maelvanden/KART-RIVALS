@@ -70,6 +70,12 @@ Dimension sociale (migration `…_social.sql`) :
   Messages typés (`kind` : texte, partage de défi / course / record / session Time Attack, sondage, photo du bucket
   privé `radio-photos`), sondages (`poll_votes`, `vote_poll`), message épinglé (`pin_message`, staff dans le canal
   d'écurie), « Vu » (`last_read_at` des membres, en temps réel) et « en train d'écrire » (diffusion Realtime, sans table).
+- **Bloquer / signaler** (migration `…_safety.sql`) : `block_pilot` / `unblock_pilot` (table `blocks`, visible du seul
+  bloqueur) retire la relation de coéquipier ; plus de demande, de défi, d'invitation d'écurie ni de Radio 1v1 entre les
+  deux (RLS + triggers, erreur `Pilot unavailable`), le pilote bloqué disparaît des recherches et ses messages d'écurie sont
+  masqués côté app. `report` enregistre un signalement de pilote ou de message (motif, précisions) dans `reports`, lisible
+  uniquement depuis le tableau de bord Supabase (colonne `status` : open / reviewed / dismissed) ; 20 signalements par jour
+  max, un message signalé par 3 pilotes différents est masqué pour tous (`messages.hidden_at`).
 
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.

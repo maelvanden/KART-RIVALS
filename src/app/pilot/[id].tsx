@@ -20,6 +20,8 @@ import { HeadToHeadCard } from '@/features/profile/components/head-to-head-card'
 import { LicenseCard } from '@/features/profile/components/license-card';
 import { MatchHistory } from '@/features/profile/components/match-history';
 import { FollowButton } from '@/features/social/components/follow-button';
+import { PilotSafety } from '@/features/social/components/pilot-safety';
+import { useIsBlocked } from '@/features/social/safety';
 
 export default function PilotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +33,8 @@ export default function PilotScreen() {
   const badges = useBadgeStats(id);
   const laps = usePilotLapRecords(id);
   const isMe = id === userId;
+  const blocked = useIsBlocked(id);
+  const reachable = !isMe && !blocked;
 
   return (
     <Screen
@@ -52,7 +56,7 @@ export default function PilotScreen() {
         <>
           <LicenseCard profile={profile.data} />
           {!isMe && h2h.data ? <HeadToHeadCard h2h={h2h.data} rival={profile.data.username} /> : null}
-          {!isMe ? (
+          {reachable ? (
             <Button
               title={`Défier ${profile.data.username}`}
               onPress={() =>
@@ -63,7 +67,18 @@ export default function PilotScreen() {
               }
             />
           ) : null}
-          {!isMe ? <FollowButton pilotId={profile.data.id} username={profile.data.username} /> : null}
+          {reachable ? <FollowButton pilotId={profile.data.id} username={profile.data.username} /> : null}
+          {!isMe ? (
+            <PilotSafety
+              pilot={{
+                id: profile.data.id,
+                username: profile.data.username,
+                avatar_url: profile.data.avatar_url,
+                elo: profile.data.elo,
+                rank: profile.data.rank,
+              }}
+            />
+          ) : null}
           <VirtualGarage profileId={profile.data.id} editable={isMe} />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}

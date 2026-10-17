@@ -28,6 +28,13 @@ const messages: Record<string, string> = {
   'Only the Team Principal can release a pilot': 'Seul le Team Principal peut libérer un pilote.',
   'Pilot is not in your team': 'Ce pilote ne fait pas partie de ton écurie.',
   'Radio is reserved to teammates': 'La Radio Paddock est réservée à tes coéquipiers.',
+  'Pilot unavailable': 'Ce pilote n’est pas joignable.',
+  'row-level security policy for table "messages"': 'Message refusé : ce pilote n’est plus joignable sur la Radio.',
+  'row-level security policy for table "challenges"': 'Défi impossible : ce pilote n’est pas joignable.',
+  'You cannot block yourself': 'Tu ne peux pas te bloquer toi-même.',
+  'You cannot report yourself': 'Tu ne peux pas te signaler toi-même.',
+  'Message not found': 'Message introuvable.',
+  'Too many reports': 'Trop de signalements aujourd’hui, réessaie demain.',
 };
 
 /** Erreur Supabase → Error avec un message en français si on le connaît. */

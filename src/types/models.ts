@@ -274,8 +274,12 @@ export type Message = {
   body: string | null;
   payload: SharePayload | PollPayload | ImagePayload | null;
   created_at: string;
+  /** Masqué pour tous après 3 signalements. */
+  hidden_at?: string | null;
   sender?: Pick<Profile, 'username' | 'avatar_url'>;
 };
+
+export type ReportReason = 'harassment' | 'spam' | 'cheating' | 'inappropriate' | 'other';
 
 export type PollVote = { message_id: string; profile_id: string; option_index: number };
 

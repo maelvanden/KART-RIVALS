@@ -1,7 +1,8 @@
 import type { ImagePayload, Message, PollPayload, SharePayload } from '@/types/models';
 
 /** Aperçu d'un message dans la liste des conversations (même règle que message_preview en SQL). */
-export function messagePreview(m: Pick<Message, 'kind' | 'body' | 'payload'>): string | null {
+export function messagePreview(m: Pick<Message, 'kind' | 'body' | 'payload' | 'hidden_at'>): string | null {
+  if (m.hidden_at) return 'Message masqué';
   switch (m.kind) {
     case 'share':
       return `🏁 ${(m.payload as SharePayload | null)?.title ?? 'Partage'}`;

@@ -23,6 +23,7 @@ export function useSocialRealtime(userId: string | null) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, refresh('conversations'))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams' }, refresh('team', 'team-tags', 'teams-directory'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_applications' }, refresh('team-applications'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blocks' }, refresh('blocks', 'friendships'))
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

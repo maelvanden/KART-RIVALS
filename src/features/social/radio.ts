@@ -22,7 +22,7 @@ import type {
 /** Nombre de messages chargés à l'ouverture d'une conversation. */
 const PAGE = 100;
 const MESSAGE_COLUMNS =
-  'id, conversation_id, sender_id, kind, body, payload, created_at, sender:profiles!messages_sender_id_fkey (username, avatar_url)';
+  'id, conversation_id, sender_id, kind, body, payload, created_at, hidden_at, sender:profiles!messages_sender_id_fkey (username, avatar_url)';
 
 // ---------- Conversations ----------
 
@@ -387,6 +387,7 @@ export function useOpenDirectRadio() {
 export const demoTypingEvents = new EventTarget();
 
 function demoSend(conversationId: string, outgoing: OutgoingMessage, queryClient: ReturnType<typeof useQueryClient>): Message {
+  if (demoSocial.blocks.some((p) => `conv-${p.id}` === conversationId)) throw new Error('Ce pilote n’est pas joignable.');
   const list = (demoSocial.messages[conversationId] ??= []);
   const base = { id: `m-${Date.now()}`, conversation_id: conversationId, sender_id: demoProfile.id, created_at: new Date().toISOString() };
   const message: Message =

@@ -14,6 +14,7 @@ const text = (id: string, conversationId: string, senderId: string, body: string
   body,
   payload: null,
   created_at: ago(minutesAgo),
+  hidden_at: null,
 });
 
 export const demoPilots: Record<string, PilotSummary> = {
@@ -112,6 +113,8 @@ export const demoSocial = {
     'conv-team': { p1: ago(5), p3: ago(11) },
     'conv-p1': { p1: ago(299) },
   } as Record<string, Record<string, string>>,
+  /** Pilotes que j'ai bloqués. */
+  blocks: [] as PilotSummary[],
 };
 
 /** Conversations de la démo (écurie + 1v1 existants). */

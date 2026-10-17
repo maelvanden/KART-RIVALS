@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 
 import { useAuth } from '@/features/auth/auth-provider';
+import { useBlockedIds } from '@/features/social/safety';
 import { demoLeaderboard, demoNearby, demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import type { NearbyPilot, Profile } from '@/types/models';
@@ -35,9 +36,11 @@ export function useApproxLocation() {
 }
 
 export function useNearbyPilots(coords: Coords | null | undefined, radiusKm: number) {
+  const blocked = useBlockedIds();
   return useQuery({
     queryKey: ['nearby', coords, radiusKm],
     enabled: !!coords,
+    select: (pilots) => pilots.filter((p) => !blocked.has(p.id)),
     queryFn: async (): Promise<NearbyPilot[]> => {
       if (isDemoMode) return demoNearby.filter((p) => p.distance_km <= radiusKm);
       const { data, error } = await supabase.rpc('nearby_pilots', { lat: coords!.lat, lng: coords!.lng, radius_km: radiusKm });
@@ -56,9 +59,12 @@ const escapeLike = (q: string) => q.replace(/[\\%_]/g, (c) => `\\${c}`);
 export function useSearchPilots(query: string) {
   const { userId } = useAuth();
   const q = query.trim();
+  // Les pilotes bloqués n'apparaissent plus (ceux qui m'ont bloqué : leurs actions sont refusées côté serveur).
+  const blocked = useBlockedIds();
   return useQuery({
     queryKey: ['search-pilots', q],
     enabled: q.length >= 2,
+    select: (pilots) => pilots.filter((p) => !blocked.has(p.id)),
     staleTime: 60_000,
     queryFn: async (): Promise<PilotSearchResult[]> => {
       if (isDemoMode) {

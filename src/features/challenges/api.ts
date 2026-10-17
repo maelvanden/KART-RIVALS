@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { demoChallenges, demoEloHistory, demoNearby, demoProfile, demoTracks, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import { isExpired } from '@/features/challenges/state';
+import { socialError } from '@/features/social/errors';
 import type { Challenge, Match, RaceFormat } from '@/types/models';
 
 const CHALLENGE_SELECT = `
@@ -96,7 +97,7 @@ export function useCreateChallenge() {
         })
         .select('id')
         .single();
-      if (error) throw error;
+      if (error) throw error.message.includes('row-level security') ? socialError(error) : error;
       return data.id;
     },
     onSuccess: invalidate,

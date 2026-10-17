@@ -7,10 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { CarbonBackdrop } from '@/components/ui/carbon-backdrop';
 import { Icon, icons, type IconName } from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useMyProfile } from '@/features/profile/api';
+import { ReportSheet } from '@/features/social/components/report-sheet';
 import { PhotoMessage } from '@/features/social/components/radio/photo-message';
 import { PollCard } from '@/features/social/components/radio/poll-card';
 import { PollComposer } from '@/features/social/components/radio/poll-composer';
@@ -32,7 +34,9 @@ import {
   type OutgoingMessage,
 } from '@/features/social/radio';
 import { isStaff } from '@/features/social/roles';
+import { useBlockedIds, useBlockPilot, useUnblockPilot } from '@/features/social/safety';
 import { useMyTeam } from '@/features/social/teams';
+import { confirmAction } from '@/lib/confirm';
 import { isDemoMode } from '@/lib/demo';
 import { formatMessageTime } from '@/lib/format';
 import { colors, fonts, radius, spacing } from '@/theme';
@@ -57,7 +61,13 @@ export default function RadioScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [selected, setSelected] = useState<Message | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [reporting, setReporting] = useState<Message | null>(null);
   const isTeam = conversation?.kind === 'team';
+  const blockedIds = useBlockedIds();
+  const block = useBlockPilot();
+  const unblock = useUnblockPilot();
+  // 1v1 gelé : j'ai bloqué ce pilote (s'il m'a bloqué, l'envoi est refusé par le serveur).
+  const frozen = conversation?.kind === 'direct' && blockedIds.has(conversation.other_id ?? '');
 
   const { typing, notifyTyping, showTyping, stopTyping } = useRadioRealtime(id);
   useMarkRead(id, messages.data?.at(-1)?.id);
@@ -104,7 +114,17 @@ export default function RadioScreen() {
 
   // Liste inversée : le plus récent en bas, collé au champ de saisie.
   const items = [...(messages.data ?? [])].reverse();
-  const error = (send.error ?? vote.error ?? pin.error) as Error | null;
+  const error = (send.error ?? vote.error ?? pin.error ?? block.error ?? unblock.error) as Error | null;
+
+  function askBlock(message: Message) {
+    const name = message.sender?.username ?? 'ce pilote';
+    confirmAction(
+      `Bloquer ${name} ?`,
+      'Vous ne serez plus coéquipiers, sa Radio 1v1 est gelée et ses messages sont masqués pour toi. Il ne sera pas prévenu.',
+      'Bloquer',
+      () => block.mutate({ id: message.sender_id, username: message.sender?.username }),
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -151,7 +171,8 @@ export default function RadioScreen() {
                 myId={userId}
                 votes={(votes.data ?? []).filter((v) => v.message_id === item.id)}
                 onVote={(option) => vote.mutate({ messageId: item.id, option })}
-                onLongPress={canPin ? () => setSelected(item) : undefined}
+                blocked={!mine && blockedIds.has(item.sender_id)}
+                onLongPress={canPin || !mine ? () => setSelected(item) : undefined}
                 pinned={item.id === meta.data?.pinnedMessageId}
               />
               {item.id === myLast?.id && seenBy.length > 0 ? (
@@ -184,37 +205,52 @@ export default function RadioScreen() {
       ) : null}
       {error || pickError ? <Text style={styles.error}>{pickError ?? error?.message}</Text> : null}
 
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ajouter une photo, un partage ou un sondage"
-          onPress={() => setSheet('menu')}
-          style={({ pressed }) => [styles.plus, pressed && styles.pressed]}>
-          <Icon name={icons.plus} size={22} color={colors.neon} />
-        </Pressable>
-        <TextInput
-          value={draft}
-          onChangeText={(t) => {
-            setDraft(t);
-            if (t.trim() && profile.data) notifyTyping(profile.data.username);
-          }}
-          placeholder="Message radio…"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          multiline
-          maxLength={1000}
-          onSubmitEditing={submit}
-          submitBehavior={Platform.OS === 'web' ? 'submit' : undefined}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Envoyer"
-          disabled={!canSend}
-          onPress={submit}
-          style={({ pressed }) => [styles.send, !canSend && styles.sendDisabled, pressed && styles.pressed]}>
-          <Icon name={icons.send} size={20} color={colors.onNeon} />
-        </Pressable>
-      </View>
+      {frozen ? (
+        <View style={[styles.frozen, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View style={styles.frozenRow}>
+            <Icon name={icons.block} size={18} color={colors.danger} />
+            <Text style={styles.frozenText}>Tu as bloqué {title}. La radio est coupée.</Text>
+          </View>
+          <Button
+            title="Débloquer"
+            variant="secondary"
+            loading={unblock.isPending}
+            onPress={() => conversation?.other_id && unblock.mutate(conversation.other_id)}
+          />
+        </View>
+      ) : (
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ajouter une photo, un partage ou un sondage"
+            onPress={() => setSheet('menu')}
+            style={({ pressed }) => [styles.plus, pressed && styles.pressed]}>
+            <Icon name={icons.plus} size={22} color={colors.neon} />
+          </Pressable>
+          <TextInput
+            value={draft}
+            onChangeText={(t) => {
+              setDraft(t);
+              if (t.trim() && profile.data) notifyTyping(profile.data.username);
+            }}
+            placeholder="Message radio…"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            multiline
+            maxLength={1000}
+            onSubmitEditing={submit}
+            submitBehavior={Platform.OS === 'web' ? 'submit' : undefined}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Envoyer"
+            disabled={!canSend}
+            onPress={submit}
+            style={({ pressed }) => [styles.send, !canSend && styles.sendDisabled, pressed && styles.pressed]}>
+            <Icon name={icons.send} size={20} color={colors.onNeon} />
+          </Pressable>
+        </View>
+      )}
 
       <BottomSheet visible={sheet === 'menu'} onClose={() => setSheet(null)} title="Ajouter">
         <View style={styles.menu}>
@@ -242,7 +278,7 @@ export default function RadioScreen() {
               {messagePreview(selected)}
             </Text>
           ) : null}
-          {selected?.id === meta.data?.pinnedMessageId ? (
+          {!canPin || selected?.hidden_at ? null : selected?.id === meta.data?.pinnedMessageId ? (
             <MenuItem icon={icons.pinned} label="Retirer l’épingle" onPress={() => (pin.mutate(null), setSelected(null))} />
           ) : (
             <MenuItem
@@ -251,8 +287,50 @@ export default function RadioScreen() {
               onPress={() => (selected && pin.mutate(selected.id), setSelected(null))}
             />
           )}
+          {selected && selected.sender_id !== userId ? (
+            <>
+              <MenuItem
+                icon={icons.report}
+                label="Signaler le message"
+                danger
+                onPress={() => (setReporting(selected), setSelected(null))}
+              />
+              {blockedIds.has(selected.sender_id) ? (
+                <MenuItem
+                  icon={icons.block}
+                  label={`Débloquer ${selected.sender?.username ?? 'ce pilote'}`}
+                  onPress={() => (unblock.mutate(selected.sender_id), setSelected(null))}
+                />
+              ) : (
+                <MenuItem
+                  icon={icons.block}
+                  label={`Bloquer ${selected.sender?.username ?? 'ce pilote'}`}
+                  danger
+                  onPress={() => (askBlock(selected), setSelected(null))}
+                />
+              )}
+            </>
+          ) : null}
         </View>
       </BottomSheet>
+      <ReportSheet
+        target={
+          reporting
+            ? {
+                pilotId: reporting.sender_id,
+                username: reporting.sender?.username ?? 'ce pilote',
+                messageId: reporting.id,
+                preview: messagePreview(reporting) ?? undefined,
+              }
+            : null
+        }
+        onClose={() => setReporting(null)}
+        onBlock={
+          reporting && !blockedIds.has(reporting.sender_id)
+            ? () => block.mutate({ id: reporting.sender_id, username: reporting.sender?.username })
+            : undefined
+        }
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -266,9 +344,11 @@ type BubbleProps = {
   onVote: (option: number) => void;
   onLongPress?: () => void;
   pinned: boolean;
+  /** Expéditeur que j'ai bloqué : contenu masqué. */
+  blocked?: boolean;
 };
 
-function Bubble({ message, mine, showSender, myId, votes, onVote, onLongPress, pinned }: BubbleProps) {
+function Bubble({ message, mine, showSender, myId, votes, onVote, onLongPress, pinned, blocked }: BubbleProps) {
   const share = asShare(message);
   const poll = asPoll(message);
   const image = asImage(message);
@@ -279,6 +359,23 @@ function Bubble({ message, mine, showSender, myId, votes, onVote, onLongPress, p
       <Text style={styles.timeLoose}>{formatMessageTime(message.created_at)}</Text>
     </View>
   );
+
+  // Masqué après 3 signalements, ou envoyé par un pilote que j'ai bloqué.
+  if (message.hidden_at || blocked) {
+    return (
+      <Pressable onLongPress={onLongPress} delayLongPress={350} style={[styles.bubbleRow, mine && styles.bubbleRowMine]}>
+        <View style={styles.masked}>
+          {sender}
+          <View style={styles.maskedRow}>
+            <Icon name={icons.hidden} size={14} color={colors.textMuted} />
+            <Text style={styles.maskedText}>
+              {message.hidden_at ? 'Message masqué après signalements' : 'Message d’un pilote bloqué'}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
 
   // Cartes (partage, sondage, photo) : posées telles quelles, sans bulle.
   if (share || poll || image) {
@@ -310,13 +407,13 @@ function Bubble({ message, mine, showSender, myId, votes, onVote, onLongPress, p
   );
 }
 
-function MenuItem({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+function MenuItem({ icon, label, onPress, danger }: { icon: IconName; label: string; onPress: () => void; danger?: boolean }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}>
-      <View style={styles.menuIcon}>
-        <Icon name={icon} size={18} color={colors.neon} />
+      <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>
+        <Icon name={icon} size={18} color={danger ? colors.danger : colors.neon} />
       </View>
-      <Text style={styles.menuLabel}>{label}</Text>
+      <Text style={[styles.menuLabel, danger && { color: colors.danger }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -441,4 +538,27 @@ const styles = StyleSheet.create({
   },
   menuIcon: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.neonDim, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { flex: 1, fontWeight: '700' },
+  menuIconDanger: { backgroundColor: 'rgba(255, 59, 92, 0.12)' },
+  masked: {
+    maxWidth: '80%',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderStrong,
+  },
+  maskedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  maskedText: { fontSize: 13, fontStyle: 'italic', color: colors.textMuted },
+  frozen: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  frozenRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  frozenText: { flex: 1, fontWeight: '700' },
 });

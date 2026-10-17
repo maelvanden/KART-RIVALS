@@ -54,6 +54,10 @@ export const icons = {
   poll: { ios: 'chart.bar.fill', material: 'bar_chart' },
   pinned: { ios: 'pin.fill', material: 'push_pin' },
   seen: { ios: 'checkmark.circle', material: 'done_all' },
+  report: { ios: 'flag.fill', material: 'flag' },
+  block: { ios: 'nosign', material: 'block' },
+  more: { ios: 'ellipsis', material: 'more_horiz' },
+  hidden: { ios: 'eye.slash', material: 'visibility_off' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

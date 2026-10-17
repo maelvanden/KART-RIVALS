@@ -17,6 +17,7 @@ import {
   useSendFriendRequest,
 } from '@/features/social/friends';
 import { useOpenDirectRadio } from '@/features/social/radio';
+import { useBlocks, useUnblockPilot } from '@/features/social/safety';
 import { colors, fonts, radius, spacing } from '@/theme';
 import type { Friendship } from '@/types/models';
 
@@ -27,6 +28,8 @@ export default function FriendsScreen() {
   const respond = useRespondFriendRequest();
   const remove = useRemoveFriend();
   const openRadio = useOpenDirectRadio();
+  const blocks = useBlocks();
+  const unblock = useUnblockPilot();
   const [query, setQuery] = useState('');
   const q = query.replace(/^@/, '').trim();
   const search = useSearchPilots(q);
@@ -36,7 +39,7 @@ export default function FriendsScreen() {
   const received = all.filter((f) => f.status === 'pending' && !f.outgoing);
   const sent = all.filter((f) => f.status === 'pending' && f.outgoing);
   const teammates = all.filter((f) => f.status === 'accepted').sort((a, b) => b.pilot.elo - a.pilot.elo);
-  const error = (send.error ?? respond.error ?? remove.error ?? openRadio.error) as Error | null;
+  const error = (send.error ?? respond.error ?? remove.error ?? openRadio.error ?? unblock.error) as Error | null;
 
   async function radio(f: Friendship) {
     const id = await openRadio.mutateAsync(f.pilot.id);
@@ -152,6 +155,19 @@ export default function FriendsScreen() {
               <Icon name={icons.clock} size={14} color={colors.textMuted} />
               <Text style={styles.sentName}>{f.pilot.username}</Text>
               <Chip title="Annuler" variant="dark" onPress={() => remove.mutate(f.pilot.id)} disabled={remove.isPending} />
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      {blocks.data && blocks.data.length > 0 ? (
+        <>
+          <SectionTitle title="Pilotes bloqués" detail={`${blocks.data.length}`} />
+          {blocks.data.map((p) => (
+            <View key={p.id} style={styles.sentRow}>
+              <Icon name={icons.block} size={14} color={colors.danger} />
+              <Text style={styles.sentName}>{p.username}</Text>
+              <Chip title="Débloquer" variant="dark" onPress={() => unblock.mutate(p.id)} disabled={unblock.isPending} />
             </View>
           ))}
         </>
