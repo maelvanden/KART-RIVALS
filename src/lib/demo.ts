@@ -129,6 +129,21 @@ export const demoTrackDetails: TrackDetails[] = [
   { id: 't28', name: 'Monky Laval – Karting', city: 'Laval', address: 'Parc de l’Habitat, 30 rue du Petit Montron', postal_code: '53000', region: 'Mayenne', is_indoor: true, length_m: 230, kart_power: 'Bioéthanol', is_verified: true, lat: 48.0831, lng: -0.79621,
     description: 'Piste indoor de 230 m homologuée en 2023, karts au bioéthanol : 10 karts adultes et 8 enfants en même temps. Ouvert 7 j/7 toute l’année, horaires variables les jours fériés et pendant les vacances.',
     website: 'https://monky.fr/laval/activites/karting/', phone: '05 19 08 38 76' },
+  { id: 't29', name: 'Karting des 24 Heures du Mans', city: 'Le Mans', address: 'Route du Chemin aux Bœufs', postal_code: '72100', region: 'Sarthe', is_indoor: false, length_m: 1400, kart_power: '160 / 270 / 390cc · Rotax', is_verified: true, lat: 47.940384, lng: 0.214265,
+    description: 'Trois circuits au pied du circuit des 24 Heures : piste internationale de 1 400 m (selon les créneaux, parfois réservée aux licenciés), circuit Alain Prost de 980 m et Indy-Kart de 805 m. Karts 4 temps 160, 270 et 390cc et Rotax 2 temps. Ouvert toute l’année, réservation en ligne conseillée.',
+    website: 'https://www.lemans-karting.com/', phone: '02 43 40 21 40' },
+  { id: 't30', name: 'Racing Kart du Mans', city: 'Montfort-le-Gesnois', address: 'Les Vinettes', postal_code: '72450', region: 'Sarthe', is_indoor: false, length_m: 1150, kart_power: '120 / 270 / 390cc · Rotax', is_verified: true, lat: 48.03707, lng: 0.422,
+    description: 'L’ancien circuit de Soulitré : piste compétition de 1 150 m et piste loisir de 900 m, karts 4 temps 120, 270 et 390cc et Rotax 2 temps. Ouvert toute l’année, notamment le mercredi et le week-end : vérifie le calendrier avant de venir.',
+    website: 'https://www.racingkartdumans.com/', phone: '02 43 54 03 03' },
+  { id: 't31', name: 'SpeedPark Le Mans', city: 'Saint-Saturnin', address: '1 rue de Villeneuve, ZAC des Portes de l’Océane', postal_code: '72650', region: 'Sarthe', is_indoor: true, length_m: 300, kart_power: 'Thermique', is_verified: true, lat: 48.04985, lng: 0.17456,
+    description: 'Karting indoor thermique d’environ 300 m au nord du Mans, avec bowling et loisirs. Ouvert toute l’année jusque tard le soir (jusqu’à 2 h le vendredi et le samedi), ouverture plus tôt pendant les vacances.',
+    website: 'https://speedpark.fr/le-mans/karting/', phone: '02 43 29 56 56' },
+  { id: 't32', name: 'K1 Speed Le Mans', city: 'Le Mans', address: '26 avenue du Panorama', postal_code: '72100', region: 'Sarthe', is_indoor: true, length_m: null, kart_power: 'Électrique (adultes et juniors)', is_verified: true, lat: 47.96321, lng: 0.21797,
+    description: 'Karting indoor 100 % électrique, adultes et juniors, sur une piste avec dénivelés. Ouvert toute l’année : lundi sur réservation, du mardi au dimanche l’après-midi et le soir (jusqu’à 1 h le vendredi et le samedi).',
+    website: 'https://www.k1speed.com/fr/le-mans.html', phone: '02 43 31 18 20' },
+  { id: 't33', name: 'BattleKart Le Mans', city: 'Spay', address: '105 rue du Parc', postal_code: '72700', region: 'Sarthe', is_indoor: true, length_m: null, kart_power: 'Électrique (karting ludique)', is_verified: true, lat: 47.941429, lng: 0.160591,
+    description: 'Karting ludique : karts électriques interactifs sur des tracés projetés au sol, entre course et jeu vidéo. Pas de longueur fixe, à part du karting classique. Ouvert toute l’année du mercredi au dimanche, horaires adaptés pendant les vacances.',
+    website: 'https://www.battlekart.com/fr/le-mans', phone: '02 43 25 77 56' },
 ];
 
 export const demoTracks: Track[] = demoTrackDetails.map(({ id, name, city }) => ({ id, name, city }));
