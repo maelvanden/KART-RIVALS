@@ -49,6 +49,10 @@ Garage virtuel + boutique (migration `…_user_gear.sql`, écran `src/app/shop.t
   Time Attack validé +30. Solde `profiles.points`, journal `point_transactions` (alimentés uniquement par des triggers).
 - **Catalogue** `gear_items` : 5 slots (casque, combinaison, gants, bottines, protège-côtes), raretés Location / Commun /
   Rare / Épique / Légendaire. Les objets s'achètent en points ou se **gagnent** en atteignant un rang (Argent, Or…).
+- **Missions de la semaine** (migration `…_weekly_missions.sql`, carte sur le Paddock) : 3 missions fixes (2 circuits,
+  record perso en Time Attack, rejoindre une session) + 1 bonus qui tourne chaque semaine (gagner un défi, 3 résultats,
+  partager un chrono, donner un avis). Progression calculée à partir de l'activité (`my_missions`), points récupérés une
+  fois par semaine (`claim_mission`, raison `mission`).
 - **Collection** `user_items` + **équipement porté** `user_gear` (pas de ligne = équipement de location), modifiés
   uniquement par `buy_gear_item()` et `equip_gear_item()`.
 - **Visuels** : SVG génériques et fictifs (aucune marque ni logo) dans `assets/gear/`, générés par

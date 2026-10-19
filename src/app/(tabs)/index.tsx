@@ -11,6 +11,7 @@ import { useMyChallenges } from '@/features/challenges/api';
 import { challengeStep, needsMe } from '@/features/challenges/state';
 import { useMyPoints } from '@/features/garage/api';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
+import { MissionsCard } from '@/features/missions/missions-card';
 import { CommunityCard } from '@/features/social/components/community-card';
 import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
 import { BadgesCard } from '@/features/profile/components/badges-card';
@@ -119,6 +120,7 @@ export default function PaddockScreen() {
             ]}
           />
 
+          <MissionsCard />
           <CommunityCard />
           <VirtualGarage profileId={p.id} editable />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
