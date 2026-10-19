@@ -112,6 +112,12 @@ accueil, prix) et commentaire (`save_track_review`), moyennes par circuit (`trac
 (`report_track_review`, masqué après 3) traité dans l'écran Signalements. Météo des circuits outdoor via Open-Meteo
 (gratuit, sans clé) avec l'état probable de la piste (sèche, humide, pluie annoncée).
 
+Sessions ouvertes « Je roule samedi » (migration `…_open_sessions.sql`, écrans `src/app/sessions/`) : un pilote
+annonce un créneau (`create_open_session` : circuit, date, 2 à 8 places, format, ouverte à tous ou aux coéquipiers et à
+l'écurie), les autres le rejoignent (`join_open_session`, `leave_open_session`). À l'heure prévue (pg_cron
+`start_due_sessions`, toutes les 5 min) ou sur « Lancer maintenant » (`start_open_session`) : 3 pilotes ou plus → course
+avec tous les inscrits, 2 pilotes → défi déjà accepté, 1 pilote → session expirée.
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

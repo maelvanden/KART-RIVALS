@@ -10,6 +10,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useApproxLocation, useNearbyPilots, useSearchPilots } from '@/features/nearby/api';
+import { SessionsBanner } from '@/features/sessions/components/sessions-banner';
 import { formatKm } from '@/lib/format';
 import { colors, radius as radii, spacing } from '@/theme';
 
@@ -52,6 +53,7 @@ export default function NearbyScreen() {
         ) : null}
       </View>
 
+      {!searching ? <SessionsBanner /> : null}
       {searching ? (
         <>
           {search.isLoading ? <Loading /> : null}
