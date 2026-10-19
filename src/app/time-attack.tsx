@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -217,7 +218,17 @@ function HistoryRow({ session: s }: { session: TimeAttackSession }) {
         </Text>
       </View>
       {validated ? (
-        <Text style={styles.lap}>{s.best_lap_ms ? formatLapTime(s.best_lap_ms) : 'Validé'}</Text>
+        <View style={styles.validated}>
+          <Text style={styles.lap}>{s.best_lap_ms ? formatLapTime(s.best_lap_ms) : 'Validé'}</Text>
+          {s.best_lap_ms ? (
+            <Text
+              style={styles.share}
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/feed/new', params: { sessionId: s.id } })}>
+              Publier dans l’actu
+            </Text>
+          ) : null}
+        </View>
       ) : (
         <Text style={styles.dnf}>DNF{s.elo_penalty ? ` · −${s.elo_penalty} ELO` : ''}</Text>
       )}
@@ -284,6 +295,8 @@ function formatRemaining(ms: number) {
 }
 
 const styles = StyleSheet.create({
+  validated: { alignItems: 'flex-end', gap: 2 },
+  share: { fontSize: 12, fontWeight: '800', color: colors.neon },
   block: { gap: spacing.sm },
   title: { fontSize: 26 },
   countdown: { fontVariant: ['tabular-nums'], marginTop: spacing.sm },

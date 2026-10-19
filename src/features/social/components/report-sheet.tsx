@@ -9,10 +9,11 @@ import { Text } from '@/components/ui/text';
 import { REPORT_REASONS, useReport } from '@/features/social/safety';
 import { useReportTrackPhoto } from '@/features/tracks/photos';
 import { useReportReview } from '@/features/tracks/reviews';
+import { useReportPost } from '@/features/feed/api';
 import { colors, radius, spacing } from '@/theme';
 import type { ReportReason } from '@/types/models';
 
-type Target = { pilotId: string; username: string; messageId?: string; photoId?: string; reviewId?: string; preview?: string };
+type Target = { pilotId: string; username: string; messageId?: string; photoId?: string; reviewId?: string; postId?: string; commentId?: string; preview?: string };
 
 type Props = {
   target: Target | null;
@@ -26,7 +27,8 @@ export function ReportSheet({ target, onClose, onBlock }: Props) {
   const reportPilot = useReport();
   const reportPhoto = useReportTrackPhoto();
   const reportReview = useReportReview();
-  const report = target?.photoId ? reportPhoto : target?.reviewId ? reportReview : reportPilot;
+  const reportPost = useReportPost();
+  const report = target?.photoId ? reportPhoto : target?.reviewId ? reportReview : target?.postId ? reportPost : reportPilot;
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [sent, setSent] = useState(false);
@@ -38,6 +40,7 @@ export function ReportSheet({ target, onClose, onBlock }: Props) {
     reportPilot.reset();
     reportPhoto.reset();
     reportReview.reset();
+    reportPost.reset();
     onClose();
   }
 
@@ -46,6 +49,7 @@ export function ReportSheet({ target, onClose, onBlock }: Props) {
     const onSuccess = () => setSent(true);
     if (target.photoId) reportPhoto.mutate({ photoId: target.photoId, reason, details }, { onSuccess });
     else if (target.reviewId) reportReview.mutate({ reviewId: target.reviewId, reason, details }, { onSuccess });
+    else if (target.postId) reportPost.mutate({ postId: target.postId, commentId: target.commentId, reason, details }, { onSuccess });
     else reportPilot.mutate({ pilotId: target.pilotId, reason, details, messageId: target.messageId }, { onSuccess });
   }
 
@@ -53,6 +57,10 @@ export function ReportSheet({ target, onClose, onBlock }: Props) {
     ? 'Signaler la photo'
     : target?.reviewId
       ? 'Signaler l’avis'
+      : target?.commentId
+        ? 'Signaler le commentaire'
+        : target?.postId
+          ? 'Signaler la publication'
     : target?.messageId
       ? 'Signaler le message'
       : `Signaler ${target?.username ?? ''}`;

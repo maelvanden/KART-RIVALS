@@ -36,10 +36,11 @@ export default function TabsLayout() {
           // Sur le web, pas d'inset bas : on laisse de la place au libellé sous l'icône.
           ...(Platform.OS === 'web' ? { height: 60, paddingBottom: 6 } : {}),
         },
-        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, letterSpacing: 0.3 },
+        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, letterSpacing: 0 },
         sceneStyle: { backgroundColor: colors.background },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Paddock', tabBarIcon: tabIcon(icons.license) }} />
+      <Tabs.Screen name="feed" options={{ title: 'Actu', tabBarIcon: tabIcon(icons.feed) }} />
       <Tabs.Screen
         name="challenges"
         options={{
@@ -51,7 +52,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="nearby" options={{ title: 'Pilotes', tabBarIcon: tabIcon(icons.nearby) }} />
       <Tabs.Screen name="tracks" options={{ title: 'Circuits', tabBarIcon: tabIcon(icons.map) }} />
-      <Tabs.Screen name="leaderboard" options={{ title: 'Classement', tabBarIcon: tabIcon(icons.trophy) }} />
+      <Tabs.Screen name="leaderboard" options={{ title: 'Classement', tabBarLabel: 'Podium', tabBarIcon: tabIcon(icons.trophy) }} />
     </Tabs>
   );
 }

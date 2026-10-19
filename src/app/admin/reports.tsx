@@ -11,9 +11,12 @@ import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { trackPhotoUrl, useAdminReports, useAdminRoles, useResolveReport, type AdminReport, type ReportStatus } from '@/features/admin/api';
+import { mediaUrl } from '@/features/feed/api';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatMessageTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
+
+const feedMediaUrl = (path: string) => mediaUrl({ media_path: path }) ?? '';
 
 const TABS: { value: ReportStatus; label: string }[] = [
   { value: 'open', label: 'À traiter' },
@@ -59,9 +62,13 @@ function ReportCard({
   onResolve: (status: 'reviewed' | 'dismissed', hide?: boolean) => void;
 }) {
   const reason = REPORT_REASONS.find((x) => x.value === r.reason)?.label ?? r.reason;
-  const hasContent = !!r.message_id || !!r.photo_id || !!r.review_id;
-  const hidden = r.message_hidden || r.photo_hidden || !!r.review_hidden;
-  const target = r.photo_id
+  const hasContent = !!r.message_id || !!r.photo_id || !!r.review_id || !!r.post_id || !!r.comment_id;
+  const hidden = r.message_hidden || r.photo_hidden || !!r.review_hidden || !!r.post_hidden || !!r.comment_hidden;
+  const target = r.comment_id
+    ? 'Commentaire dans l’actu'
+    : r.post_id
+      ? 'Publication dans l’actu'
+      : r.photo_id
     ? 'Photo de circuit'
     : r.review_id
       ? `Avis sur ${r.review_track ?? 'un circuit'}`
@@ -89,6 +96,14 @@ function ReportCard({
         <View style={styles.quote}>
           <Text style={styles.quoteText}>{r.message_body ?? (r.message_kind === 'image' ? '📷 Photo' : 'Message sans texte')}</Text>
         </View>
+      ) : null}
+      {r.post_id || r.comment_id ? (
+        <View style={styles.quote}>
+          <Text style={styles.quoteText}>{r.comment_body ?? r.post_caption ?? 'Publication sans texte (chrono ou média)'}</Text>
+        </View>
+      ) : null}
+      {r.post_media_path ? (
+        <Image source={{ uri: feedMediaUrl(r.post_media_path) }} style={styles.photo} contentFit="cover" />
       ) : null}
       {r.review_id ? (
         <View style={styles.quote}>

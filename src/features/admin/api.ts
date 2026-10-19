@@ -46,6 +46,13 @@ export type AdminReport = {
   review_comment?: string | null;
   review_track?: string | null;
   review_hidden?: boolean;
+  post_id?: string | null;
+  post_caption?: string | null;
+  post_media_path?: string | null;
+  post_hidden?: boolean;
+  comment_id?: string | null;
+  comment_body?: string | null;
+  comment_hidden?: boolean;
 };
 /** Champs d'une fiche circuit modifiables par ses gestionnaires (chaîne vide = effacer). */
 export type TrackPageInput = Partial<
