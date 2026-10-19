@@ -81,6 +81,9 @@ Dimension sociale (migration `…_social.sql`) :
   uniquement depuis le tableau de bord Supabase (colonne `status` : open / reviewed / dismissed) ; 20 signalements par jour
   max, un message signalé par 3 pilotes différents est masqué pour tous (`messages.hidden_at`).
 
+Circuits recensés : Maine-et-Loire (49) et Loudun (86) (`…_tracks_49.sql`), Vendée (85, `…_tracks_85.sql`),
+Loire-Atlantique (44) et Mayenne (53) (`…_tracks_44_53.sql`). Onglet Circuits filtrable par département.
+
 Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`) :
 
 - **Infos pratiques** sur `tracks` : `description`, `booking_url` (bouton « Réserver une session »), `website`, `phone`,

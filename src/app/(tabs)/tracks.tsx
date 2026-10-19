@@ -44,7 +44,11 @@ export default function TracksScreen() {
       .sort((a, b) => (a.km ?? 0) - (b.km ?? 0) || a.track.name.localeCompare(b.track.name));
   }, [tracks.data, location.data, filter, dept]);
   const subtitle =
-    dept === 'all' ? departments.map(([, name]) => name).join(' · ') : (departments.find(([c]) => c === dept)?.[1] ?? '');
+    dept === 'all'
+      ? departments.length > 3
+        ? `${departments.length} départements`
+        : departments.map(([, name]) => name).join(' · ')
+      : (departments.find(([c]) => c === dept)?.[1] ?? '');
 
   return (
     <Screen subtitle={subtitle} title="Circuits" refreshing={tracks.isRefetching} onRefresh={tracks.refetch}>
@@ -61,7 +65,7 @@ export default function TracksScreen() {
       ) : null}
       {departments.length > 1 ? (
         <Segmented
-          options={[{ value: 'all', label: 'Partout' }, ...departments.map(([code]) => ({ value: code, label: code }))]}
+          options={[{ value: 'all', label: 'Tout' }, ...departments.map(([code]) => ({ value: code, label: code }))]}
           value={dept}
           onChange={setDept}
         />
