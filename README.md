@@ -97,6 +97,12 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   téléphone, position GPS, tracé envoyé dans le bucket public `track-layouts`) et modère ses photos. Un exploitant le
   demande depuis la fiche (`request_track_admin`), un admin appli valide (`respond_track_admin_request`).
 
+Agenda & promos des kartings (migration `…_track_events.sql`, écrans `src/app/events.tsx`, `src/app/event/[id].tsx`,
+`src/app/admin/event.tsx`) : les admins d'un karting publient événements (endurance, Grand Prix, nocturne, course) et
+promos (`save_track_event`, `delete_track_event`). Le code promo n'est pas lisible directement : `reveal_promo` le livre et
+compte les pilotes qui l'ont affiché ; « Ça m'intéresse » (`toggle_event_interest`) ; statistiques pour le karting
+(`manage_track_events`) ; mise à la une par un admin appli (`set_event_featured`).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

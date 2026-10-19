@@ -46,6 +46,13 @@ const messages: Record<string, string> = {
   'Only the track admins can edit this page': 'Seuls les admins de ce karting peuvent modifier la fiche.',
   'Invalid coordinates': 'Coordonnées GPS invalides.',
   'Report not found': 'Signalement introuvable.',
+  'Event not found': 'Événement introuvable.',
+  'Only the track admins can publish events': 'Seuls les admins de ce karting publient des événements.',
+  'Too many upcoming events': 'Trop d’événements à venir (30 maximum) : supprime-en un.',
+  'Promo expired': 'Cette promo est terminée.',
+  'track_events_check1': 'Une promo a besoin d’un code et d’une date de fin.',
+  'track_events_check2': 'La fin doit être après le début.',
+  'track_events_check"': 'Un événement a besoin d’une date et d’un type.',
   'violates check constraint "tracks_': 'Valeur refusée : vérifie les liens (https://…) et la longueur des textes.',
   'invalid input syntax for type integer': 'La longueur de piste doit être un nombre.',
 };

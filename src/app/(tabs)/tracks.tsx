@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Segmented } from '@/components/ui/segmented';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
+import { AgendaBanner } from '@/features/events/components/agenda-banner';
 import { useApproxLocation } from '@/features/nearby/api';
 import { useMyProfile } from '@/features/profile/api';
 import { useTrackRecords, useTracksMap } from '@/features/tracks/api';
@@ -47,6 +48,7 @@ export default function TracksScreen() {
 
   return (
     <Screen subtitle={subtitle} title="Circuits" refreshing={tracks.isRefetching} onRefresh={tracks.refetch}>
+      <AgendaBanner />
       {tracks.isPending ? <Loading /> : null}
       {tracks.error ? <ErrorState error={tracks.error} /> : null}
       {tracks.data ? (
