@@ -64,6 +64,7 @@ export const icons = {
   route: { ios: 'point.topleft.down.to.point.bottomright.curvepath', material: 'route' },
   link: { ios: 'link', material: 'link' },
   trash: { ios: 'trash', material: 'delete' },
+  verified: { ios: 'checkmark.seal.fill', material: 'verified' },
   admin: { ios: 'checkmark.shield.fill', material: 'admin_panel_settings' },
   locate: { ios: 'location.circle', material: 'my_location' },
 } satisfies Record<string, IconName>;

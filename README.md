@@ -103,6 +103,10 @@ promos (`save_track_event`, `delete_track_event`). Le code promo n'est pas lisib
 compte les pilotes qui l'ont affiché ; « Ça m'intéresse » (`toggle_event_interest`) ; statistiques pour le karting
 (`manage_track_events`) ; mise à la une par un admin appli (`set_event_featured`).
 
+Badges (migration `…_badges.sql`) : « pilote vérifié » pour au moins un Time Attack validé par ticket
+(`verified_pilots`, affiché à côté du pseudo) ; « karting officiel » quand la fiche a un admin karting
+(`tracks.is_official`, tenu à jour par trigger sur `track_admins`).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

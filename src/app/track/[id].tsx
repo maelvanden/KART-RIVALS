@@ -16,6 +16,7 @@ import { TrackLapRecords } from '@/features/tracks/components/track-lap-records'
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
 import { TrackLinks } from '@/features/tracks/components/track-links';
 import { TrackMap } from '@/features/tracks/components/track-map';
+import { OfficialBadge } from '@/features/tracks/components/official-badge';
 import { TrackTypeBadge } from '@/features/tracks/components/track-row';
 import { colors, spacing } from '@/theme';
 import type { TrackDetails } from '@/types/models';
@@ -65,6 +66,7 @@ export default function TrackScreen() {
               </Text>
               <TrackTypeBadge indoor={t.is_indoor} />
             </View>
+            {t.is_official ? <OfficialBadge /> : null}
             <Text variant="caption">
               {[t.address, [t.postal_code, t.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
             </Text>

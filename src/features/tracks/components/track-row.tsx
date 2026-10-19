@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, icons } from '@/components/ui/icon';
+import { OfficialBadge } from '@/features/tracks/components/official-badge';
 import { Text } from '@/components/ui/text';
 import { formatKm, formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
@@ -37,6 +38,7 @@ export function TrackRow({ track, distanceKm, favorite, recordMs }: Props) {
               <Text variant="heading" numberOfLines={1} style={styles.name}>
                 {track.name}
               </Text>
+              {track.is_official ? <OfficialBadge compact /> : null}
               {favorite ? <Icon name={icons.star} size={16} color={colors.neon} /> : null}
             </View>
             <Text variant="caption" numberOfLines={2}>

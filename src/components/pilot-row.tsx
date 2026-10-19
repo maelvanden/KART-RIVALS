@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { VerifiedBadge } from '@/features/profile/components/verified-badge';
 import { TeamTag } from '@/features/social/components/team-tag';
 import { colors, rankMeta, spacing } from '@/theme';
 import type { RankTier } from '@/types/models';
@@ -31,6 +32,7 @@ export function PilotRow({ pilotId, username, avatarUrl = null, rank, elo, subti
         <View style={styles.nameRow}>
           <TeamTag pilotId={pilotId} />
           <Text variant="heading" numberOfLines={1} style={styles.name}>{username}</Text>
+          <VerifiedBadge pilotId={pilotId} />
         </View>
         {/* Rang sur la 2e ligne : le pseudo (et le tag d'écurie) gardent toute la largeur. */}
         <View style={styles.metaRow}>

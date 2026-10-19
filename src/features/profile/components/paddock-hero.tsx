@@ -9,6 +9,7 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { nextRankProgress } from '@/features/profile/components/license-card';
 import { RankBadge } from '@/features/profile/components/rank-badge';
+import { VerifiedBadge } from '@/features/profile/components/verified-badge';
 import { TeamTag } from '@/features/social/components/team-tag';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { colors, fonts, gradients, radius, rankMeta, spacing } from '@/theme';
@@ -36,6 +37,7 @@ export function PaddockHero({ profile }: { profile: Profile }) {
           </Text>
           <View style={styles.badges}>
             <TeamTag pilotId={profile.id} />
+            <VerifiedBadge pilotId={profile.id} />
             <RankBadge rank={profile.rank} size="sm" />
           </View>
         </View>

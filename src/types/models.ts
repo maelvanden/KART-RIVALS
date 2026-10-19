@@ -44,6 +44,8 @@ export type TrackDetails = Track & {
   tiktok_url?: string | null;
   youtube_url?: string | null;
   layout_url?: string | null;
+  /** Fiche tenue par au moins un admin karting (exploitant validé). */
+  is_official?: boolean;
 };
 
 /** Photo d'un circuit postée par un pilote (bucket public track-photos). */
