@@ -73,6 +73,7 @@ export type TrackPageInput = Partial<
     | 'tiktok_url'
     | 'youtube_url'
     | 'layout_url'
+    | 'cover_url'
     | 'lat'
     | 'lng'
   > & { length_m: number | string | null }
@@ -384,6 +385,20 @@ export async function uploadTrackLayout(trackId: string, uri: string, width: num
   const bytes = await (await fetch(saved.uri)).arrayBuffer();
   const path = `${trackId}/${Date.now()}.png`;
   const { error } = await supabase.storage.from('track-layouts').upload(path, bytes, { contentType: 'image/png' });
+  if (error) throw error;
+  return supabase.storage.from('track-layouts').getPublicUrl(path).data.publicUrl;
+}
+
+/** Envoie la photo principale du circuit (JPEG, bucket public track-layouts) et renvoie son adresse. */
+export async function uploadTrackCover(trackId: string, uri: string, width: number): Promise<string> {
+  const context = ImageManipulator.manipulate(uri);
+  if (width > 1800) context.resize({ width: 1800 });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: 0.82, format: SaveFormat.JPEG });
+  if (isDemoMode) return saved.uri;
+  const bytes = await (await fetch(saved.uri)).arrayBuffer();
+  const path = `${trackId}/cover-${Date.now()}.jpg`;
+  const { error } = await supabase.storage.from('track-layouts').upload(path, bytes, { contentType: 'image/jpeg' });
   if (error) throw error;
   return supabase.storage.from('track-layouts').getPublicUrl(path).data.publicUrl;
 }

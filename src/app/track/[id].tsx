@@ -14,13 +14,12 @@ import { TrackManageLink } from '@/features/admin/components/track-manage-link';
 import { TrackReviews } from '@/features/tracks/components/track-reviews';
 import { WeatherCard } from '@/features/tracks/components/weather-card';
 import { TrackSessions } from '@/features/sessions/components/track-sessions';
+import { TrackHero } from '@/features/tracks/components/track-hero';
 import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
 import { TrackLinks } from '@/features/tracks/components/track-links';
 import { TrackMap } from '@/features/tracks/components/track-map';
-import { OfficialBadge } from '@/features/tracks/components/official-badge';
-import { TrackTypeBadge } from '@/features/tracks/components/track-row';
 import { colors, spacing } from '@/theme';
 import type { TrackDetails } from '@/types/models';
 
@@ -54,22 +53,16 @@ export default function TrackScreen() {
         board.refetch();
         laps.refetch();
       }}>
-      <Stack.Screen options={{ title: t?.name ?? 'Circuit' }} />
+      {/* L'en-tête photo remplace la barre de navigation une fois le circuit chargé. */}
+      <Stack.Screen options={{ title: t?.name ?? 'Circuit', headerShown: !t }} />
       {track.isPending ? <Loading /> : null}
       {track.error ? <ErrorState error={track.error} /> : null}
       {track.data === null ? <EmptyState title="Circuit introuvable" /> : null}
       {t ? (
         <>
-          <TrackMap tracks={[t]} height={180} selectedId={t.id} />
+          <TrackHero track={t} />
 
           <Card style={styles.info}>
-            <View style={styles.titleRow}>
-              <Text variant="title" style={styles.title}>
-                {t.name}
-              </Text>
-              <TrackTypeBadge indoor={t.is_indoor} />
-            </View>
-            {t.is_official ? <OfficialBadge /> : null}
             <Text variant="caption">
               {[t.address, [t.postal_code, t.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
             </Text>
@@ -83,6 +76,7 @@ export default function TrackScreen() {
 
           <TrackLinks track={t} />
           <WeatherCard track={t} />
+          <TrackMap tracks={[t]} height={160} selectedId={t.id} />
 
           <View style={styles.actions}>
             <Button
@@ -161,8 +155,6 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   info: { gap: spacing.md },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  title: { flexShrink: 1, fontSize: 24 },
   facts: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   fact: { gap: 2, minWidth: 80 },
   factValue: { fontSize: 16, fontWeight: '800' },

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -15,6 +16,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import {
   normalizeUrl,
+  uploadTrackCover,
   uploadTrackLayout,
   useAdminRoles,
   useCanManageTrack,
@@ -49,6 +51,7 @@ export default function ManageTrackScreen() {
       ) : null}
       {track.data && canManage ? (
         <>
+          <CoverEditor track={track.data} />
           <TrackForm key={track.data.id} track={track.data} />
           <LayoutEditor track={track.data} />
           {roles.data?.is_app_admin ? <TrackAdmins trackId={track.data.id} /> : null}
@@ -243,6 +246,50 @@ function TrackForm({ track }: { track: TrackDetails }) {
   );
 }
 
+/** Photo principale en haut de la fiche (format paysage conseillé). */
+function CoverEditor({ track }: { track: TrackDetails }) {
+  const update = useUpdateTrackPage(track.id);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function pick() {
+    setError(null);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: true, aspect: [16, 9] });
+      if (result.canceled) return;
+      setUploading(true);
+      const { uri, width } = result.assets[0];
+      const url = await uploadTrackCover(track.id, uri, width);
+      await update.mutateAsync({ cover_url: url });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Impossible d’envoyer la photo.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <>
+      <SectionTitle title="Photo principale" />
+      {track.cover_url ? <Image source={{ uri: track.cover_url }} style={styles.cover} contentFit="cover" /> : null}
+      <Text variant="caption">
+        Affichée en grand en haut de la fiche. Sans photo, la plus récente des photos des pilotes est utilisée.
+      </Text>
+      <Button
+        title={track.cover_url ? 'Changer la photo' : 'Choisir une photo'}
+        variant="secondary"
+        icon={<Icon name={icons.gallery} size={18} color={colors.text} />}
+        loading={uploading}
+        onPress={pick}
+      />
+      {track.cover_url ? (
+        <Button title="Retirer la photo" variant="quiet" disabled={update.isPending} onPress={() => update.mutate({ cover_url: '' })} />
+      ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </>
+  );
+}
+
 /** Tracé : image envoyée depuis la galerie (PNG transparent conseillé). */
 function LayoutEditor({ track }: { track: TrackDetails }) {
   const update = useUpdateTrackPage(track.id);
@@ -365,4 +412,5 @@ const styles = StyleSheet.create({
   error: { color: colors.danger },
   notice: { color: colors.neon, fontWeight: '700' },
   tip: { borderLeftWidth: 3, borderLeftColor: colors.neon },
+  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: colors.surfaceAlt },
 });

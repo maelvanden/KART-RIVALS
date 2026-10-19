@@ -82,6 +82,8 @@ Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`
 - **Infos pratiques** sur `tracks` : `description`, `booking_url` (bouton « Réserver une session »), `website`, `phone`,
   `instagram_url`, `facebook_url`, `tiktok_url`, `youtube_url` (adresses en https). Elles se renseignent depuis le tableau
   de bord Supabase (Table Editor > tracks) et apparaissent dans l'app sans mise à jour.
+- **Photo principale** (`tracks.cover_url`, migration `…_track_cover.sql`) : en-tête plein cadre de la fiche, envoyée par
+  les admins du karting (Gérer la fiche) ; à défaut la plus récente des photos des pilotes, sinon le tracé.
 - **Tracé** : image embarquée dans `assets/tracks/` (déclarée dans `src/features/tracks/layouts.ts`, par nom de circuit) ou
   adresse publique dans `tracks.layout_url`.
 - **Photos des pilotes** : `track_photos` + bucket public `track-photos` (`<circuit>/<pilote>/…`), 10 photos par jour et par

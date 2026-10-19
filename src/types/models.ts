@@ -46,6 +46,8 @@ export type TrackDetails = Track & {
   layout_url?: string | null;
   /** Fiche tenue par au moins un admin karting (exploitant validé). */
   is_official?: boolean;
+  /** Photo principale en haut de la fiche. */
+  cover_url?: string | null;
 };
 
 /** Photo d'un circuit postée par un pilote (bucket public track-photos). */
