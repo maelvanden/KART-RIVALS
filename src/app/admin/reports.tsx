@@ -59,9 +59,15 @@ function ReportCard({
   onResolve: (status: 'reviewed' | 'dismissed', hide?: boolean) => void;
 }) {
   const reason = REPORT_REASONS.find((x) => x.value === r.reason)?.label ?? r.reason;
-  const hasContent = !!r.message_id || !!r.photo_id;
-  const hidden = r.message_hidden || r.photo_hidden;
-  const target = r.photo_id ? 'Photo de circuit' : r.message_id ? 'Message Radio' : 'Pilote';
+  const hasContent = !!r.message_id || !!r.photo_id || !!r.review_id;
+  const hidden = r.message_hidden || r.photo_hidden || !!r.review_hidden;
+  const target = r.photo_id
+    ? 'Photo de circuit'
+    : r.review_id
+      ? `Avis sur ${r.review_track ?? 'un circuit'}`
+      : r.message_id
+        ? 'Message Radio'
+        : 'Pilote';
 
   return (
     <Card style={[styles.card, r.status === 'open' && styles.cardOpen]}>
@@ -82,6 +88,11 @@ function ReportCard({
       {r.message_id ? (
         <View style={styles.quote}>
           <Text style={styles.quoteText}>{r.message_body ?? (r.message_kind === 'image' ? '📷 Photo' : 'Message sans texte')}</Text>
+        </View>
+      ) : null}
+      {r.review_id ? (
+        <View style={styles.quote}>
+          <Text style={styles.quoteText}>{r.review_comment ?? 'Avis sans commentaire (notes seules)'}</Text>
         </View>
       ) : null}
       {r.photo_path ? <Image source={{ uri: trackPhotoUrl(r.photo_path) }} style={styles.photo} contentFit="cover" /> : null}

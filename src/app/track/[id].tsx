@@ -11,6 +11,8 @@ import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { useTrack, useTrackLapRecords, useTrackLeaderboard } from '@/features/tracks/api';
 import { TrackEvents } from '@/features/events/components/track-events';
 import { TrackManageLink } from '@/features/admin/components/track-manage-link';
+import { TrackReviews } from '@/features/tracks/components/track-reviews';
+import { WeatherCard } from '@/features/tracks/components/weather-card';
 import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
@@ -79,6 +81,7 @@ export default function TrackScreen() {
           </Card>
 
           <TrackLinks track={t} />
+          <WeatherCard track={t} />
 
           <View style={styles.actions}>
             <Button
@@ -101,6 +104,7 @@ export default function TrackScreen() {
           <TrackEvents trackId={t.id} />
           <TrackLayoutCard track={t} />
           <TrackGallery trackId={t.id} trackName={t.name} />
+          <TrackReviews trackId={t.id} trackName={t.name} />
 
           <Text variant="label">Records du tour</Text>
           {laps.isPending ? <Loading /> : null}

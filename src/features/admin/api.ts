@@ -42,6 +42,10 @@ export type AdminReport = {
   photo_id: string | null;
   photo_path: string | null;
   photo_hidden: boolean;
+  review_id?: string | null;
+  review_comment?: string | null;
+  review_track?: string | null;
+  review_hidden?: boolean;
 };
 /** Champs d'une fiche circuit modifiables par ses gestionnaires (chaîne vide = effacer). */
 export type TrackPageInput = Partial<

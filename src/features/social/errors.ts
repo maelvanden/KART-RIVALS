@@ -47,6 +47,8 @@ const messages: Record<string, string> = {
   'Invalid coordinates': 'Coordonnées GPS invalides.',
   'Report not found': 'Signalement introuvable.',
   'Event not found': 'Événement introuvable.',
+  'Review not found': 'Avis introuvable.',
+  'Track not found': 'Circuit introuvable.',
   'Only the track admins can publish events': 'Seuls les admins de ce karting publient des événements.',
   'Too many upcoming events': 'Trop d’événements à venir (30 maximum) : supprime-en un.',
   'Promo expired': 'Cette promo est terminée.',

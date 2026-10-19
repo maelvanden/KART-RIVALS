@@ -107,6 +107,11 @@ Badges (migration `…_badges.sql`) : « pilote vérifié » pour au moins un Ti
 (`verified_pilots`, affiché à côté du pseudo) ; « karting officiel » quand la fiche a un admin karting
 (`tracks.is_official`, tenu à jour par trigger sur `track_admins`).
 
+Avis et météo (migration `…_track_reviews.sql`) : un avis par pilote et par circuit, notes de 1 à 5 (piste, karts,
+accueil, prix) et commentaire (`save_track_review`), moyennes par circuit (`track_ratings`), signalement
+(`report_track_review`, masqué après 3) traité dans l'écran Signalements. Météo des circuits outdoor via Open-Meteo
+(gratuit, sans clé) avec l'état probable de la piste (sèche, humide, pluie annoncée).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

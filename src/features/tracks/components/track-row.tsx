@@ -2,8 +2,9 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, icons } from '@/components/ui/icon';
-import { OfficialBadge } from '@/features/tracks/components/official-badge';
 import { Text } from '@/components/ui/text';
+import { OfficialBadge } from '@/features/tracks/components/official-badge';
+import { useTrackRatings } from '@/features/tracks/reviews';
 import { formatKm, formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { TrackDetails } from '@/types/models';
@@ -20,6 +21,7 @@ export function TrackTypeBadge({ indoor }: { indoor: boolean }) {
 }
 
 export function TrackRow({ track, distanceKm, favorite, recordMs }: Props) {
+  const rating = useTrackRatings().data?.[track.id];
   const facts = [
     track.length_m ? `${track.length_m.toLocaleString('fr-FR')} m` : null,
     track.kart_power,
@@ -45,6 +47,14 @@ export function TrackRow({ track, distanceKm, favorite, recordMs }: Props) {
               {track.city}
               {facts.length ? ` · ${facts.join(' · ')}` : ''}
             </Text>
+            {rating ? (
+              <View style={styles.record}>
+                <Icon name={icons.star} size={12} color="#FFC83D" />
+                <Text style={styles.ratingText}>
+                  {rating.overall.toLocaleString('fr-FR')} · {rating.reviews} avis
+                </Text>
+              </View>
+            ) : null}
             {recordMs ? (
               <View style={styles.record}>
                 <Icon name={icons.timer} size={12} color="#FFC83D" />
@@ -61,6 +71,7 @@ export function TrackRow({ track, distanceKm, favorite, recordMs }: Props) {
 }
 
 const styles = StyleSheet.create({
+  ratingText: { fontSize: 12, fontWeight: '700', color: '#FFC83D' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
