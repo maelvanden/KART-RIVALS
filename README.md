@@ -82,7 +82,7 @@ Dimension sociale (migration `…_social.sql`) :
   max, un message signalé par 3 pilotes différents est masqué pour tous (`messages.hidden_at`).
 
 Circuits recensés : Maine-et-Loire (49) et Loudun (86) (`…_tracks_49.sql`), Vendée (85, `…_tracks_85.sql`),
-Loire-Atlantique (44) et Mayenne (53) (`…_tracks_44_53.sql`), Sarthe (72, `…_tracks_72.sql`). Onglet Circuits filtrable par département.
+Loire-Atlantique (44) et Mayenne (53) (`…_tracks_44_53.sql`), Sarthe (72, `…_tracks_72.sql`), Ille-et-Vilaine (35, `…_tracks_35.sql`). Onglet Circuits filtrable par département.
 
 Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`) :
 
