@@ -28,14 +28,21 @@ export default function TracksScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [dept, setDept] = useState('all');
 
-  // Départements présents (49, 85, 86…) avec leur nom, pour le filtre et le sous-titre.
+  // Départements présents (49, 85, 86…) avec leur nom, pour le filtre et le sous-titre. Le nom retenu est la région
+  // la plus fréquente du numéro : quelques communes ont le code postal d'un département voisin (Piégut, 04 → 05130).
   const departments = useMemo(() => {
-    const byCode = new Map<string, string>();
+    const counts = new Map<string, Map<string, number>>();
     for (const t of tracks.data ?? []) {
       const code = department(t.postal_code);
-      if (code && !byCode.has(code)) byCode.set(code, t.region ?? code);
+      if (!code) continue;
+      const names = counts.get(code) ?? new Map<string, number>();
+      const name = t.region ?? code;
+      names.set(name, (names.get(name) ?? 0) + 1);
+      counts.set(code, names);
     }
-    return [...byCode.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return [...counts.entries()]
+      .map(([code, names]): [string, string] => [code, [...names.entries()].sort((a, b) => b[1] - a[1])[0][0]])
+      .sort(([a], [b]) => a.localeCompare(b));
   }, [tracks.data]);
 
   const list = useMemo(() => {
