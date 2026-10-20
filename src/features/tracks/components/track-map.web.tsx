@@ -34,6 +34,8 @@ export function TrackMap({ tracks, height, selectedId, onSelect }: TrackMapProps
       .sort((a, b) => a.d - b.d)[0],
   );
   const CLOSE = 0.25;
+  // Au-delà d'une vingtaine de circuits, les noms se chevauchent : on ne garde que les points (et le circuit choisi).
+  const showLabels = tracks.length <= 20;
 
   // Libellé à droite du point, sauf au bord droit ou si un voisin proche est à droite (et qu'il y a la place à gauche).
   const labelOnLeft = points.map((p, i) => {
@@ -79,16 +81,18 @@ export function TrackMap({ tracks, height, selectedId, onSelect }: TrackMapProps
             <View
               style={[styles.dot, selected && styles.selected, { backgroundColor: color, shadowColor: color }]}
             />
-            <Text
-              style={[
-                styles.label,
-                left && styles.labelLeft,
-                { transform: [{ translateY: labelShift[i] }] },
-                selected && { color: colors.text },
-              ]}
-              numberOfLines={1}>
-              {t.name}
-            </Text>
+            {showLabels || selected ? (
+              <Text
+                style={[
+                  styles.label,
+                  left && styles.labelLeft,
+                  { transform: [{ translateY: labelShift[i] }] },
+                  selected && { color: colors.text },
+                ]}
+                numberOfLines={1}>
+                {t.name}
+              </Text>
+            ) : null}
           </Pressable>
         );
       })}

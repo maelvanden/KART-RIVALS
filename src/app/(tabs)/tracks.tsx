@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { Segmented } from '@/components/ui/segmented';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
+import { Text } from '@/components/ui/text';
 import { AgendaBanner } from '@/features/events/components/agenda-banner';
 import { useApproxLocation } from '@/features/nearby/api';
 import { useMyProfile } from '@/features/profile/api';
@@ -11,6 +13,7 @@ import { useTrackRecords, useTracksMap } from '@/features/tracks/api';
 import { TrackMap } from '@/features/tracks/components/track-map';
 import { TrackRow } from '@/features/tracks/components/track-row';
 import { distanceKm } from '@/lib/geo';
+import { colors, radius, spacing } from '@/theme';
 
 type Filter = 'all' | 'indoor' | 'outdoor';
 
@@ -64,8 +67,8 @@ export default function TracksScreen() {
         />
       ) : null}
       {departments.length > 1 ? (
-        <Segmented
-          options={[{ value: 'all', label: 'Tout' }, ...departments.map(([code]) => ({ value: code, label: code }))]}
+        <DepartmentChips
+          options={[{ code: 'all', label: 'Tout' }, ...departments.map(([code, name]) => ({ code, label: `${code} · ${name}` }))]}
           value={dept}
           onChange={setDept}
         />
@@ -92,3 +95,47 @@ export default function TracksScreen() {
     </Screen>
   );
 }
+
+/** Filtre par département : une rangée de puces qui défile, lisible même avec des dizaines de départements. */
+function DepartmentChips({
+  options,
+  value,
+  onChange,
+}: {
+  options: { code: string; label: string }[];
+  value: string;
+  onChange: (code: string) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      {options.map((o) => {
+        const active = o.code === value;
+        return (
+          <Pressable
+            key={o.code}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(o.code)}
+            style={[styles.chip, active && styles.chipActive]}>
+            <Text style={[styles.chipText, active && styles.chipTextActive]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  chips: { gap: spacing.sm },
+  chip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  chipActive: { backgroundColor: colors.neon, borderColor: colors.neon },
+  chipText: { fontWeight: '800', fontSize: 12, letterSpacing: 0.6, textTransform: 'uppercase', color: colors.textMuted },
+  chipTextActive: { color: colors.onNeon },
+});
