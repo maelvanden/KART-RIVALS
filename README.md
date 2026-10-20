@@ -82,7 +82,7 @@ Dimension sociale (migration `…_social.sql`) :
   max, un message signalé par 3 pilotes différents est masqué pour tous (`messages.hidden_at`).
 
 Circuits recensés : Maine-et-Loire (49) et Loudun (86) (`…_tracks_49.sql`), Vendée (85, `…_tracks_85.sql`),
-Loire-Atlantique (44) et Mayenne (53) (`…_tracks_44_53.sql`), Sarthe (72, `…_tracks_72.sql`), Ille-et-Vilaine (35, `…_tracks_35.sql`), Côtes-d’Armor (22) et Morbihan (56) (`…_tracks_22_56.sql`), Finistère (29, `…_tracks_29.sql`), Normandie (14, 50, 61, 76 ; `…_tracks_normandie.sql`), Hauts-de-France (02, 59, 60, 62, 80 ; `…_tracks_hauts_de_france.sql`), Grand Est (08, 10, 51, 52, 54, 55, 57, 67, 68, 88 ; `…_tracks_grand_est.sql`). Onglet Circuits filtrable par département.
+Loire-Atlantique (44) et Mayenne (53) (`…_tracks_44_53.sql`), Sarthe (72, `…_tracks_72.sql`), Ille-et-Vilaine (35, `…_tracks_35.sql`), Côtes-d’Armor (22) et Morbihan (56) (`…_tracks_22_56.sql`), Finistère (29, `…_tracks_29.sql`), Normandie (14, 50, 61, 76 ; `…_tracks_normandie.sql`), Hauts-de-France (02, 59, 60, 62, 80 ; `…_tracks_hauts_de_france.sql`), Grand Est (08, 10, 51, 52, 54, 55, 57, 67, 68, 88 ; `…_tracks_grand_est.sql`), Centre-Val de Loire (18, 28, 36, 37, 41, 45 ; `…_tracks_centre_val_de_loire.sql`). Onglet Circuits filtrable par département.
 
 Fiches circuit (migration `…_track_pages.sql`, écran `src/app/track/[id].tsx`) :
 
