@@ -68,7 +68,10 @@ export type AdminPilotDetail = {
   last_activity: string | null;
   reports: { id: string; reason: ReportReason; details: string | null; status: string; created_at: string; reporter: string | null }[];
   actions: { action: string; details: Record<string, unknown> | null; created_at: string; admin: string | null }[];
+  warnings?: { id: string; message: string; created_at: string; acknowledged_at: string | null; admin: string | null }[];
 };
+
+export type PendingWarning = { id: string; message: string; created_at: string; number: number };
 
 export type ModerationAction = 'suspend' | 'unsuspend' | 'ban' | 'unban' | 'revoke_verified' | 'restore_verified';
 
@@ -174,6 +177,7 @@ const demo = {
     },
   ] as AdminPilotRow[],
   reasons: {} as Record<string, string | null>,
+  warnings: {} as Record<string, NonNullable<AdminPilotDetail['warnings']>>,
   revoked: {} as Record<string, boolean>,
   hidden: {} as Record<string, boolean>,
   created: [] as AdminTrackRow[],
@@ -337,6 +341,7 @@ export function useAdminPilot(id: string | undefined) {
             p.total_reports > 0
               ? [{ id: 'r1', reason: 'harassment', details: 'Insultes après la course de samedi.', status: 'open', created_at: ago(45), reporter: 'TurboLéa' }]
               : [],
+          warnings: [...(demo.warnings[p.id] ?? [])],
           actions: demo.actions
             .filter((a) => a.pilot === p.username)
             .map((a) => ({ action: a.action, details: a.details, created_at: a.created_at, admin: a.admin })),
@@ -599,6 +604,53 @@ export function useSetContentHidden() {
   });
 }
 
+// Avertissements
+
+export function useWarnPilot() {
+  const invalidate = useInvalidate('admin-pilot', 'admin-actions');
+  return useMutation({
+    mutationFn: async ({ pilotId, message }: { pilotId: string; message: string }): Promise<number> => {
+      if (message.trim().length < 5) throw new Error('Écris le message de l’avertissement (5 caractères minimum).');
+      if (isDemoMode) {
+        const p = demo.pilots.find((x) => x.id === pilotId);
+        const list = (demo.warnings[pilotId] ??= []);
+        list.unshift({ id: `w-${Date.now()}`, message: message.trim(), created_at: new Date().toISOString(), acknowledged_at: null, admin: demoProfile.username });
+        logDemo('warn', p?.username ?? null, null, { number: list.length, reason: message.trim() });
+        return list.length;
+      }
+      return rpc<number>('admin_warn_pilot', { p_profile: pilotId, p_message: message.trim() });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Avertissement officiel pas encore lu par le pilote connecté (affiché à l'ouverture de l'appli). */
+export function useMyPendingWarning(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['pending-warning', userId],
+    enabled: !!userId,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<PendingWarning | null> => {
+      if (isDemoMode) return null;
+      const { data, error } = await supabase.rpc('my_pending_warning');
+      if (error) throw error;
+      return (data as PendingWarning | null) ?? null;
+    },
+  });
+}
+
+export function useAcknowledgeWarning() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isDemoMode) return;
+      const { error } = await supabase.rpc('acknowledge_warning', { p_id: id });
+      if (error) throw socialError(error);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pending-warning'] }),
+  });
+}
+
 // Compte du pilote connecté
 
 export function useAccountStatus(userId: string | null | undefined) {
@@ -619,6 +671,8 @@ export function useAccountStatus(userId: string | null | undefined) {
 export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string {
   const d = a.details ?? {};
   switch (a.action) {
+    case 'warn':
+      return `Avertissement n°${d.number ?? '?'}`;
     case 'suspend':
       return `Suspension ${d.days ? `de ${d.days} j` : ''}`.trim();
     case 'unsuspend':

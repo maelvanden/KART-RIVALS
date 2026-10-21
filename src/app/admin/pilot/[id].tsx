@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,14 @@ import { Segmented } from '@/components/ui/segmented';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { ActionLine } from '@/features/admin/components/action-line';
-import { useAdminPilot, useModeratePilot, useSetElo, type AdminPilotDetail, type ModerationAction } from '@/features/admin/panel';
+import {
+  useAdminPilot,
+  useModeratePilot,
+  useSetElo,
+  useWarnPilot,
+  type AdminPilotDetail,
+  type ModerationAction,
+} from '@/features/admin/panel';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { confirmAction } from '@/lib/confirm';
@@ -92,6 +99,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
       </View>
 
       {moderate.error ? <Text style={styles.error}>{moderate.error.message}</Text> : null}
+
+      <Warnings pilot={p} />
 
       <SectionTitle title="Sanctions" />
       <Card style={styles.card}>
@@ -236,6 +245,92 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
   );
 }
 
+const PRESETS = [
+  {
+    label: 'Insultes',
+    text: 'Les insultes et le harcèlement sont interdits sur Kart Rivals (Radio, Actu, commentaires). Reste respectueux envers les autres pilotes.',
+  },
+  {
+    label: 'Spam / pub',
+    text: 'Les publicités et les messages répétés ne sont pas autorisés. Merci de garder l’Actu et la Radio pour le karting.',
+  },
+  {
+    label: 'Triche',
+    text: 'Un de tes résultats a été signalé comme suspect. Déclare uniquement des résultats réels : la triche entraîne une suspension.',
+  },
+  {
+    label: 'Contenu',
+    text: 'Un de tes contenus a été jugé inapproprié et a été masqué. Merci de respecter les règles de la communauté.',
+  },
+];
+
+/** Avertissement officiel avant sanction : le pilote le lit en plein écran à l'ouverture de l'appli. */
+function Warnings({ pilot: p }: { pilot: AdminPilotDetail }) {
+  const warn = useWarnPilot();
+  const [message, setMessage] = useState('');
+  const [sent, setSent] = useState<number | null>(null);
+  const list = p.warnings ?? [];
+
+  return (
+    <>
+      <SectionTitle title="Avertissements" detail={`${list.length}`} accent={list.length > 0 ? colors.orange : undefined} />
+      <Card style={styles.card}>
+        <Text variant="caption">
+          Un message officiel numéroté ({list.length === 0 ? '1er' : `${list.length + 1}e`} avertissement), affiché en plein
+          écran à sa prochaine ouverture de l’appli. Il doit confirmer l’avoir lu.
+        </Text>
+        <View style={styles.presets}>
+          {PRESETS.map((x) => (
+            <Pressable key={x.label} accessibilityRole="button" onPress={() => (setMessage(x.text), setSent(null))} style={styles.preset}>
+              <Text style={styles.presetText}>{x.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Input
+          label={`Message (${message.length}/500)`}
+          value={message}
+          onChangeText={(v) => (setMessage(v), setSent(null))}
+          multiline
+          maxLength={500}
+          style={styles.multiline}
+          placeholder="Explique ce qui ne va pas et ce qu’on attend de lui…"
+        />
+        {warn.error ? <Text style={styles.error}>{warn.error.message}</Text> : null}
+        {sent ? <Text style={styles.sent}>Avertissement n°{sent} envoyé ✓</Text> : null}
+        <Button
+          title="Envoyer l’avertissement"
+          variant="secondary"
+          disabled={p.is_admin}
+          loading={warn.isPending}
+          onPress={() =>
+            confirmAction(`Avertir ${p.username} ?`, 'Il verra ce message en plein écran à l’ouverture de l’appli.', 'Envoyer', () =>
+              warn.mutate(
+                { pilotId: p.id, message },
+                {
+                  onSuccess: (n) => {
+                    setSent(n);
+                    setMessage('');
+                  },
+                },
+              ),
+            )
+          }
+        />
+        {list.map((w, i) => (
+          <View key={w.id} style={styles.warning}>
+            <Text style={styles.bold}>Avertissement n°{list.length - i}</Text>
+            <Text variant="caption">« {w.message} »</Text>
+            <Text variant="caption">
+              {w.admin ?? 'admin'} · {formatMessageTime(w.created_at)} ·{' '}
+              {w.acknowledged_at ? `lu ${formatMessageTime(w.acknowledged_at)}` : 'pas encore lu'}
+            </Text>
+          </View>
+        ))}
+      </Card>
+    </>
+  );
+}
+
 function Status({ color, title, reason }: { color: string; title: string; reason: string | null }) {
   return (
     <View style={[styles.status, { borderLeftColor: color }]}>
@@ -280,4 +375,17 @@ const styles = StyleSheet.create({
   open: { borderLeftWidth: 3, borderLeftColor: colors.danger },
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
+  sent: { color: colors.neon, fontWeight: '700' },
+  multiline: { minHeight: 100, paddingTop: 14, textAlignVertical: 'top' },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  preset: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  presetText: { fontSize: 12, fontWeight: '800', color: colors.text },
+  warning: { gap: 2, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
 });

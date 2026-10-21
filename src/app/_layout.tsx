@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { RestrictedAccount } from '@/features/admin/components/restricted-account';
-import { useAccountStatus } from '@/features/admin/panel';
+import { WarningScreen } from '@/features/admin/components/warning-screen';
+import { useAccountStatus, useAcknowledgeWarning, useMyPendingWarning } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { useSocialRealtime } from '@/features/social/realtime';
@@ -59,6 +60,8 @@ function RootNavigator() {
   const { isLoading, userId, signOut } = useAuth();
   const profile = useMyProfile();
   const account = useAccountStatus(profile.data ? userId : null);
+  const warning = useMyPendingWarning(profile.data ? userId : null);
+  const acknowledge = useAcknowledgeWarning();
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
 
@@ -86,6 +89,12 @@ function RootNavigator() {
   const restriction = account.data;
   if (hasProfile && restriction && (restriction.banned_at || restriction.suspended_until)) {
     return <RestrictedAccount status={restriction} onSignOut={signOut} onRetry={() => account.refetch()} />;
+  }
+
+  // Avertissement officiel non lu : le pilote doit le lire avant de continuer.
+  if (hasProfile && warning.data) {
+    const w = warning.data;
+    return <WarningScreen warning={w} loading={acknowledge.isPending} onAcknowledge={() => acknowledge.mutate(w.id)} />;
   }
 
   return (
