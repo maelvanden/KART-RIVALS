@@ -35,6 +35,29 @@ const DURATIONS = [
   { value: '30', label: '30 j' },
 ];
 
+/** Avertissements qui déclenchent la suggestion de suspension. */
+const WARNINGS_BEFORE_SANCTION = 3;
+
+type SanctionSuggestion = { kind: 'suspend'; days: number; previous: number } | { kind: 'ban'; previous: number };
+
+/**
+ * Escalade après 3 avertissements depuis la dernière sanction : 3 jours la première fois, puis 7, puis 30,
+ * puis bannissement. Les avertissements reçus avant une suspension ne comptent plus ensuite.
+ */
+function sanctionLadder(p: AdminPilotDetail) {
+  const suspensions = p.suspensions ?? p.actions.filter((a) => a.action === 'suspend').map((a) => a.created_at);
+  const lastSanction = suspensions.reduce((max, at) => (at > max ? at : max), '');
+  const pending = (p.warnings ?? []).filter((w) => w.created_at > lastSanction);
+  const previous = suspensions.length;
+  const suggestion: SanctionSuggestion | null =
+    pending.length < WARNINGS_BEFORE_SANCTION || p.banned_at || p.suspended_until || p.is_admin
+      ? null
+      : previous >= 3
+        ? { kind: 'ban', previous }
+        : { kind: 'suspend', days: [3, 7, 30][previous], previous };
+  return { pending, suggestion };
+}
+
 const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** Fiche admin d'un pilote : activité, signalements reçus, sanctions, badge vérifié, ELO. */
@@ -60,6 +83,9 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
   const [reason, setReason] = useState('');
   const [elo, setEloInput] = useState(String(p.elo));
   const [eloReason, setEloReason] = useState('');
+
+  const ladder = sanctionLadder(p);
+  const suggestedReason = `${ladder.pending.length} avertissements sans changement de comportement.`;
 
   const act = (action: ModerationAction, title: string, message: string, label: string, extra?: { days?: number }) =>
     confirmAction(title, message, label, () =>
@@ -103,7 +129,60 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
 
       {moderate.error ? <Text style={styles.error}>{moderate.error.message}</Text> : null}
 
-      <Warnings pilot={p} />
+      {ladder.suggestion ? (
+        <Card style={[styles.card, styles.suggestion]}>
+          <Text style={[styles.kicker, { color: colors.danger }]}>Sanction suggérée</Text>
+          <Text variant="heading">
+            {ladder.pending.length} avertissements
+            {ladder.suggestion.previous > 0 ? ' depuis sa dernière suspension' : ''}
+          </Text>
+          <Text variant="caption">
+            {ladder.suggestion.kind === 'ban'
+              ? `Déjà ${ladder.suggestion.previous} suspensions : le bannissement est l’étape suivante.`
+              : ladder.suggestion.previous === 0
+                ? 'Le pilote a été prévenu 3 fois : une première suspension courte est l’étape suivante.'
+                : `Déjà ${ladder.suggestion.previous} suspension${ladder.suggestion.previous > 1 ? 's' : ''} : on passe à ${ladder.suggestion.days} jours.`}
+          </Text>
+          <Text variant="caption">Dernier avertissement : « {ladder.pending[0].message} »</Text>
+          {ladder.suggestion.kind === 'ban' ? (
+            <Button
+              title="Bannir maintenant"
+              loading={moderate.isPending}
+              onPress={() =>
+                confirmAction(
+                  `Bannir ${p.username} ?`,
+                  `Motif envoyé : « ${suggestedReason} »`,
+                  'Bannir',
+                  () => moderate.mutate({ pilotId: p.id, action: 'ban', reason: suggestedReason }),
+                )
+              }
+            />
+          ) : (
+            <Button
+              title={`Suspendre ${ladder.suggestion.days} jours`}
+              loading={moderate.isPending}
+              onPress={() =>
+                ladder.suggestion?.kind === 'suspend' &&
+                confirmAction(
+                  `Suspendre ${p.username} ${ladder.suggestion.days} jours ?`,
+                  `Motif affiché au pilote : « ${suggestedReason} »`,
+                  'Suspendre',
+                  () =>
+                    moderate.mutate({
+                      pilotId: p.id,
+                      action: 'suspend',
+                      reason: suggestedReason,
+                      days: ladder.suggestion?.kind === 'suspend' ? ladder.suggestion.days : 3,
+                    }),
+                )
+              }
+            />
+          )}
+          <Text variant="caption">Tu peux aussi choisir une autre durée ou un autre motif dans Sanctions, plus bas.</Text>
+        </Card>
+      ) : null}
+
+      <Warnings pilot={p} pending={ladder.pending.length} />
 
       <SectionTitle title="Sanctions" />
       <Card style={styles.card}>
@@ -325,7 +404,7 @@ const PRESETS = [
 ];
 
 /** Avertissement officiel avant sanction : le pilote le lit en plein écran à l'ouverture de l'appli. */
-function Warnings({ pilot: p }: { pilot: AdminPilotDetail }) {
+function Warnings({ pilot: p, pending }: { pilot: AdminPilotDetail; pending: number }) {
   const warn = useWarnPilot();
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState<number | null>(null);
@@ -339,6 +418,12 @@ function Warnings({ pilot: p }: { pilot: AdminPilotDetail }) {
           Un message officiel numéroté ({list.length === 0 ? '1er' : `${list.length + 1}e`} avertissement), affiché en plein
           écran à sa prochaine ouverture de l’appli. Il doit confirmer l’avoir lu.
         </Text>
+        {!p.banned_at ? (
+          <Text variant="caption" style={pending > 0 ? { color: colors.orange } : undefined}>
+            {pending}/{WARNINGS_BEFORE_SANCTION} depuis la dernière sanction · une suspension est suggérée au{' '}
+            {WARNINGS_BEFORE_SANCTION}e.
+          </Text>
+        ) : null}
         <View style={styles.presets}>
           {PRESETS.map((x) => (
             <Pressable key={x.label} accessibilityRole="button" onPress={() => (setMessage(x.text), setSent(null))} style={styles.preset}>
@@ -363,7 +448,13 @@ function Warnings({ pilot: p }: { pilot: AdminPilotDetail }) {
           disabled={p.is_admin}
           loading={warn.isPending}
           onPress={() =>
-            confirmAction(`Avertir ${p.username} ?`, 'Il verra ce message en plein écran à l’ouverture de l’appli.', 'Envoyer', () =>
+            confirmAction(
+              `Avertir ${p.username} ?`,
+              pending + 1 >= WARNINGS_BEFORE_SANCTION
+                ? `Il verra ce message en plein écran. C’est son ${pending + 1}e avertissement : une suspension te sera suggérée.`
+                : 'Il verra ce message en plein écran à l’ouverture de l’appli.',
+              'Envoyer',
+              () =>
               warn.mutate(
                 { pilotId: p.id, message },
                 {
@@ -416,6 +507,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.md },
   eloInput: { width: 110 },
+  suggestion: { borderWidth: 1, borderColor: colors.danger },
+  kicker: { fontSize: 11, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' },
   status: { gap: 2, padding: spacing.md, borderLeftWidth: 3, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   adminNote: { color: colors.neon, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

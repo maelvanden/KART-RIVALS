@@ -69,6 +69,8 @@ export type AdminPilotDetail = {
   reports: { id: string; reason: ReportReason; details: string | null; status: string; created_at: string; reporter: string | null }[];
   actions: { action: string; details: Record<string, unknown> | null; created_at: string; admin: string | null }[];
   warnings?: { id: string; message: string; created_at: string; acknowledged_at: string | null; admin: string | null }[];
+  /** Dates de toutes ses suspensions, la plus récente d'abord. */
+  suspensions?: string[];
 };
 
 export type PendingWarning = { id: string; message: string; created_at: string; number: number };
@@ -116,7 +118,12 @@ export type Announcement = {
   created_at: string;
   ends_at: string;
   archived_at: string | null;
+  /** Région ciblée ; null = toute la France. */
+  region: string | null;
 };
+
+/** Pilotes touchés par région (région null = pilotes sans circuit favori ni position). */
+export type AnnouncementAudience = { region: string | null; pilots: number }[];
 
 export type AdminAction = {
   id: number;
@@ -323,7 +330,13 @@ const demo = {
     },
   ] as AdminPilotRow[],
   reasons: {} as Record<string, string | null>,
-  warnings: {} as Record<string, NonNullable<AdminPilotDetail['warnings']>>,
+  // KartiNono a déjà 2 avertissements : le 3e fait apparaître la suspension suggérée.
+  warnings: {
+    p4: [
+      { id: 'w-2', message: 'Nouveaux propos insultants dans les commentaires de l’Actu.', created_at: ago(60 * 24 * 3), acknowledged_at: ago(60 * 24 * 2), admin: 'Admin' },
+      { id: 'w-1', message: 'Merci de rester respectueux sur la Radio Paddock.', created_at: ago(60 * 24 * 12), acknowledged_at: ago(60 * 24 * 11), admin: 'Admin' },
+    ],
+  } as Record<string, NonNullable<AdminPilotDetail['warnings']>>,
   revoked: {} as Record<string, boolean>,
   hidden: {} as Record<string, boolean>,
   created: [] as AdminTrackRow[],
@@ -336,6 +349,7 @@ const demo = {
       created_at: ago(60 * 5),
       ends_at: later(6),
       archived_at: null,
+      region: null,
     },
   ] as Announcement[],
   actions: [
@@ -680,7 +694,7 @@ export function useAdminAnnouncements(enabled: boolean) {
       if (isDemoMode) return demo.announcements.map((a) => ({ ...a }));
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, body, link_url, created_at, ends_at, archived_at')
+        .select('id, title, body, link_url, created_at, ends_at, archived_at, region')
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw socialError(error);
@@ -696,11 +710,16 @@ export function useLiveAnnouncement() {
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<Announcement | null> => {
       if (isDemoMode) {
-        return demo.announcements.find((a) => !a.archived_at && Date.parse(a.ends_at) > Date.now()) ?? null;
+        // Le pilote de démo court en Pays de la Loire.
+        return (
+          demo.announcements.find(
+            (a) => !a.archived_at && Date.parse(a.ends_at) > Date.now() && (!a.region || a.region === 'Pays de la Loire'),
+          ) ?? null
+        );
       }
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, body, link_url, created_at, ends_at, archived_at')
+        .select('id, title, body, link_url, created_at, ends_at, archived_at, region')
         .is('archived_at', null)
         .gt('ends_at', new Date().toISOString())
         .order('created_at', { ascending: false })
@@ -715,7 +734,19 @@ export function useLiveAnnouncement() {
 export function usePublishAnnouncement() {
   const invalidate = useInvalidate('announcements', 'admin-actions');
   return useMutation({
-    mutationFn: async ({ title, body, link, days }: { title: string; body: string; link?: string; days: number }) => {
+    mutationFn: async ({
+      title,
+      body,
+      link,
+      days,
+      region,
+    }: {
+      title: string;
+      body: string;
+      link?: string;
+      days: number;
+      region?: string | null;
+    }) => {
       if (title.trim().length < 3) throw new Error('Le titre doit faire entre 3 et 80 caractères.');
       if (!body.trim()) throw new Error('Écris le message de l’annonce.');
       if (link?.trim() && !/^https:\/\//.test(link.trim())) throw new Error('Le lien doit commencer par https://');
@@ -728,13 +759,42 @@ export function usePublishAnnouncement() {
           created_at: new Date().toISOString(),
           ends_at: later(days),
           archived_at: null,
+          region: region ?? null,
         });
-        logDemo('announcement', null, null, { title: title.trim() });
+        logDemo('announcement', null, null, { title: title.trim(), region: region ?? undefined });
         return;
       }
-      await rpc('admin_publish_announcement', { p_title: title, p_body: body, p_link: link?.trim() || null, p_days: days });
+      await rpc('admin_publish_announcement', {
+        p_title: title,
+        p_body: body,
+        p_link: link?.trim() || null,
+        p_days: days,
+        p_region: region ?? null,
+      });
     },
     onSuccess: invalidate,
+  });
+}
+
+export function useAnnouncementAudience(enabled: boolean) {
+  return useQuery({
+    queryKey: ['announcement-audience'],
+    enabled,
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<AnnouncementAudience> => {
+      if (isDemoMode) {
+        return [
+          { region: 'Pays de la Loire', pilots: 512 },
+          { region: 'Bretagne', pilots: 236 },
+          { region: null, pilots: 188 },
+          { region: 'Île-de-France', pilots: 121 },
+          { region: 'Hauts-de-France', pilots: 64 },
+          { region: 'Normandie', pilots: 58 },
+          { region: 'Nouvelle-Aquitaine', pilots: 41 },
+        ];
+      }
+      return rpc<AnnouncementAudience>('admin_announcement_audience');
+    },
   });
 }
 
@@ -1237,7 +1297,7 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `${kind} ${a.action === 'hide_content' ? 'masqué' : 'rétabli'}${d.kind === 'post' || d.kind === 'photo' ? 'e' : ''}${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
     }
     case 'announcement':
-      return `Annonce publiée${d.title ? ` : « ${d.title} »` : ''}`;
+      return `Annonce publiée${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:
       return a.action;
   }

@@ -15,7 +15,9 @@ export function AnnouncementCard({ announcement: a, onClose }: { announcement: A
     <View style={styles.card}>
       <View style={styles.head}>
         <Icon name={icons.megaphone} size={18} color={colors.onNeon} />
-        <Text style={styles.kicker}>Kart Rivals</Text>
+        <Text style={styles.kicker} numberOfLines={1}>
+          Kart Rivals{a.region ? ` · ${a.region}` : ''}
+        </Text>
         <View style={styles.flex} />
         {onClose ? (
           <Pressable accessibilityLabel="Masquer l’annonce" hitSlop={12} onPress={onClose}>

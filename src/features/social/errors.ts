@@ -108,6 +108,7 @@ const messages: Record<string, string> = {
   'Ticket time must be between check-in and deadline': 'L’heure du ticket doit être entre le check-in et l’échéance.',
   'Ticket already used': 'Ce pilote a déjà un chrono validé avec cette heure de ticket.',
   'Unknown decision': 'Décision inconnue.',
+  'announcements_region_known': 'Région inconnue.',
   'announcements_title_check': 'Le titre doit faire entre 3 et 80 caractères.',
   'announcements_body_check': 'Le message doit faire au plus 600 caractères.',
   'announcements_link_url_check': 'Le lien doit commencer par https://',
