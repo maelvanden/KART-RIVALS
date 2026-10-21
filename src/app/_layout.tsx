@@ -17,6 +17,8 @@ import { View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { RestrictedAccount } from '@/features/admin/components/restricted-account';
+import { useAccountStatus } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { useSocialRealtime } from '@/features/social/realtime';
@@ -54,8 +56,9 @@ const detailHeader = {
 };
 
 function RootNavigator() {
-  const { isLoading, userId } = useAuth();
+  const { isLoading, userId, signOut } = useAuth();
   const profile = useMyProfile();
+  const account = useAccountStatus(profile.data ? userId : null);
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
 
@@ -78,6 +81,12 @@ function RootNavigator() {
   }
 
   const hasProfile = !!profile.data;
+
+  // Compte suspendu ou banni par un admin : on bloque l'appli et on affiche le motif.
+  const restriction = account.data;
+  if (hasProfile && restriction && (restriction.banned_at || restriction.suspended_until)) {
+    return <RestrictedAccount status={restriction} onSignOut={signOut} onRetry={() => account.refetch()} />;
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
@@ -117,6 +126,12 @@ function RootNavigator() {
         <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administration' }} />
         <Stack.Screen name="admin/reports" options={{ ...detailHeader, title: 'Signalements' }} />
         <Stack.Screen name="admin/track/[id]" options={{ ...detailHeader, title: 'Gérer la fiche' }} />
+        <Stack.Screen name="admin/track/new" options={{ ...detailHeader, presentation: 'modal', title: 'Nouveau circuit' }} />
+        <Stack.Screen name="admin/pilots" options={{ ...detailHeader, title: 'Pilotes' }} />
+        <Stack.Screen name="admin/pilot/[id]" options={{ ...detailHeader, title: 'Pilote' }} />
+        <Stack.Screen name="admin/tracks" options={{ ...detailHeader, title: 'Circuits' }} />
+        <Stack.Screen name="admin/announcements" options={{ ...detailHeader, title: 'Annonces' }} />
+        <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen

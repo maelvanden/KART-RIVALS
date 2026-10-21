@@ -7,6 +7,7 @@ import { CarbonBackdrop } from '@/components/ui/carbon-backdrop';
 import { Icon, icons, type IconName } from '@/components/ui/icon';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { AnnouncementBanner } from '@/features/admin/components/announcement-banner';
 import { useFeed, type FeedFilter } from '@/features/feed/api';
 import { PostCard } from '@/features/feed/components/post-card';
 import { colors, radius, spacing } from '@/theme';
@@ -44,6 +45,7 @@ export default function FeedScreen() {
               </Text>
             </View>
             <Text variant="display">Actualité</Text>
+            <AnnouncementBanner />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {FILTERS.map((f) => {
                 const active = f.value === filter;

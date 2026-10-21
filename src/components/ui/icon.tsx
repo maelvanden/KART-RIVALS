@@ -81,6 +81,8 @@ export const icons = {
   verified: { ios: 'checkmark.seal.fill', material: 'verified' },
   admin: { ios: 'checkmark.shield.fill', material: 'admin_panel_settings' },
   locate: { ios: 'location.circle', material: 'my_location' },
+  megaphone: { ios: 'megaphone.fill', material: 'campaign' },
+  journal: { ios: 'list.bullet.rectangle', material: 'receipt_long' },
 } satisfies Record<string, IconName>;
 
 type Props = { name: IconName; size?: number; color?: ColorValue };

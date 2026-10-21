@@ -105,6 +105,12 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
 - **Admin karting** (`track_admins`) : modifie la fiche de son circuit (`update_track_page` : infos, présentation, liens,
   téléphone, position GPS, tracé envoyé dans le bucket public `track-layouts`) et modère ses photos. Un exploitant le
   demande depuis la fiche (`request_track_admin`), un admin appli valide (`respond_track_admin_request`).
+- **Panel admin appli** (migration `…_admin_panel.sql`, `src/features/admin/panel.ts`) : tableau de bord (`admin_stats`),
+  pilotes (`admin_search_pilots`, `admin_pilot_detail`, `admin_moderate_pilot` : suspension, bannissement, badge vérifié ;
+  `admin_set_elo`), circuits (`admin_tracks`, `admin_create_track`, `admin_set_track_hidden`, `admin_merge_tracks`,
+  positions approximatives `location_approx`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal
+  (`admin_actions`). Un compte suspendu ou banni ne crée plus rien (déclencheurs `reject_restricted`) et voit le motif à
+  l'ouverture (`my_account_status`) ; banni, il sort des classements et de la recherche.
 
 Agenda & promos des kartings (migration `…_track_events.sql`, écrans `src/app/events.tsx`, `src/app/event/[id].tsx`,
 `src/app/admin/event.tsx`) : les admins d'un karting publient événements (endurance, Grand Prix, nocturne, course) et

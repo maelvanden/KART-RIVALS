@@ -5,6 +5,7 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { AnnouncementBanner } from '@/features/admin/components/announcement-banner';
 import { useAdminRoles } from '@/features/admin/api';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useMyChallenges } from '@/features/challenges/api';
@@ -88,6 +89,8 @@ export default function PaddockScreen() {
           </Text>
         </Text>
       </View>
+
+      <AnnouncementBanner />
 
       {profile.isPending ? <Loading /> : null}
       {profile.error ? <ErrorState error={profile.error} /> : null}

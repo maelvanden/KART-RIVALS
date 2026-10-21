@@ -25,12 +25,14 @@ import {
   useUpdateTrackPage,
   type TrackPageInput,
 } from '@/features/admin/api';
+import { useAdminTracks, useMergeTracks, useSetTrackHidden } from '@/features/admin/panel';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSearchPilots } from '@/features/nearby/api';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { useTrack } from '@/features/tracks/api';
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
 import { confirmAction } from '@/lib/confirm';
+import { normalize, parseCoordinates } from '@/lib/regions';
 import { colors, spacing } from '@/theme';
 import type { TrackDetails } from '@/types/models';
 
@@ -55,6 +57,7 @@ export default function ManageTrackScreen() {
           <TrackForm key={track.data.id} track={track.data} />
           <LayoutEditor track={track.data} />
           {roles.data?.is_app_admin ? <TrackAdmins trackId={track.data.id} /> : null}
+          {roles.data?.is_app_admin ? <TrackModeration track={track.data} /> : null}
         </>
       ) : null}
     </Screen>
@@ -219,12 +222,22 @@ function TrackForm({ track }: { track: TrackDetails }) {
 
       <SectionTitle title="Position sur la carte" />
       <Text variant="caption">
-        Sur place, touche « Ma position actuelle ». Sinon, fais un appui long sur la piste dans Google Maps et recopie
-        les deux nombres affichés.
+        Sur place, touche « Ma position actuelle ». Sinon, fais un appui long sur la piste dans Google Maps, copie les
+        coordonnées et colle-les dans Latitude : les deux champs se remplissent.
       </Text>
       <View style={styles.row}>
         <View style={styles.flex}>
-          <Input label="Latitude" value={form.lat} onChangeText={set('lat')} keyboardType="numbers-and-punctuation" />
+          <Input
+            label="Latitude"
+            value={form.lat}
+            onChangeText={(v) => {
+              // « 47.4284, -0.5434 » collé d'un coup depuis Google Maps : on répartit dans les deux champs.
+              const both = parseCoordinates(v);
+              if (both) setForm((f) => ({ ...f, lat: String(both.lat), lng: String(both.lng) }));
+              else set('lat')(v);
+            }}
+            keyboardType="numbers-and-punctuation"
+          />
         </View>
         <View style={styles.flex}>
           <Input label="Longitude" value={form.lng} onChangeText={set('lng')} keyboardType="numbers-and-punctuation" />
@@ -404,6 +417,87 @@ function TrackAdmins({ trackId }: { trackId: string }) {
   );
 }
 
+/** Admin appli : masquer la fiche (circuit fermé) ou la fusionner dans un doublon. */
+function TrackModeration({ track }: { track: TrackDetails }) {
+  const admin = useAdminTracks();
+  const hide = useSetTrackHidden();
+  const merge = useMergeTracks();
+  const [query, setQuery] = useState('');
+  const row = admin.data?.find((t) => t.id === track.id);
+  const q = normalize(query);
+  const matches =
+    q.length >= 2
+      ? (admin.data ?? []).filter((t) => t.id !== track.id && normalize(`${t.name} ${t.city}`).includes(q)).slice(0, 6)
+      : [];
+
+  return (
+    <>
+      <SectionTitle title="Visibilité et doublons" />
+      {row?.location_approx ? (
+        <Card style={styles.warn}>
+          <Text variant="caption">
+            Position approximative (placée à l’import) : corrige-la dans « Position sur la carte » puis enregistre.
+          </Text>
+        </Card>
+      ) : null}
+      {row?.hidden ? (
+        <Card style={styles.warn}>
+          <Text variant="caption">Fiche masquée : les pilotes ne la voient plus (tu la vois car tu es admin).</Text>
+        </Card>
+      ) : null}
+      <Button
+        title={row?.hidden ? 'Réafficher le circuit' : 'Masquer le circuit'}
+        variant={row?.hidden ? 'secondary' : 'quiet'}
+        icon={<Icon name={icons.hidden} size={18} color={row?.hidden ? colors.text : colors.textMuted} />}
+        loading={hide.isPending}
+        onPress={() =>
+          row?.hidden
+            ? hide.mutate({ trackId: track.id, hidden: false })
+            : confirmAction(
+                `Masquer ${track.name} ?`,
+                'Le circuit disparaît de la carte et des listes, son historique est conservé. Réversible ici.',
+                'Masquer',
+                () => hide.mutate({ trackId: track.id, hidden: true }),
+              )
+        }
+      />
+      {hide.error ? <Text style={styles.error}>{hide.error.message}</Text> : null}
+
+      <Text variant="caption">
+        Masquer : pour un circuit fermé ou en travaux, réversible. Doublon ? Cherche la fiche à conserver : défis, courses, Time Attack, avis, photos et événements de cette fiche y
+        seront rattachés, ses infos manquantes complétées, puis cette fiche sera supprimée.
+      </Text>
+      <Input label="Fiche à conserver" value={query} onChangeText={setQuery} placeholder="Nom ou ville" autoCorrect={false} />
+      {matches.map((t) => (
+        <Card key={t.id} style={styles.mergeRow}>
+          <View style={styles.flex}>
+            <Text style={styles.bold}>{t.name}</Text>
+            <Text variant="caption">{[t.postal_code, t.city].filter(Boolean).join(' ')}</Text>
+          </View>
+          <Button
+            title="Fusionner ici"
+            variant="ghost"
+            loading={merge.isPending}
+            onPress={() =>
+              confirmAction(
+                `Fusionner ${track.name} dans ${t.name} ?`,
+                `${track.name} (${track.city}) sera supprimé et tout son historique passera sur ${t.name} (${t.city}). Irréversible.`,
+                'Fusionner',
+                () =>
+                  merge.mutate(
+                    { fromId: track.id, intoId: t.id },
+                    { onSuccess: () => router.replace({ pathname: '/admin/track/[id]', params: { id: t.id } }) },
+                  ),
+              )
+            }
+          />
+        </Card>
+      ))}
+      {merge.error ? <Text style={styles.error}>{merge.error.message}</Text> : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },
@@ -412,5 +506,8 @@ const styles = StyleSheet.create({
   error: { color: colors.danger },
   notice: { color: colors.neon, fontWeight: '700' },
   tip: { borderLeftWidth: 3, borderLeftColor: colors.neon },
+  warn: { borderLeftWidth: 3, borderLeftColor: colors.orange },
+  mergeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  bold: { fontWeight: '800' },
   cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: colors.surfaceAlt },
 });

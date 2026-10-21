@@ -76,6 +76,19 @@ const messages: Record<string, string> = {
   'track_events_check"': 'Un événement a besoin d’une date et d’un type.',
   'violates check constraint "tracks_': 'Valeur refusée : vérifie les liens (https://…) et la longueur des textes.',
   'invalid input syntax for type integer': 'La longueur de piste doit être un nombre.',
+  'Only app admins can do this': 'Réservé aux admins appli.',
+  'Account suspended': 'Ton compte est suspendu : cette action est bloquée.',
+  'You cannot sanction yourself': 'Tu ne peux pas te sanctionner toi-même.',
+  'Remove the admin role before sanctioning this pilot': 'Retire d’abord son rôle d’admin appli.',
+  'Invalid suspension length': 'Durée de suspension invalide (1 à 365 jours).',
+  'Invalid ELO': 'ELO invalide (entre 0 et 4000).',
+  'Name and city are required': 'Le nom et la ville sont obligatoires.',
+  'Track already exists': 'Un circuit porte déjà ce nom dans cette ville.',
+  'Pick two different tracks': 'Choisis deux circuits différents.',
+  'Invalid duration': 'Durée invalide (1 à 60 jours).',
+  'announcements_title_check': 'Le titre doit faire entre 3 et 80 caractères.',
+  'announcements_body_check': 'Le message doit faire au plus 600 caractères.',
+  'announcements_link_url_check': 'Le lien doit commencer par https://',
 };
 
 /** Erreur Supabase → Error avec un message en français si on le connaît. */

@@ -78,6 +78,7 @@ export function useSearchPilots(query: string) {
         .select('id, username, avatar_url, elo, rank, wins, losses')
         .ilike('username', `%${escapeLike(q)}%`)
         .neq('id', userId!)
+        .is('banned_at', null)
         .order('elo', { ascending: false })
         .limit(20);
       if (error) throw error;
