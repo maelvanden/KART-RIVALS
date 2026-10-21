@@ -114,6 +114,7 @@ function RootNavigator() {
         <Stack.Screen name="challenge/[id]" options={{ ...detailHeader, title: 'Défi' }} />
         <Stack.Screen name="pilot/[id]" options={{ ...detailHeader, title: 'Pilote' }} />
         <Stack.Screen name="track/[id]" options={{ ...detailHeader, title: 'Circuit' }} />
+        <Stack.Screen name="track/correction" options={{ ...detailHeader, presentation: 'modal', title: 'Signaler une erreur' }} />
         <Stack.Screen name="race/new" options={{ ...detailHeader, presentation: 'modal', title: 'Organiser une course' }} />
         <Stack.Screen name="race/[id]" options={{ ...detailHeader, title: 'Course' }} />
         <Stack.Screen name="time-attack" options={{ ...detailHeader, title: 'Time Attack' }} />
@@ -143,6 +144,8 @@ function RootNavigator() {
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />
         <Stack.Screen name="admin/results" options={{ ...detailHeader, title: 'Résultats' }} />
+        <Stack.Screen name="admin/corrections" options={{ ...detailHeader, title: 'Remontées des pilotes' }} />
+        <Stack.Screen name="admin/officials" options={{ ...detailHeader, title: 'Kartings officiels' }} />
         <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen

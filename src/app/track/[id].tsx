@@ -3,6 +3,7 @@ import { Linking, Platform, StyleSheet, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
+import { Icon, icons } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
@@ -138,6 +139,12 @@ export default function TrackScreen() {
             <Button title="Défier un pilote" variant="ghost" onPress={() => router.push('/nearby')} />
           ) : null}
           <TrackManageLink trackId={t.id} trackName={t.name} />
+          <Button
+            title="Signaler une erreur sur cette fiche"
+            variant="quiet"
+            icon={<Icon name={icons.report} size={16} color={colors.textMuted} />}
+            onPress={() => router.push({ pathname: '/track/correction', params: { id: t.id } })}
+          />
         </>
       ) : null}
     </Screen>

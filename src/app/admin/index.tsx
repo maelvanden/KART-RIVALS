@@ -20,7 +20,13 @@ import {
   useSetAppAdmin,
 } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
-import { useAdminDisputes, useAdminRecentActions, useAdminStats, useAdminTimeAttacks } from '@/features/admin/panel';
+import {
+  useAdminDisputes,
+  useAdminRecentActions,
+  useAdminStats,
+  useAdminTimeAttacks,
+  useTrackCorrections,
+} from '@/features/admin/panel';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSearchPilots } from '@/features/nearby/api';
 import { SectionTitle } from '@/features/social/components/section-title';
@@ -41,6 +47,7 @@ export default function AdminScreen() {
   const actions = useAdminRecentActions(isAppAdmin, 6);
   const disputes = useAdminDisputes(isAppAdmin);
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
+  const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
   const respond = useRespondTrackRequest();
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
@@ -168,6 +175,19 @@ export default function AdminScreen() {
             onPress={() => router.push('/admin/tracks')}
           />
           <MenuRow
+            icon={icons.report}
+            title="Remontées des pilotes"
+            detail={`${corrections.data?.length ?? 0} erreur${(corrections.data?.length ?? 0) > 1 ? 's' : ''} signalée${(corrections.data?.length ?? 0) > 1 ? 's' : ''} sur les fiches`}
+            alert={(corrections.data?.length ?? 0) > 0}
+            onPress={() => router.push('/admin/corrections')}
+          />
+          <MenuRow
+            icon={icons.verified}
+            title="Kartings officiels"
+            detail={s ? `${s.tracks_official} fiches gérées par leur exploitant` : 'Activité des exploitants'}
+            onPress={() => router.push('/admin/officials')}
+          />
+          <MenuRow
             icon={icons.megaphone}
             title="Annonces"
             detail="Message officiel affiché à tous les pilotes"
@@ -228,6 +248,13 @@ export default function AdminScreen() {
               <Icon name={icons.edit} size={18} color={colors.neon} />
             </Pressable>
           ))}
+          <MenuRow
+            icon={icons.report}
+            title="Remontées des pilotes"
+            detail={`${corrections.data?.length ?? 0} erreur${(corrections.data?.length ?? 0) > 1 ? 's' : ''} signalée${(corrections.data?.length ?? 0) > 1 ? 's' : ''} sur tes fiches`}
+            alert={(corrections.data?.length ?? 0) > 0}
+            onPress={() => router.push('/admin/corrections')}
+          />
         </>
       ) : null}
 

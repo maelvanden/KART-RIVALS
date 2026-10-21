@@ -211,6 +211,45 @@ export type PilotResult = {
   outcome: 'win' | 'loss' | 'draw' | 'validated';
 };
 
+export type TrackCorrection = {
+  id: string;
+  track_id: string;
+  track_name: string;
+  track_city: string;
+  kind: 'hours' | 'closed' | 'position' | 'contact' | 'info' | 'other';
+  message: string | null;
+  suggested_lat: number | null;
+  suggested_lng: number | null;
+  current_lat: number | null;
+  current_lng: number | null;
+  status: 'open' | 'applied' | 'dismissed';
+  created_at: string;
+  author_id: string | null;
+  author: string | null;
+  handled_by: string | null;
+  handled_at: string | null;
+};
+
+export type OfficialTrack = {
+  id: string;
+  name: string;
+  city: string;
+  postal_code: string | null;
+  admins: string[] | null;
+  admins_since: string | null;
+  page_updated_at: string | null;
+  page_updated_by: string | null;
+  last_event_at: string | null;
+  events_total: number;
+  events_upcoming: number;
+  promos_active: number;
+  promo_reveals: number;
+  interests: number;
+  photos: number;
+  corrections_open: number;
+  last_activity: string | null;
+};
+
 export type AccountStatus = { suspended_until: string | null; banned_at: string | null; reason: string | null };
 
 // ---------- Mode démo ----------
@@ -294,6 +333,11 @@ const demoResults = {
     },
   ] as TimeAttackReview[],
 };
+
+const demoCorrections: TrackCorrection[] = [
+  { id: 'tc1', track_id: 't3', track_name: 'Inwall Kart', track_city: 'Les Ponts-de-Cé', kind: 'hours', message: 'Maintenant fermé le lundi, ouvert jusqu’à 23 h le samedi.', suggested_lat: null, suggested_lng: null, current_lat: 47.4284, current_lng: -0.5434, status: 'open', created_at: ago(90), author_id: 'p1', author: 'TurboLéa', handled_by: null, handled_at: null },
+  { id: 'tc2', track_id: 't2', track_name: 'SpeedPark Angers', track_city: 'Beaucouzé', kind: 'position', message: 'L’entrée est de l’autre côté du centre commercial.', suggested_lat: 47.4752, suggested_lng: -0.6265, current_lat: 47.4742, current_lng: -0.6301, status: 'open', created_at: ago(300), author_id: 'p3', author: 'ApexHunter', handled_by: null, handled_at: null },
+];
 
 const logDemo = (action: string, pilot: string | null, track: string | null, details: Record<string, unknown> | null = null) =>
   demo.actions.unshift({ id: Date.now(), action, created_at: new Date().toISOString(), admin: demoProfile.username, pilot, track, details });
@@ -879,6 +923,72 @@ export function useTicketUrl(path: string | null) {
   });
 }
 
+// Remontées des pilotes et kartings officiels
+
+export function useTrackCorrections(status: 'open' | 'done', enabled: boolean) {
+  return useQuery({
+    queryKey: ['track-corrections', status],
+    enabled,
+    queryFn: async (): Promise<TrackCorrection[]> => {
+      if (isDemoMode) return demoCorrections.filter((c) => (status === 'open') === (c.status === 'open')).map((c) => ({ ...c }));
+      return rpc<TrackCorrection[]>('admin_track_corrections', { p_status: status });
+    },
+  });
+}
+
+export function useResolveTrackCorrection() {
+  const invalidate = useInvalidate('track-corrections', 'admin-tracks', 'tracks-map', 'admin-actions', 'admin-officials');
+  return useMutation({
+    mutationFn: async ({ id, status, applyPosition }: { id: string; status: 'applied' | 'dismissed'; applyPosition?: boolean }) => {
+      if (isDemoMode) {
+        const c = demoCorrections.find((x) => x.id === id);
+        if (c) {
+          c.status = status;
+          c.handled_by = demoProfile.username;
+          c.handled_at = new Date().toISOString();
+          logDemo('track_correction', c.author, c.track_name, { decision: status, kind: c.kind });
+        }
+        return;
+      }
+      await rpc('resolve_track_correction', { p_id: id, p_status: status, p_apply_position: !!applyPosition });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useOfficialTracks(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin-officials'],
+    enabled,
+    queryFn: async (): Promise<OfficialTrack[]> => {
+      if (isDemoMode) {
+        return demoTrackDetails
+          .filter((t) => t.is_official)
+          .map((t, i) => ({
+            id: t.id,
+            name: t.name,
+            city: t.city,
+            postal_code: t.postal_code,
+            admins: i === 0 ? [demoProfile.username] : ['KartiNono', 'Gérant_SP'],
+            admins_since: ago(60 * 24 * (40 + i * 20)),
+            page_updated_at: i === 0 ? ago(60 * 24 * 2) : ago(60 * 24 * 75),
+            page_updated_by: i === 0 ? demoProfile.username : 'KartiNono',
+            last_event_at: i === 0 ? ago(60 * 24 * 5) : null,
+            events_total: i === 0 ? 6 : 0,
+            events_upcoming: i === 0 ? 2 : 0,
+            promos_active: i === 0 ? 1 : 0,
+            promo_reveals: i === 0 ? 37 : 0,
+            interests: i === 0 ? 54 : 0,
+            photos: 8 - i * 5,
+            corrections_open: demoCorrections.filter((c) => c.track_id === t.id && c.status === 'open').length,
+            last_activity: i === 0 ? ago(60 * 24 * 2) : ago(60 * 24 * 75),
+          }));
+      }
+      return rpc<OfficialTrack[]>('admin_official_tracks');
+    },
+  });
+}
+
 // Compte du pilote connecté
 
 export function useAccountStatus(userId: string | null | undefined) {
@@ -913,6 +1023,8 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return 'Time Attack vérifié et confirmé';
     case 'reject_time_attack':
       return 'Time Attack refusé';
+    case 'track_correction':
+      return `Remontée ${d.decision === 'applied' ? 'appliquée (+20 pts)' : 'rejetée'}`;
     case 'warn':
       return `Avertissement n°${d.number ?? '?'}`;
     case 'suspend':
