@@ -86,6 +86,8 @@ const messages: Record<string, string> = {
   'Track already exists': 'Un circuit porte déjà ce nom dans cette ville.',
   'Pick two different tracks': 'Choisis deux circuits différents.',
   'Invalid duration': 'Durée invalide (1 à 60 jours).',
+  'Unknown content type': 'Type de contenu inconnu.',
+  'Content not found': 'Contenu introuvable (supprimé par son auteur ?).',
   'announcements_title_check': 'Le titre doit faire entre 3 et 80 caractères.',
   'announcements_body_check': 'Le message doit faire au plus 600 caractères.',
   'announcements_link_url_check': 'Le lien doit commencer par https://',

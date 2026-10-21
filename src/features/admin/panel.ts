@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { demoPilots } from '@/features/social/demo';
 import { socialError } from '@/features/social/errors';
@@ -125,6 +125,27 @@ export type AdminAction = {
   details: Record<string, unknown> | null;
 };
 
+export type ContentKind = 'post' | 'comment' | 'photo' | 'review';
+export type ContentFilter = 'all' | 'posts' | 'comments' | 'photos' | 'reviews' | 'reported' | 'hidden';
+export type AdminContent = {
+  kind: ContentKind;
+  id: string;
+  created_at: string;
+  author_id: string;
+  author_username: string | null;
+  author_avatar: string | null;
+  track_id: string | null;
+  track_name: string | null;
+  post_id: string | null;
+  body: string | null;
+  media_path: string | null;
+  media_type: 'image' | 'video' | null;
+  lap_ms: number | null;
+  rating: number | null;
+  hidden: boolean;
+  report_count: number;
+};
+
 export type AccountStatus = { suspended_until: string | null; banned_at: string | null; reason: string | null };
 
 // ---------- Mode démo ----------
@@ -172,6 +193,14 @@ const demo = {
     { id: 1, action: 'create_track', created_at: ago(60 * 26), admin: demoProfile.username, pilot: null, track: 'Kart Origins', details: null },
   ] as AdminAction[],
 };
+const demoContent: AdminContent[] = [
+  { kind: 'post', id: 'c1', created_at: ago(12), author_id: 'p2', author_username: 'Drift_Max', author_avatar: null, track_id: 't2', track_name: 'SpeedPark Angers', post_id: 'c1', body: 'Nouveau record perso ce soir 🔥 qui vient me le reprendre ?', media_path: null, media_type: null, lap_ms: 24612, rating: null, hidden: false, report_count: 0 },
+  { kind: 'comment', id: 'c2', created_at: ago(35), author_id: 'p4', author_username: 'KartiNono', author_avatar: null, track_id: 't2', track_name: 'SpeedPark Angers', post_id: 'c1', body: 'T’as triché c’est sûr, t’es nul en vrai', media_path: null, media_type: null, lap_ms: null, rating: null, hidden: false, report_count: 1 },
+  { kind: 'review', id: 'c3', created_at: ago(80), author_id: 'p1', author_username: 'TurboLéa', author_avatar: null, track_id: 't3', track_name: 'Inwall Kart', post_id: null, body: 'Super accueil, karts bien réglés, un peu cher le week-end.', media_path: null, media_type: null, lap_ms: null, rating: 4.3, hidden: false, report_count: 0 },
+  { kind: 'photo', id: 'c4', created_at: ago(140), author_id: 'p3', author_username: 'ApexHunter', author_avatar: null, track_id: 't1', track_name: 'MK Racing', post_id: null, body: 'Le virage en épingle avant la ligne droite', media_path: null, media_type: 'image', lap_ms: null, rating: null, hidden: false, report_count: 0 },
+  { kind: 'post', id: 'c5', created_at: ago(300), author_id: 'p4', author_username: 'KartiNono', author_avatar: null, track_id: null, track_name: null, post_id: 'c5', body: 'Vends karts d’occasion, contactez-moi en privé 💸💸', media_path: null, media_type: null, lap_ms: null, rating: null, hidden: true, report_count: 2 },
+];
+
 const logDemo = (action: string, pilot: string | null, track: string | null, details: Record<string, unknown> | null = null) =>
   demo.actions.unshift({ id: Date.now(), action, created_at: new Date().toISOString(), admin: demoProfile.username, pilot, track, details });
 
@@ -523,6 +552,53 @@ export function useArchiveAnnouncement() {
   });
 }
 
+// Modération de l'Actu
+
+export function useAdminContent(filter: ContentFilter, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: ['admin-content', filter],
+    enabled,
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: AdminContent[]) => (last.length === 30 ? last[last.length - 1].created_at : undefined),
+    queryFn: async ({ pageParam }): Promise<AdminContent[]> => {
+      if (isDemoMode) {
+        if (pageParam) return [];
+        const kind = { posts: 'post', comments: 'comment', photos: 'photo', reviews: 'review' }[filter as string];
+        return demoContent
+          .filter((c) => (kind ? c.kind === kind : filter === 'hidden' ? c.hidden : filter === 'reported' ? c.report_count > 0 : true))
+          .map((c) => ({ ...c }));
+      }
+      return rpc<AdminContent[]>('admin_content', { p_filter: filter, p_before: pageParam, p_limit: 30 });
+    },
+  });
+}
+
+export function useSetContentHidden() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kind, id, hidden }: { kind: ContentKind; id: string; hidden: boolean }) => {
+      if (isDemoMode) {
+        const c = demoContent.find((x) => x.id === id);
+        if (c) {
+          c.hidden = hidden;
+          logDemo(hidden ? 'hide_content' : 'show_content', c.author_username, null, { kind, excerpt: c.body?.slice(0, 80) });
+        }
+        return;
+      }
+      await rpc('admin_set_content_hidden', { p_kind: kind, p_id: id, p_hidden: hidden });
+    },
+    // Mise à jour immédiate de la carte, puis rafraîchissement des fils concernés.
+    onSuccess: (_, { id, hidden }) => {
+      queryClient.setQueriesData<{ pages: AdminContent[][]; pageParams: unknown[] }>({ queryKey: ['admin-content'] }, (data) =>
+        data ? { ...data, pages: data.pages.map((page) => page.map((c) => (c.id === id ? { ...c, hidden } : c))) } : data,
+      );
+      ['admin-actions', 'feed', 'post-comments', 'track-photos', 'track-reviews', 'track-ratings', 'admin-reports'].forEach((k) =>
+        queryClient.invalidateQueries({ queryKey: [k] }),
+      );
+    },
+  });
+}
+
 // Compte du pilote connecté
 
 export function useAccountStatus(userId: string | null | undefined) {
@@ -565,6 +641,11 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return 'Circuit réaffiché';
     case 'merge_track':
       return `Doublon fusionné${d.merged ? ` (${d.merged})` : ''}`;
+    case 'hide_content':
+    case 'show_content': {
+      const kind = { post: 'Publication', comment: 'Commentaire', photo: 'Photo', review: 'Avis' }[d.kind as string] ?? 'Contenu';
+      return `${kind} ${a.action === 'hide_content' ? 'masqué' : 'rétabli'}${d.kind === 'post' || d.kind === 'photo' ? 'e' : ''}${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
+    }
     case 'announcement':
       return `Annonce publiée${d.title ? ` : « ${d.title} »` : ''}`;
     default:

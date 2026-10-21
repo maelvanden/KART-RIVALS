@@ -136,6 +136,12 @@ export default function AdminScreen() {
 
           <SectionTitle title="Gestion" />
           <MenuRow
+            icon={icons.feed}
+            title="Modération de l’Actu"
+            detail={s ? `${s.posts_7d} publications cette semaine · masquer en un geste` : 'Publications, commentaires, photos, avis'}
+            onPress={() => router.push('/admin/content')}
+          />
+          <MenuRow
             icon={icons.teammates}
             title="Pilotes"
             detail={s ? `${s.pilots_total} inscrits · +${s.pilots_new_30d} ce mois-ci` : 'Rechercher, suspendre, bannir'}
