@@ -250,6 +250,39 @@ export type OfficialTrack = {
   last_activity: string | null;
 };
 
+export type ActivityDept = {
+  dept: string | null;
+  pilots: number;
+  active_30d: number;
+  new_30d: number;
+  far_pilots: number;
+  tracks: number;
+  lat: number | null;
+  lng: number | null;
+};
+
+export type RetentionCohort = {
+  month: string;
+  signups: number;
+  eligible_7d: number;
+  returned_7d: number;
+  eligible_30d: number;
+  returned_30d: number;
+  with_challenge: number;
+  median_hours_to_challenge: number | null;
+};
+export type Retention = {
+  pilots: number;
+  eligible_7d: number;
+  returned_7d: number;
+  eligible_30d: number;
+  returned_30d: number;
+  with_challenge: number;
+  avg_hours_to_challenge: number | null;
+  median_hours_to_challenge: number | null;
+  cohorts: RetentionCohort[];
+};
+
 export type AccountStatus = { suspended_until: string | null; banned_at: string | null; reason: string | null };
 
 // ---------- Mode démo ----------
@@ -985,6 +1018,86 @@ export function useOfficialTracks(enabled: boolean) {
           }));
       }
       return rpc<OfficialTrack[]>('admin_official_tracks');
+    },
+  });
+}
+
+// Statistiques avancées
+
+export function useActivityMap(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin-activity-map'],
+    enabled,
+    queryFn: async (): Promise<ActivityDept[]> => {
+      if (isDemoMode) {
+        // Démo : pilotes répartis autour des circuits de démonstration.
+        const byDept = new Map<string, { n: number; lat: number; lng: number }>();
+        for (const t of demoTrackDetails) {
+          const d = t.postal_code?.slice(0, 2);
+          if (!d) continue;
+          const cur = byDept.get(d) ?? { n: 0, lat: 0, lng: 0 };
+          byDept.set(d, { n: cur.n + 1, lat: cur.lat + t.lat, lng: cur.lng + t.lng });
+        }
+        const weight: Record<string, number> = { '49': 420, '44': 260, '35': 140, '72': 90, '85': 75, '53': 30, '33': 120, '69': 150, '75': 0 };
+        return [...byDept.entries()]
+          .map(([dept, v]): ActivityDept => {
+            const pilots = weight[dept] ?? Math.round((v.n * 7 + dept.charCodeAt(1)) % 40);
+            return {
+              dept,
+              pilots,
+              active_30d: Math.round(pilots * 0.45),
+              new_30d: Math.round(pilots * 0.12),
+              far_pilots: dept === '53' || dept === '35' ? Math.round(pilots * 0.4) : Math.round(pilots * 0.05),
+              tracks: v.n,
+              lat: v.lat / v.n,
+              lng: v.lng / v.n,
+            };
+          })
+          .concat([{ dept: null, pilots: 64, active_30d: 10, new_30d: 8, far_pilots: 0, tracks: 0, lat: null, lng: null }])
+          .sort((a, b) => b.pilots - a.pilots);
+      }
+      return rpc<ActivityDept[]>('admin_activity_map');
+    },
+  });
+}
+
+/** Département où il manque des kartings : beaucoup de pilotes par circuit, ou beaucoup de pilotes loin d'un circuit. */
+export const isShortage = (d: ActivityDept) =>
+  d.pilots >= 20 && (d.pilots / Math.max(1, d.tracks) >= 60 || d.far_pilots / d.pilots >= 0.25);
+
+export function useRetention(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin-retention'],
+    enabled,
+    queryFn: async (): Promise<Retention> => {
+      if (isDemoMode) {
+        const months = ['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05'];
+        const cohorts = months.map((month, i) => {
+          const signups = [212, 341, 298, 187, 164, 82][i];
+          return {
+            month,
+            signups,
+            eligible_7d: i === 0 ? 150 : signups,
+            returned_7d: Math.round((i === 0 ? 150 : signups) * (0.58 - i * 0.02)),
+            eligible_30d: i === 0 ? 0 : signups,
+            returned_30d: i === 0 ? 0 : Math.round(signups * (0.36 - i * 0.015)),
+            with_challenge: Math.round(signups * (0.41 + i * 0.02)),
+            median_hours_to_challenge: [30, 42, 51, 60, 66, 72][i],
+          };
+        });
+        return {
+          pilots: 1284,
+          eligible_7d: 1222,
+          returned_7d: 668,
+          eligible_30d: 1072,
+          returned_30d: 351,
+          with_challenge: 571,
+          avg_hours_to_challenge: 94.5,
+          median_hours_to_challenge: 41,
+          cohorts,
+        };
+      }
+      return rpc<Retention>('admin_retention');
     },
   });
 }

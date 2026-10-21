@@ -145,6 +145,12 @@ export default function AdminScreen() {
 
           <SectionTitle title="Gestion" />
           <MenuRow
+            icon={icons.poll}
+            title="Statistiques avancées"
+            detail="Carte d’activité, fidélité, export tableur"
+            onPress={() => router.push('/admin/insights')}
+          />
+          <MenuRow
             icon={icons.challenge}
             title="Résultats et anti-triche"
             detail={`${disputes.data?.length ?? 0} litige${(disputes.data?.length ?? 0) > 1 ? 's' : ''} · ${suspects.data?.length ?? 0} Time Attack suspect${(suspects.data?.length ?? 0) > 1 ? 's' : ''}`}

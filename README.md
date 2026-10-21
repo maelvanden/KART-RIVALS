@@ -109,7 +109,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   pilotes (`admin_search_pilots`, `admin_pilot_detail`, `admin_moderate_pilot` : suspension, bannissement, badge vérifié ;
   `admin_set_elo`), circuits (`admin_tracks`, `admin_create_track`, `admin_set_track_hidden`, `admin_merge_tracks`,
   positions approximatives `location_approx`), modération de l'Actu (`admin_content`, `admin_set_content_hidden` :
-  publications, commentaires, photos et avis masqués en un geste), remontées des pilotes (`track_corrections`, bouton
+  publications, commentaires, photos et avis masqués en un geste), statistiques avancées (`admin_activity_map` : carte
+  d'activité par département et zones sans karting ; `admin_retention` : fidélité ; export CSV), remontées des pilotes (`track_corrections`, bouton
   « Signaler une erreur » sur la fiche, +20 pts si appliquée), suivi des kartings officiels (`admin_official_tracks`,
   `page_updated_at`), arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,

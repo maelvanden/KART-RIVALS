@@ -146,6 +146,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/results" options={{ ...detailHeader, title: 'Résultats' }} />
         <Stack.Screen name="admin/corrections" options={{ ...detailHeader, title: 'Remontées des pilotes' }} />
         <Stack.Screen name="admin/officials" options={{ ...detailHeader, title: 'Kartings officiels' }} />
+        <Stack.Screen name="admin/insights" options={{ ...detailHeader, title: 'Statistiques' }} />
         <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen
