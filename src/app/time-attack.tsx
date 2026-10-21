@@ -13,7 +13,13 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile } from '@/features/profile/api';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
-import { takeTicketPhoto, useStartTimeAttack, useSubmitTicket, useTimeAttackSessions } from '@/features/time-attack/api';
+import {
+  takeTicketPhoto,
+  useRequestTimeAttackReview,
+  useStartTimeAttack,
+  useSubmitTicket,
+  useTimeAttackSessions,
+} from '@/features/time-attack/api';
 import {
   TicketRejectedError,
   describeTicketRejection,
@@ -21,6 +27,7 @@ import {
   type RejectionMessage,
 } from '@/features/time-attack/errors';
 import { useTracks } from '@/features/tracks/api';
+import { confirmAction } from '@/lib/confirm';
 import { dateTimeFormat, formatLapTime, parseLapTime } from '@/lib/format';
 import { colors, spacing } from '@/theme';
 import type { TimeAttackSession } from '@/types/models';
@@ -73,7 +80,11 @@ function CheckIn() {
         <Rule n={1} text="Appuie sur « Je pars rouler » avant le briefing : l’heure du check-in est enregistrée par le serveur." />
         <Rule n={2} text="Après ta session, prends ton ticket en photo depuis l’app dans les 90 minutes, avec le nom et le meilleur tour qui y figurent." />
         <Rule n={3} text="L’heure de session imprimée sur le ticket doit être postérieure à ton check-in, sinon il est refusé." />
-        <Rule n={4} text="Pas de ticket valide au bout de 90 minutes : abandon (DNF) et perte d’ELO." />
+        <Rule n={4} text="Pas de ticket envoyé au bout de 90 minutes : abandon (DNF) et perte d’ELO." />
+        <Rule
+          n={5}
+          text="La lecture automatique échoue ou se trompe ? Envoie ton ticket en vérification manuelle : un admin regarde la photo, sans DNF en attendant."
+        />
       </Card>
 
       <Text variant="label">Circuit</Text>
@@ -125,6 +136,9 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
           })
         : null;
   const otherError = submit.error && !(submit.error instanceof TicketRejectedError) ? submit.error.message : pickError;
+  // Un ticket a été envoyé à temps mais refusé par la lecture automatique : la vérification manuelle est possible.
+  const lastCode = submit.error instanceof TicketRejectedError ? submit.error.rejection.code : s.last_rejection_code;
+  const canReview = !!lastCode && !NOT_REVIEWABLE.includes(lastCode) && remaining > -5 * 60_000;
 
   return (
     <>
@@ -142,12 +156,14 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
         </Text>
         <Text variant="caption">
           {expired
-            ? 'Sans ticket valide, la session va passer en abandon (DNF) avec une perte d’ELO.'
+            ? canReview
+              ? 'Ton ticket a été envoyé à temps : il part en vérification manuelle chez un admin, sans DNF.'
+              : 'Sans ticket envoyé, la session va passer en abandon (DNF) avec une perte d’ELO.'
             : `Seul un ticket dont l’heure de session est après ${formatHour(s.check_in_at)} sera accepté.`}
         </Text>
       </Card>
 
-      {!expired ? (
+      {!expired || canReview ? (
         <Card style={styles.block}>
           <Text variant="caption">Recopie ce qui est imprimé sur ton ticket, puis photographie-le en entier, à plat et bien éclairé : on vérifie le circuit, ton nom, ton temps et l’heure de la session.</Text>
           <Input
@@ -186,7 +202,56 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
 
       {rejection ? <RejectionCard rejection={rejection} attempts={s.rejection_count} /> : null}
       {otherError ? <Text style={{ color: colors.danger }}>{otherError}</Text> : null}
+      {canReview && !submit.isPending ? (
+        <ReviewRequest sessionId={s.id} ticketName={ticketName.trim()} bestLapMs={canSend ? bestLapMs : null} />
+      ) : null}
     </>
+  );
+}
+
+/** Refus où un nouvel envoi ne changerait rien : hors délai ou session close. */
+const NOT_REVIEWABLE = ['DEADLINE_PASSED', 'SESSION_CLOSED', 'SESSION_NOT_FOUND'];
+
+/** Plan B quand la lecture automatique échoue : un admin vérifie la photo du dernier ticket envoyé. */
+function ReviewRequest({ sessionId, ticketName, bestLapMs }: { sessionId: string; ticketName: string; bestLapMs: number | null }) {
+  const request = useRequestTimeAttackReview();
+  const [note, setNote] = useState('');
+  return (
+    <Card style={styles.block}>
+      <Text variant="heading">La lecture s’est trompée ?</Text>
+      <Text variant="caption">
+        Envoie ton dernier ticket en vérification manuelle : un admin compare la photo avec ton nom et ton meilleur tour.
+        Le compte à rebours s’arrête, pas de DNF en attendant sa décision.
+      </Text>
+      <Input
+        label="Précision pour l’admin (facultatif)"
+        value={note}
+        onChangeText={setNote}
+        placeholder="Ticket un peu froissé, heure en haut à droite…"
+        maxLength={300}
+      />
+      {bestLapMs === null ? (
+        <Text variant="caption" style={{ color: colors.orange }}>
+          Indique d’abord le nom et le meilleur tour imprimés sur le ticket.
+        </Text>
+      ) : null}
+      {request.error ? <Text style={{ color: colors.danger }}>{request.error.message}</Text> : null}
+      <Button
+        title="Vérification manuelle"
+        variant="secondary"
+        disabled={bestLapMs === null || ticketName.length < 2}
+        loading={request.isPending}
+        onPress={() =>
+          bestLapMs !== null &&
+          confirmAction(
+            'Envoyer en vérification ?',
+            `Ton dernier ticket part chez un admin avec « ${ticketName} » et ${formatLapTime(bestLapMs)}. Tu ne pourras plus en envoyer d’autre pour cette session.`,
+            'Envoyer',
+            () => request.mutate({ sessionId, ticketName, bestLapMs, note }),
+          )
+        }
+      />
+    </Card>
   );
 }
 
@@ -206,6 +271,7 @@ function RejectionCard({ rejection, attempts }: { rejection: RejectionMessage; a
 
 function HistoryRow({ session: s }: { session: TimeAttackSession }) {
   const validated = s.status === 'validated';
+  const pending = s.status === 'pending_review';
   return (
     <Card style={styles.row}>
       <View style={styles.rowText}>
@@ -216,6 +282,8 @@ function HistoryRow({ session: s }: { session: TimeAttackSession }) {
           {dateTimeFormat.format(new Date(s.check_in_at))}
           {validated && s.ticket_at ? ` · session de ${formatHour(s.ticket_at)}` : ''}
         </Text>
+        {pending ? <Text variant="caption">Un admin vérifie ton ticket, aucune pénalité en attendant.</Text> : null}
+        {s.rejected_reason && !validated ? <Text variant="caption">Motif : {s.rejected_reason}</Text> : null}
       </View>
       {validated ? (
         <View style={styles.validated}>
@@ -229,6 +297,8 @@ function HistoryRow({ session: s }: { session: TimeAttackSession }) {
             </Text>
           ) : null}
         </View>
+      ) : pending ? (
+        <Text style={styles.pending}>En vérification</Text>
       ) : (
         <Text style={styles.dnf}>
           {s.status === 'rejected' ? 'Refusé par un admin' : `DNF${s.elo_penalty ? ` · −${s.elo_penalty} ELO` : ''}`}
@@ -311,4 +381,5 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: '800' },
   lap: { fontSize: 16, fontWeight: '900', fontStyle: 'italic', color: colors.neon, fontVariant: ['tabular-nums'] },
   dnf: { fontWeight: '800', color: colors.danger },
+  pending: { fontWeight: '800', color: colors.orange },
 });

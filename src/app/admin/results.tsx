@@ -15,27 +15,32 @@ import { useAdminRoles } from '@/features/admin/api';
 import {
   useAdminDisputes,
   useAdminTimeAttacks,
+  useDecideTimeAttackReview,
   useResolveMatch,
   useResolveRace,
   useReviewTimeAttack,
   useTicketUrl,
   type MatchDispute,
   type RaceDispute,
+  type TimeAttackFilter,
   type TimeAttackReview,
 } from '@/features/admin/panel';
+import { describeTicketRejection } from '@/features/time-attack/errors';
 import { confirmAction } from '@/lib/confirm';
-import { formatLapTime, formatMessageTime } from '@/lib/format';
+import { formatLapTime, formatMessageTime, parseLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 
 type Tab = 'disputes' | 'time_attack';
 
-/** Résultats : litiges à trancher et Time Attack suspects à revoir avec le ticket. */
+/** Résultats : litiges à trancher, tickets Time Attack à vérifier à la main et chronos suspects. */
 export default function AdminResultsScreen() {
   const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
   const [tab, setTab] = useState<Tab>('disputes');
-  const [taFilter, setTaFilter] = useState<'suspect' | 'recent'>('suspect');
+  const [taFilter, setTaFilter] = useState<TimeAttackFilter>('pending');
   const disputes = useAdminDisputes(isAppAdmin);
+  const pending = useAdminTimeAttacks('pending', isAppAdmin);
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
+  const toCheck = (pending.data?.length ?? 0) + (suspects.data?.length ?? 0);
   const timeAttacks = useAdminTimeAttacks(taFilter, isAppAdmin && tab === 'time_attack');
 
   if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé aux admins appli" /></Screen>;
@@ -46,13 +51,14 @@ export default function AdminResultsScreen() {
       refreshing={disputes.isRefetching || timeAttacks.isRefetching}
       onRefresh={() => {
         disputes.refetch();
+        pending.refetch();
         suspects.refetch();
         timeAttacks.refetch();
       }}>
       <Segmented
         options={[
           { value: 'disputes', label: `Litiges ${disputes.data?.length || ''}`.trim() },
-          { value: 'time_attack', label: `Time Attack ${suspects.data?.length || ''}`.trim() },
+          { value: 'time_attack', label: `Time Attack ${toCheck || ''}`.trim() },
         ]}
         value={tab}
         onChange={setTab}
@@ -73,23 +79,30 @@ export default function AdminResultsScreen() {
         <>
           <Segmented
             options={[
-              { value: 'suspect', label: 'Suspects' },
+              { value: 'pending', label: `À vérifier ${pending.data?.length || ''}`.trim() },
+              { value: 'suspect', label: `Suspects ${suspects.data?.length || ''}`.trim() },
               { value: 'recent', label: 'Récents' },
             ]}
             value={taFilter}
             onChange={setTaFilter}
           />
           <Text variant="caption">
-            {taFilter === 'suspect'
-              ? 'Chronos validés à plus de 3 % sous le meilleur temps précédent du circuit. Compare avec la photo du ticket.'
-              : 'Les 30 derniers Time Attack validés.'}
+            {taFilter === 'pending'
+              ? 'Tickets que la lecture automatique n’a pas su valider. Le pilote n’a pas de DNF tant que tu n’as pas tranché : compare la photo avec son nom, son temps, le circuit et l’heure (après le check-in).'
+              : taFilter === 'suspect'
+                ? 'Chronos validés à plus de 3 % sous le meilleur temps précédent du circuit. Compare avec la photo du ticket.'
+                : 'Les 30 derniers Time Attack validés.'}
           </Text>
           {timeAttacks.isPending ? <Loading /> : null}
           {timeAttacks.error ? <ErrorState error={timeAttacks.error} /> : null}
           {timeAttacks.data?.length === 0 ? (
-            <EmptyState title={taFilter === 'suspect' ? 'Aucun chrono suspect' : 'Aucun Time Attack'} />
+            <EmptyState
+              title={taFilter === 'pending' ? 'Aucun ticket à vérifier' : taFilter === 'suspect' ? 'Aucun chrono suspect' : 'Aucun Time Attack'}
+            />
           ) : null}
-          {timeAttacks.data?.map((t) => <TimeAttackCard key={t.id} session={t} />)}
+          {timeAttacks.data?.map((t) =>
+            t.status === 'pending_review' ? <PendingTicketCard key={t.id} session={t} /> : <TimeAttackCard key={t.id} session={t} />,
+          )}
         </>
       )}
     </Screen>
@@ -258,7 +271,6 @@ function RaceCard({ dispute: d }: { dispute: RaceDispute }) {
 
 function TimeAttackCard({ session: s }: { session: TimeAttackReview }) {
   const review = useReviewTimeAttack();
-  const ticket = useTicketUrl(s.ticket_path);
   const [reason, setReason] = useState('');
   const [showOcr, setShowOcr] = useState(false);
 
@@ -270,12 +282,12 @@ function TimeAttackCard({ session: s }: { session: TimeAttackReview }) {
         style={styles.head}>
         <Text style={styles.bold}>{s.username}</Text>
         <Text variant="caption">
-          {s.track_name} · validé {formatMessageTime(s.validated_at)}
+          {s.track_name} · validé {s.validated_at ? formatMessageTime(s.validated_at) : '—'}
           {s.reviewed ? ' · déjà vérifié' : ''}
         </Text>
       </Pressable>
       <View style={styles.lapRow}>
-        <Text style={styles.lap}>{formatLapTime(s.best_lap_ms)}</Text>
+        <Text style={styles.lap}>{s.best_lap_ms ? formatLapTime(s.best_lap_ms) : '—'}</Text>
         {s.previous_best_ms ? (
           <View style={styles.flex}>
             <Text variant="caption">Record précédent {formatLapTime(s.previous_best_ms)}</Text>
@@ -294,18 +306,7 @@ function TimeAttackCard({ session: s }: { session: TimeAttackReview }) {
         {s.ticket_at ? ` · session du ticket ${formatMessageTime(s.ticket_at)}` : ''}
         {s.ticket_name ? ` · « ${s.ticket_name} »` : ''}
       </Text>
-      {ticket.data ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Ouvrir le ticket en grand" onPress={() => Linking.openURL(ticket.data!)}>
-          <Image source={{ uri: ticket.data }} style={styles.ticket} contentFit="contain" />
-        </Pressable>
-      ) : s.ticket_path ? (
-        ticket.isPending ? <Loading /> : <Text variant="caption">Photo du ticket indisponible.</Text>
-      ) : (
-        <View style={styles.noTicket}>
-          <Icon name={icons.ticket} size={18} color={colors.textMuted} />
-          <Text variant="caption">Pas de photo de ticket</Text>
-        </View>
-      )}
+      <TicketPhoto path={s.ticket_path} />
       {s.ocr_text ? (
         <>
           <Button title={showOcr ? 'Masquer le texte lu' : 'Texte lu sur le ticket'} variant="quiet" onPress={() => setShowOcr((v) => !v)} />
@@ -334,6 +335,125 @@ function TimeAttackCard({ session: s }: { session: TimeAttackReview }) {
               'Il sort des records et du badge vérifié, ses 30 points sont repris et sa publication perd la mention certifiée.',
               'Refuser',
               () => review.mutate({ id: s.id, valid: false, reason }),
+            )
+          }
+        />
+      </View>
+    </Card>
+  );
+}
+
+function TicketPhoto({ path }: { path: string | null }) {
+  const ticket = useTicketUrl(path);
+  if (ticket.data) {
+    return (
+      <Pressable accessibilityRole="button" accessibilityLabel="Ouvrir le ticket en grand" onPress={() => Linking.openURL(ticket.data!)}>
+        <Image source={{ uri: ticket.data }} style={styles.ticket} contentFit="contain" />
+      </Pressable>
+    );
+  }
+  if (path) return ticket.isPending ? <Loading /> : <Text variant="caption">Photo du ticket indisponible.</Text>;
+  return (
+    <View style={styles.noTicket}>
+      <Icon name={icons.ticket} size={18} color={colors.textMuted} />
+      <Text variant="caption">Pas de photo de ticket</Text>
+    </View>
+  );
+}
+
+/** Ticket en vérification manuelle : valider (temps corrigeable), DNF ou annuler sans pénalité. */
+function PendingTicketCard({ session: s }: { session: TimeAttackReview }) {
+  const decide = useDecideTimeAttackReview();
+  const [lapInput, setLapInput] = useState(s.best_lap_ms ? formatLapTime(s.best_lap_ms) : '');
+  const [reason, setReason] = useState('');
+  const lapMs = parseLapTime(lapInput);
+  const lapOk = lapMs !== null && lapMs >= 10_000 && lapMs <= 600_000;
+  const lastRefusal = s.last_rejection_code ? describeTicketRejection({ code: s.last_rejection_code }).title : null;
+
+  return (
+    <Card style={[styles.card, styles.disputed]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/admin/pilot/[id]', params: { id: s.pilot_id } })}
+        style={styles.head}>
+        <Text style={[styles.kind, { color: colors.orange }]}>{s.review_auto ? 'Envoyé d’office à l’échéance' : 'Demandé par le pilote'}</Text>
+        <Text style={styles.bold}>{s.username}</Text>
+        <Text variant="caption">
+          {s.track_name}
+          {s.review_requested_at ? ` · en attente depuis ${formatMessageTime(s.review_requested_at)}` : ''}
+        </Text>
+      </Pressable>
+      <Text variant="caption">
+        Check-in {formatMessageTime(s.check_in_at)} · échéance {formatMessageTime(s.deadline_at)}
+        {s.ticket_uploaded_at ? ` · photo envoyée ${formatMessageTime(s.ticket_uploaded_at)}` : ''}
+      </Text>
+      <Text variant="caption">
+        {s.ticket_name ? `Nom déclaré « ${s.ticket_name} »` : 'Nom non déclaré'}
+        {s.previous_best_ms ? ` · record du circuit ${formatLapTime(s.previous_best_ms)}` : ''}
+      </Text>
+      {lastRefusal ? (
+        <Text variant="caption">
+          Lecture auto : {lastRefusal}
+          {s.rejection_count > 1 ? ` (${s.rejection_count} essais)` : ''}
+        </Text>
+      ) : null}
+      {s.review_note ? (
+        <View style={styles.quote}>
+          <Text variant="caption">Précision du pilote :</Text>
+          <Text style={styles.italic}>« {s.review_note} »</Text>
+        </View>
+      ) : null}
+      <TicketPhoto path={s.ticket_path} />
+
+      <Input
+        label="Meilleur tour lu sur le ticket"
+        value={lapInput}
+        onChangeText={setLapInput}
+        placeholder="47.312"
+        keyboardType="numbers-and-punctuation"
+        autoCorrect={false}
+      />
+      <Input label="Motif (DNF ou annulation)" value={reason} onChangeText={setReason} placeholder="Ticket d’un autre jour, illisible…" />
+      {decide.error ? <Text style={styles.error}>{decide.error.message}</Text> : null}
+      <Button
+        title={lapOk ? `Valider en ${formatLapTime(lapMs)}` : 'Valider le chrono'}
+        disabled={!lapOk}
+        loading={decide.isPending}
+        onPress={() =>
+          confirmAction(
+            `Valider le chrono de ${s.username} ?`,
+            `${formatLapTime(lapMs!)} entre dans les records du circuit et le pilote gagne ses 30 points.`,
+            'Valider',
+            () => decide.mutate({ id: s.id, decision: 'validate', bestLapMs: lapMs }),
+          )
+        }
+      />
+      <View style={styles.row}>
+        <Button
+          title="DNF"
+          variant="secondary"
+          style={styles.flex}
+          disabled={decide.isPending}
+          onPress={() =>
+            confirmAction(
+              `DNF pour ${s.username} ?`,
+              'Le ticket ne prouve pas une session après le check-in : abandon et −15 ELO, comme sans ticket.',
+              'DNF',
+              () => decide.mutate({ id: s.id, decision: 'dnf', reason }),
+            )
+          }
+        />
+        <Button
+          title="Annuler"
+          variant="quiet"
+          style={styles.flex}
+          disabled={decide.isPending}
+          onPress={() =>
+            confirmAction(
+              'Annuler sans pénalité ?',
+              'La session est close sans chrono ni perte d’ELO (ex. ticket illisible mais pilote de bonne foi).',
+              'Annuler la session',
+              () => decide.mutate({ id: s.id, decision: 'cancel', reason }),
             )
           }
         />

@@ -195,7 +195,7 @@ export type Race = {
   entries: RaceEntry[];
 };
 
-export type TimeAttackStatus = 'on_track' | 'validated' | 'dnf' | 'rejected';
+export type TimeAttackStatus = 'on_track' | 'pending_review' | 'validated' | 'dnf' | 'rejected';
 
 export type TimeAttackSession = {
   id: string;
@@ -213,6 +213,10 @@ export type TimeAttackSession = {
   last_rejected_ticket_at: string | null;
   dnf_at: string | null;
   elo_penalty: number | null;
+  /** Vérification manuelle demandée (par le pilote ou d'office à l'échéance). */
+  review_requested_at: string | null;
+  /** Motif laissé par l'admin en cas de refus ou de DNF après vérification. */
+  rejected_reason: string | null;
   track: Track;
 };
 

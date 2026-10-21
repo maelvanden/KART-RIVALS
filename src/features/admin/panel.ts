@@ -188,17 +188,29 @@ export type TimeAttackReview = {
   username: string;
   track_id: string;
   track_name: string;
-  best_lap_ms: number;
+  /** Temps déclaré par le pilote ; null si la vérification a été ouverte d'office sans temps connu. */
+  best_lap_ms: number | null;
   previous_best_ms: number | null;
   gap_pct: number | null;
   check_in_at: string;
   ticket_at: string | null;
-  validated_at: string;
+  validated_at: string | null;
   ticket_path: string | null;
   ticket_name: string | null;
   ocr_text: string | null;
   reviewed: boolean;
+  status: 'pending_review' | 'validated';
+  deadline_at: string;
+  last_rejection_code: string | null;
+  rejection_count: number;
+  review_requested_at: string | null;
+  review_note: string | null;
+  /** Vérification ouverte par le planificateur à l'échéance (ticket envoyé mais jamais validé). */
+  review_auto: boolean;
+  ticket_uploaded_at: string | null;
 };
+export type TimeAttackFilter = 'pending' | 'suspect' | 'recent';
+export type ReviewDecision = 'validate' | 'dnf' | 'cancel';
 
 export type PilotResult = {
   kind: 'match' | 'race' | 'time_attack';
@@ -363,6 +375,23 @@ const demoResults = {
       id: 'ta1', pilot_id: 'p4', username: 'KartiNono', track_id: 't2', track_name: 'SpeedPark Angers', best_lap_ms: 22106,
       previous_best_ms: 24612, gap_pct: 10.2, check_in_at: ago(60 * 6), ticket_at: ago(60 * 5.5), validated_at: ago(60 * 5),
       ticket_path: null, ticket_name: 'SPEEDPARK ANGERS', ocr_text: 'SPEEDPARK ANGERS\nSESSION 14:30\nKARTINONO\nMEILLEUR TOUR 22.106', reviewed: false,
+      status: 'validated', deadline_at: ago(60 * 4.5), last_rejection_code: null, rejection_count: 0, review_requested_at: null,
+      review_note: null, review_auto: false, ticket_uploaded_at: ago(60 * 5),
+    },
+    {
+      id: 'ta2', pilot_id: 'p1', username: 'TurboLéa', track_id: 't3', track_name: 'Inwall Kart', best_lap_ms: 31204,
+      previous_best_ms: 30877, gap_pct: -1.1, check_in_at: ago(110), ticket_at: null, validated_at: null,
+      ticket_path: null, ticket_name: 'Léa Martin', ocr_text: null, reviewed: false,
+      status: 'pending_review', deadline_at: ago(20), last_rejection_code: 'TICKET_TIME_UNREADABLE', rejection_count: 2,
+      review_requested_at: ago(35), review_note: 'Le ticket a pris l’eau, l’heure est en haut à droite : 15:42.', review_auto: false,
+      ticket_uploaded_at: ago(38),
+    },
+    {
+      id: 'ta3', pilot_id: 'p3', username: 'ApexHunter', track_id: 't1', track_name: 'MK Racing', best_lap_ms: null,
+      previous_best_ms: 31840, gap_pct: null, check_in_at: ago(200), ticket_at: null, validated_at: null,
+      ticket_path: null, ticket_name: null, ocr_text: null, reviewed: false,
+      status: 'pending_review', deadline_at: ago(110), last_rejection_code: null, rejection_count: 0,
+      review_requested_at: ago(100), review_note: null, review_auto: true, ticket_uploaded_at: ago(150),
     },
   ] as TimeAttackReview[],
 };
@@ -912,12 +941,20 @@ export function useAdminPilotResults(pilotId: string | undefined) {
   });
 }
 
-export function useAdminTimeAttacks(filter: 'suspect' | 'recent', enabled: boolean) {
+export function useAdminTimeAttacks(filter: TimeAttackFilter, enabled: boolean) {
   return useQuery({
     queryKey: ['admin-time-attacks', filter],
     enabled,
     queryFn: async (): Promise<TimeAttackReview[]> => {
-      if (isDemoMode) return demoResults.timeAttacks.filter((t) => filter === 'recent' || !t.reviewed).map((t) => ({ ...t }));
+      if (isDemoMode) {
+        return demoResults.timeAttacks
+          .filter((t) =>
+            filter === 'pending'
+              ? t.status === 'pending_review'
+              : t.status === 'validated' && (filter === 'recent' || (!t.reviewed && (t.gap_pct ?? 0) > 3)),
+          )
+          .map((t) => ({ ...t }));
+      }
       return rpc<TimeAttackReview[]>('admin_time_attacks', { p_filter: filter });
     },
   });
@@ -937,6 +974,32 @@ export function useReviewTimeAttack() {
         return;
       }
       await rpc('admin_review_time_attack', { p_id: id, p_valid: valid, p_reason: reason?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Décision sur un ticket envoyé en vérification manuelle : validé (temps corrigé possible), DNF ou annulé sans pénalité. */
+export function useDecideTimeAttackReview() {
+  const invalidate = useInvalidate(...RESULT_KEYS);
+  return useMutation({
+    mutationFn: async ({ id, decision, bestLapMs, reason }: { id: string; decision: ReviewDecision; bestLapMs?: number | null; reason?: string }) => {
+      if (isDemoMode) {
+        const t = demoResults.timeAttacks.find((x) => x.id === id);
+        if (!t || t.status !== 'pending_review') throw new Error('Cette session a déjà été tranchée.');
+        demoResults.timeAttacks = demoResults.timeAttacks.filter((x) => x.id !== id);
+        if (decision === 'validate') {
+          demoResults.timeAttacks.unshift({ ...t, status: 'validated', best_lap_ms: bestLapMs ?? t.best_lap_ms, validated_at: new Date().toISOString(), ticket_at: t.ticket_uploaded_at, reviewed: true });
+        }
+        logDemo(`review_${decision}_time_attack`, t.username, t.track_name, { lap_ms: bestLapMs ?? t.best_lap_ms, reason: reason?.trim() || undefined });
+        return;
+      }
+      await rpc('admin_decide_time_attack_review', {
+        p_id: id,
+        p_decision: decision,
+        p_best_lap_ms: decision === 'validate' ? (bestLapMs ?? null) : null,
+        p_reason: reason?.trim() || null,
+      });
     },
     onSuccess: invalidate,
   });
@@ -1136,6 +1199,12 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return 'Time Attack vérifié et confirmé';
     case 'reject_time_attack':
       return 'Time Attack refusé';
+    case 'review_validate_time_attack':
+      return 'Ticket vérifié à la main : chrono validé';
+    case 'review_dnf_time_attack':
+      return 'Ticket vérifié à la main : DNF (−15 ELO)';
+    case 'review_cancel_time_attack':
+      return 'Ticket vérifié à la main : annulé sans pénalité';
     case 'track_correction':
       return `Remontée ${d.decision === 'applied' ? 'appliquée (+20 pts)' : 'rejetée'}`;
     case 'warn':

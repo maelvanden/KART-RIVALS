@@ -4,6 +4,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/features/auth/auth-provider';
+import { socialError } from '@/features/social/errors';
 import { TicketRejectedError, type TicketRejection } from '@/features/time-attack/errors';
 import { demoEloHistory, demoProfile, demoTracks, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +13,7 @@ import type { TimeAttackSession } from '@/types/models';
 const SESSION_SELECT = `
   id, status, check_in_at, deadline_at, ticket_at, best_lap_ms, validated_at,
   rejection_count, last_rejection_code, last_rejected_ticket_at, dnf_at, elo_penalty,
+  review_requested_at, rejected_reason,
   track:tracks (id, name, city)
 `;
 
@@ -129,6 +131,29 @@ export function useSubmitTicket() {
   });
 }
 
+export type ReviewRequest = { sessionId: string; ticketName: string; bestLapMs: number; note?: string };
+
+/**
+ * Lecture automatique ratée ou erronée : le dernier ticket envoyé part en vérification manuelle chez les admins.
+ * La session sort du compte à rebours : plus de DNF tant qu'un admin n'a pas tranché.
+ */
+export function useRequestTimeAttackReview() {
+  const invalidate = useInvalidateTimeAttack();
+  return useMutation({
+    mutationFn: async ({ sessionId, ticketName, bestLapMs, note }: ReviewRequest) => {
+      if (isDemoMode) return demoRequestReview(sessionId, bestLapMs);
+      const { error } = await supabase.rpc('request_time_attack_review', {
+        p_session_id: sessionId,
+        p_ticket_name: ticketName,
+        p_best_lap_ms: bestLapMs,
+        p_note: note?.trim() || null,
+      });
+      if (error) throw socialError(error);
+    },
+    onSuccess: invalidate,
+  });
+}
+
 // ---------- Mode démo : mêmes règles que l'Edge Function et les fonctions SQL ----------
 
 const MINUTE = 60_000;
@@ -149,6 +174,8 @@ function demoSession(trackIndex: number, checkInMs: number, patch: Partial<TimeA
     last_rejected_ticket_at: null,
     dnf_at: null,
     elo_penalty: null,
+    review_requested_at: null,
+    rejected_reason: null,
     track: demoTracks[trackIndex % demoTracks.length],
     ...patch,
   };
@@ -172,9 +199,14 @@ const demoSessions: TimeAttackSession[] = [
 ];
 
 function demoList(): TimeAttackSession[] {
-  // Le « planificateur » de la démo : DNF 5 min après l'échéance.
+  // Le « planificateur » de la démo : 5 min après l'échéance, vérification si un ticket a été envoyé, sinon DNF.
   for (const s of demoSessions) {
     if (s.status === 'on_track' && new Date(s.deadline_at).getTime() + 5 * MINUTE < Date.now()) {
+      if (s.rejection_count > 0) {
+        s.status = 'pending_review';
+        s.review_requested_at = new Date().toISOString();
+        continue;
+      }
       s.status = 'dnf';
       s.dnf_at = new Date().toISOString();
       s.elo_penalty = DNF_PENALTY;
@@ -212,5 +244,14 @@ async function demoSubmit(sessionId: string, bestLapMs: number) {
   s.status = 'validated';
   s.ticket_at = times.ticket_at;
   s.validated_at = iso(received);
+  s.best_lap_ms = bestLapMs;
+}
+
+function demoRequestReview(sessionId: string, bestLapMs: number) {
+  const s = demoSessions.find((x) => x.id === sessionId);
+  if (!s || s.status !== 'on_track') throw new Error('Cette session est déjà clôturée.');
+  if (s.rejection_count === 0) throw new Error('Envoie d’abord la photo de ton ticket avant l’échéance.');
+  s.status = 'pending_review';
+  s.review_requested_at = new Date().toISOString();
   s.best_lap_ms = bestLapMs;
 }

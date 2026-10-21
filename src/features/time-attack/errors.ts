@@ -55,7 +55,8 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
         hint:
           'Si l’heure a été mal lue, reprends la photo en cadrant bien l’heure de la session. ' +
           'Sinon, envoie le ticket d’une session courue après ton check-in.' +
-          (deadline ? ` Sans ticket valide à ${deadline}, la session sera comptée comme abandon (DNF).` : ''),
+          ' Tu es sûr de ton ticket ? Demande une vérification manuelle par un admin' +
+          (deadline ? `, avant ${deadline}.` : '.'),
       };
     case 'TICKET_ALREADY_USED':
       return {

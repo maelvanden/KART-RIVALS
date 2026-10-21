@@ -47,6 +47,7 @@ export default function AdminScreen() {
   const actions = useAdminRecentActions(isAppAdmin, 6);
   const disputes = useAdminDisputes(isAppAdmin);
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
+  const pendingTickets = useAdminTimeAttacks('pending', isAppAdmin);
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
   const respond = useRespondTrackRequest();
   const tracks = useTracksMap();
@@ -153,8 +154,8 @@ export default function AdminScreen() {
           <MenuRow
             icon={icons.challenge}
             title="Résultats et anti-triche"
-            detail={`${disputes.data?.length ?? 0} litige${(disputes.data?.length ?? 0) > 1 ? 's' : ''} · ${suspects.data?.length ?? 0} Time Attack suspect${(suspects.data?.length ?? 0) > 1 ? 's' : ''}`}
-            alert={(disputes.data?.length ?? 0) + (suspects.data?.length ?? 0) > 0}
+            detail={`${disputes.data?.length ?? 0} litige${(disputes.data?.length ?? 0) > 1 ? 's' : ''} · ${pendingTickets.data?.length ?? 0} ticket${(pendingTickets.data?.length ?? 0) > 1 ? 's' : ''} à vérifier · ${suspects.data?.length ?? 0} suspect${(suspects.data?.length ?? 0) > 1 ? 's' : ''}`}
+            alert={(disputes.data?.length ?? 0) + (pendingTickets.data?.length ?? 0) + (suspects.data?.length ?? 0) > 0}
             onPress={() => router.push('/admin/results')}
           />
           <MenuRow
