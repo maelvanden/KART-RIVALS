@@ -13,7 +13,10 @@ import { Text } from '@/components/ui/text';
 import { ActionLine } from '@/features/admin/components/action-line';
 import {
   useAdminPilot,
+  useAdminPilotResults,
+  useCancelResult,
   useModeratePilot,
+  useReviewTimeAttack,
   useSetElo,
   useWarnPilot,
   type AdminPilotDetail,
@@ -22,7 +25,7 @@ import {
 import { SectionTitle } from '@/features/social/components/section-title';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { confirmAction } from '@/lib/confirm';
-import { formatMessageTime } from '@/lib/format';
+import { formatLapTime, formatMessageTime } from '@/lib/format';
 import { colors, radius, rankMeta, spacing } from '@/theme';
 
 const DURATIONS = [
@@ -215,6 +218,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         />
       </Card>
 
+      <RecentResults pilot={p} />
+
       <SectionTitle title="Signalements reçus" detail={`${p.reports.length}`} />
       {p.reports.length === 0 ? <Text variant="caption">Aucun signalement.</Text> : null}
       {p.reports.map((r) => (
@@ -241,6 +246,61 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
           </Card>
         </>
       ) : null}
+    </>
+  );
+}
+
+/** Derniers résultats validés : un défi ou une course frauduleux s'annule (ELO rendu), un Time Attack se refuse. */
+function RecentResults({ pilot: p }: { pilot: AdminPilotDetail }) {
+  const results = useAdminPilotResults(p.id);
+  const cancel = useCancelResult();
+  const review = useReviewTimeAttack();
+  const error = cancel.error ?? review.error;
+
+  return (
+    <>
+      <SectionTitle title="Résultats récents" detail={results.data ? `${results.data.length}` : undefined} />
+      {results.isPending ? <Loading /> : null}
+      {results.data?.length === 0 ? <Text variant="caption">Aucun résultat validé.</Text> : null}
+      {error ? <Text style={styles.error}>{error.message}</Text> : null}
+      {results.data?.map((r) => (
+        <Card key={`${r.kind}-${r.id}`} style={styles.resultRow}>
+          <View style={styles.flex}>
+            <Text style={styles.bold} numberOfLines={1}>{r.label}</Text>
+            <Text variant="caption" numberOfLines={1}>
+              {r.track} · {formatMessageTime(r.date)}
+            </Text>
+          </View>
+          {r.kind === 'time_attack' ? (
+            <Text style={styles.resultValue}>{r.lap_ms ? formatLapTime(r.lap_ms) : ''}</Text>
+          ) : (
+            <Text style={[styles.resultValue, { color: (r.delta ?? 0) >= 0 ? colors.neon : colors.danger }]}>
+              {(r.delta ?? 0) >= 0 ? '+' : ''}
+              {r.delta}
+            </Text>
+          )}
+          <Button
+            title={r.kind === 'time_attack' ? 'Refuser' : 'Annuler'}
+            variant="quiet"
+            disabled={cancel.isPending || review.isPending}
+            onPress={() =>
+              r.kind === 'time_attack'
+                ? confirmAction(
+                    'Refuser ce Time Attack ?',
+                    'Le chrono sort des records et du badge vérifié, ses points sont repris.',
+                    'Refuser',
+                    () => review.mutate({ id: r.id, valid: false, reason: 'Refusé depuis la fiche pilote' }),
+                  )
+                : confirmAction(
+                    r.kind === 'match' ? 'Annuler ce défi ?' : 'Annuler cette course ?',
+                    'L’ELO gagné ou perdu est rendu à tous les pilotes concernés, les victoires et les points sont repris.',
+                    'Annuler le résultat',
+                    () => cancel.mutate({ kind: r.kind as 'match' | 'race', id: r.id, note: 'Annulé depuis la fiche pilote' }),
+                  )
+            }
+          />
+        </Card>
+      ))}
     </>
   );
 }
@@ -375,6 +435,8 @@ const styles = StyleSheet.create({
   open: { borderLeftWidth: 3, borderLeftColor: colors.danger },
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
+  resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  resultValue: { fontWeight: '900' },
   sent: { color: colors.neon, fontWeight: '700' },
   multiline: { minHeight: 100, paddingTop: 14, textAlignVertical: 'top' },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

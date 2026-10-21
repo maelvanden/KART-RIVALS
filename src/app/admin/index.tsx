@@ -20,7 +20,7 @@ import {
   useSetAppAdmin,
 } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
-import { useAdminRecentActions, useAdminStats } from '@/features/admin/panel';
+import { useAdminDisputes, useAdminRecentActions, useAdminStats, useAdminTimeAttacks } from '@/features/admin/panel';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSearchPilots } from '@/features/nearby/api';
 import { SectionTitle } from '@/features/social/components/section-title';
@@ -39,6 +39,8 @@ export default function AdminScreen() {
   const reports = useAdminReports('open', isAppAdmin);
   const requests = useAdminTrackRequests(isAppAdmin);
   const actions = useAdminRecentActions(isAppAdmin, 6);
+  const disputes = useAdminDisputes(isAppAdmin);
+  const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
   const respond = useRespondTrackRequest();
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
@@ -135,6 +137,13 @@ export default function AdminScreen() {
           ) : null}
 
           <SectionTitle title="Gestion" />
+          <MenuRow
+            icon={icons.challenge}
+            title="Résultats et anti-triche"
+            detail={`${disputes.data?.length ?? 0} litige${(disputes.data?.length ?? 0) > 1 ? 's' : ''} · ${suspects.data?.length ?? 0} Time Attack suspect${(suspects.data?.length ?? 0) > 1 ? 's' : ''}`}
+            alert={(disputes.data?.length ?? 0) + (suspects.data?.length ?? 0) > 0}
+            onPress={() => router.push('/admin/results')}
+          />
           <MenuRow
             icon={icons.feed}
             title="Modération de l’Actu"

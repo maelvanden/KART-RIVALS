@@ -195,7 +195,7 @@ export type Race = {
   entries: RaceEntry[];
 };
 
-export type TimeAttackStatus = 'on_track' | 'validated' | 'dnf';
+export type TimeAttackStatus = 'on_track' | 'validated' | 'dnf' | 'rejected';
 
 export type TimeAttackSession = {
   id: string;

@@ -230,7 +230,9 @@ function HistoryRow({ session: s }: { session: TimeAttackSession }) {
           ) : null}
         </View>
       ) : (
-        <Text style={styles.dnf}>DNF{s.elo_penalty ? ` · −${s.elo_penalty} ELO` : ''}</Text>
+        <Text style={styles.dnf}>
+          {s.status === 'rejected' ? 'Refusé par un admin' : `DNF${s.elo_penalty ? ` · −${s.elo_penalty} ELO` : ''}`}
+        </Text>
       )}
     </Card>
   );

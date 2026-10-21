@@ -149,6 +149,68 @@ export type AdminContent = {
   report_count: number;
 };
 
+export type DisputePilot = { id: string; username: string; elo: number };
+export type MatchDispute = {
+  kind: 'match';
+  id: string;
+  created_at: string;
+  status: 'disputed' | 'awaiting_confirmation';
+  format: 'position' | 'lap_time';
+  track: string;
+  track_id: string;
+  challenger: DisputePilot;
+  opponent: DisputePilot;
+  submitted_by: string | null;
+  winner: string | null;
+  challenger_position: number | null;
+  opponent_position: number | null;
+  challenger_best_lap_ms: number | null;
+  opponent_best_lap_ms: number | null;
+  dispute_reason: string | null;
+};
+export type RaceDispute = {
+  kind: 'race';
+  id: string;
+  created_at: string;
+  status: 'disputed' | 'awaiting_confirmation';
+  format: 'position' | 'lap_time';
+  track: string;
+  track_id: string;
+  organizer: string;
+  dispute_reason: string | null;
+  entries: (DisputePilot & { pilot_id: string; position: number | null; best_lap_ms: number | null; confirmed: boolean })[];
+};
+export type Dispute = MatchDispute | RaceDispute;
+
+export type TimeAttackReview = {
+  id: string;
+  pilot_id: string;
+  username: string;
+  track_id: string;
+  track_name: string;
+  best_lap_ms: number;
+  previous_best_ms: number | null;
+  gap_pct: number | null;
+  check_in_at: string;
+  ticket_at: string | null;
+  validated_at: string;
+  ticket_path: string | null;
+  ticket_name: string | null;
+  ocr_text: string | null;
+  reviewed: boolean;
+};
+
+export type PilotResult = {
+  kind: 'match' | 'race' | 'time_attack';
+  id: string;
+  date: string;
+  track: string;
+  label: string;
+  delta?: number;
+  lap_ms?: number;
+  outcome: 'win' | 'loss' | 'draw' | 'validated';
+};
+
 export type AccountStatus = { suspended_until: string | null; banned_at: string | null; reason: string | null };
 
 // ---------- Mode démo ----------
@@ -204,6 +266,34 @@ const demoContent: AdminContent[] = [
   { kind: 'photo', id: 'c4', created_at: ago(140), author_id: 'p3', author_username: 'ApexHunter', author_avatar: null, track_id: 't1', track_name: 'MK Racing', post_id: null, body: 'Le virage en épingle avant la ligne droite', media_path: null, media_type: 'image', lap_ms: null, rating: null, hidden: false, report_count: 0 },
   { kind: 'post', id: 'c5', created_at: ago(300), author_id: 'p4', author_username: 'KartiNono', author_avatar: null, track_id: null, track_name: null, post_id: 'c5', body: 'Vends karts d’occasion, contactez-moi en privé 💸💸', media_path: null, media_type: null, lap_ms: null, rating: null, hidden: true, report_count: 2 },
 ];
+
+const demoResults = {
+  disputes: [
+    {
+      kind: 'match', id: 'd1', created_at: ago(60 * 20), status: 'disputed', format: 'position', track: 'SpeedPark Angers', track_id: 't2',
+      challenger: { id: 'p2', username: 'Drift_Max', elo: 1198 }, opponent: { id: 'p1', username: 'TurboLéa', elo: 1342 },
+      submitted_by: 'Drift_Max', winner: 'Drift_Max', challenger_position: 1, opponent_position: 2,
+      challenger_best_lap_ms: null, opponent_best_lap_ms: null,
+      dispute_reason: 'Il m’a poussée dans l’épingle au dernier tour, j’étais devant avant.',
+    },
+    {
+      kind: 'race', id: 'd2', created_at: ago(60 * 80), status: 'disputed', format: 'position', track: 'Inwall Kart', track_id: 't3',
+      organizer: 'ApexHunter', dispute_reason: 'Je suis arrivé 2e, pas 3e : la feuille de temps le montre.',
+      entries: [
+        { id: 'p3', pilot_id: 'p3', username: 'ApexHunter', elo: 1467, position: 1, best_lap_ms: null, confirmed: true },
+        { id: 'p4', pilot_id: 'p4', username: 'KartiNono', elo: 1040, position: 2, best_lap_ms: null, confirmed: true },
+        { id: 'p2', pilot_id: 'p2', username: 'Drift_Max', elo: 1198, position: 3, best_lap_ms: null, confirmed: false },
+      ],
+    },
+  ] as Dispute[],
+  timeAttacks: [
+    {
+      id: 'ta1', pilot_id: 'p4', username: 'KartiNono', track_id: 't2', track_name: 'SpeedPark Angers', best_lap_ms: 22106,
+      previous_best_ms: 24612, gap_pct: 10.2, check_in_at: ago(60 * 6), ticket_at: ago(60 * 5.5), validated_at: ago(60 * 5),
+      ticket_path: null, ticket_name: 'SPEEDPARK ANGERS', ocr_text: 'SPEEDPARK ANGERS\nSESSION 14:30\nKARTINONO\nMEILLEUR TOUR 22.106', reviewed: false,
+    },
+  ] as TimeAttackReview[],
+};
 
 const logDemo = (action: string, pilot: string | null, track: string | null, details: Record<string, unknown> | null = null) =>
   demo.actions.unshift({ id: Date.now(), action, created_at: new Date().toISOString(), admin: demoProfile.username, pilot, track, details });
@@ -651,6 +741,144 @@ export function useAcknowledgeWarning() {
   });
 }
 
+// Résultats : litiges, Time Attack suspects, annulations
+
+export function useAdminDisputes(enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin-disputes'],
+    enabled,
+    queryFn: async (): Promise<Dispute[]> => {
+      if (isDemoMode) return demoResults.disputes.map((d) => ({ ...d }));
+      return rpc<Dispute[]>('admin_disputes');
+    },
+  });
+}
+
+const RESULT_KEYS = ['admin-disputes', 'admin-time-attacks', 'admin-pilot-results', 'admin-actions', 'admin-stats', 'profile', 'leaderboard', 'elo-history'];
+
+export function useResolveMatch() {
+  const invalidate = useInvalidate(...RESULT_KEYS);
+  return useMutation({
+    mutationFn: async (input: {
+      matchId: string;
+      decision: 'validate' | 'correct' | 'cancel';
+      challengerPosition?: number;
+      opponentPosition?: number;
+      challengerLapMs?: number;
+      opponentLapMs?: number;
+      note?: string;
+    }) => {
+      if (isDemoMode) {
+        const d = demoResults.disputes.find((x) => x.id === input.matchId) as MatchDispute | undefined;
+        demoResults.disputes = demoResults.disputes.filter((x) => x.id !== input.matchId);
+        if (d) for (const u of [d.challenger.username, d.opponent.username]) logDemo('resolve_match', u, d.track, { decision: input.decision, reason: input.note });
+        return;
+      }
+      await rpc('admin_resolve_match', {
+        p_match_id: input.matchId,
+        p_decision: input.decision,
+        p_challenger_position: input.challengerPosition ?? null,
+        p_opponent_position: input.opponentPosition ?? null,
+        p_challenger_lap_ms: input.challengerLapMs ?? null,
+        p_opponent_lap_ms: input.opponentLapMs ?? null,
+        p_note: input.note?.trim() || null,
+      });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useResolveRace() {
+  const invalidate = useInvalidate(...RESULT_KEYS);
+  return useMutation({
+    mutationFn: async ({ raceId, decision, note }: { raceId: string; decision: 'validate' | 'cancel'; note?: string }) => {
+      if (isDemoMode) {
+        const d = demoResults.disputes.find((x) => x.id === raceId) as RaceDispute | undefined;
+        demoResults.disputes = demoResults.disputes.filter((x) => x.id !== raceId);
+        if (d) for (const e of d.entries) logDemo('resolve_race', e.username, d.track, { decision, reason: note });
+        return;
+      }
+      await rpc('admin_resolve_race', { p_race_id: raceId, p_decision: decision, p_note: note?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useCancelResult() {
+  const invalidate = useInvalidate(...RESULT_KEYS);
+  return useMutation({
+    mutationFn: async ({ kind, id, note }: { kind: 'match' | 'race'; id: string; note?: string }) => {
+      if (isDemoMode) {
+        logDemo(`cancel_${kind}`, null, null, { reason: note });
+        return;
+      }
+      await rpc('admin_cancel_result', { p_kind: kind, p_id: id, p_note: note?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useAdminPilotResults(pilotId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-pilot-results', pilotId],
+    enabled: !!pilotId,
+    queryFn: async (): Promise<PilotResult[]> => {
+      if (isDemoMode) {
+        return [
+          { kind: 'match', id: 'pr1', date: ago(60 * 30), track: 'SpeedPark Angers', label: 'Défi contre TurboLéa', delta: 18, outcome: 'win' },
+          { kind: 'race', id: 'pr2', date: ago(60 * 26), track: 'Inwall Kart', label: 'Course · 2e sur 4', delta: 6, outcome: 'loss' },
+          { kind: 'time_attack', id: 'pr3', date: ago(60 * 50), track: 'MK Racing', label: 'Time Attack', lap_ms: 31840, outcome: 'validated' },
+        ];
+      }
+      return rpc<PilotResult[]>('admin_pilot_results', { p_profile: pilotId });
+    },
+  });
+}
+
+export function useAdminTimeAttacks(filter: 'suspect' | 'recent', enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin-time-attacks', filter],
+    enabled,
+    queryFn: async (): Promise<TimeAttackReview[]> => {
+      if (isDemoMode) return demoResults.timeAttacks.filter((t) => filter === 'recent' || !t.reviewed).map((t) => ({ ...t }));
+      return rpc<TimeAttackReview[]>('admin_time_attacks', { p_filter: filter });
+    },
+  });
+}
+
+export function useReviewTimeAttack() {
+  const invalidate = useInvalidate(...RESULT_KEYS);
+  return useMutation({
+    mutationFn: async ({ id, valid, reason }: { id: string; valid: boolean; reason?: string }) => {
+      if (isDemoMode) {
+        const t = demoResults.timeAttacks.find((x) => x.id === id);
+        if (t) {
+          t.reviewed = true;
+          if (!valid) demoResults.timeAttacks = demoResults.timeAttacks.filter((x) => x.id !== id);
+          logDemo(valid ? 'approve_time_attack' : 'reject_time_attack', t.username, t.track_name, { lap_ms: t.best_lap_ms, reason });
+        }
+        return;
+      }
+      await rpc('admin_review_time_attack', { p_id: id, p_valid: valid, p_reason: reason?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Lien temporaire vers la photo d'un ticket (bucket privé, lisible par les admins appli). */
+export function useTicketUrl(path: string | null) {
+  return useQuery({
+    queryKey: ['ticket-url', path],
+    enabled: !!path && !isDemoMode,
+    staleTime: 50 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from('time-attack-tickets').createSignedUrl(path!, 3600);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+}
+
 // Compte du pilote connecté
 
 export function useAccountStatus(userId: string | null | undefined) {
@@ -671,6 +899,20 @@ export function useAccountStatus(userId: string | null | undefined) {
 export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string {
   const d = a.details ?? {};
   switch (a.action) {
+    case 'resolve_match':
+    case 'resolve_race': {
+      const what = a.action === 'resolve_match' ? 'Défi contesté' : 'Course contestée';
+      const verdict = { validate: 'validé', correct: 'corrigé', cancel: 'annulé' }[d.decision as string] ?? 'tranché';
+      return `${what} : résultat ${verdict}`;
+    }
+    case 'cancel_match':
+      return 'Défi annulé, ELO rendu';
+    case 'cancel_race':
+      return 'Course annulée, ELO rendu';
+    case 'approve_time_attack':
+      return 'Time Attack vérifié et confirmé';
+    case 'reject_time_attack':
+      return 'Time Attack refusé';
     case 'warn':
       return `Avertissement n°${d.number ?? '?'}`;
     case 'suspend':

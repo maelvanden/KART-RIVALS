@@ -109,7 +109,9 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   pilotes (`admin_search_pilots`, `admin_pilot_detail`, `admin_moderate_pilot` : suspension, bannissement, badge vérifié ;
   `admin_set_elo`), circuits (`admin_tracks`, `admin_create_track`, `admin_set_track_hidden`, `admin_merge_tracks`,
   positions approximatives `location_approx`), modération de l'Actu (`admin_content`, `admin_set_content_hidden` :
-  publications, commentaires, photos et avis masqués en un geste), avertissements avant sanction
+  publications, commentaires, photos et avis masqués en un geste), arbitrage des résultats (`admin_disputes`,
+  `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
+  `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction
   (`pilot_warnings`, `admin_warn_pilot` ; lus en plein écran à l'ouverture via `my_pending_warning`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal
   (`admin_actions`). Un compte suspendu ou banni ne crée plus rien (déclencheurs `reject_restricted`) et voit le motif à
   l'ouverture (`my_account_status`) ; banni, il sort des classements et de la recherche.
