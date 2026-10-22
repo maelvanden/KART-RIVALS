@@ -19,6 +19,7 @@ import {
   useStartTimeAttack,
   useSubmitTicket,
   useTimeAttackSessions,
+  MAX_TICKET_ATTEMPTS,
 } from '@/features/time-attack/api';
 import {
   TicketRejectedError,
@@ -138,7 +139,9 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
   const otherError = submit.error && !(submit.error instanceof TicketRejectedError) ? submit.error.message : pickError;
   // Un ticket a été envoyé à temps mais refusé par la lecture automatique : la vérification manuelle est possible.
   const lastCode = submit.error instanceof TicketRejectedError ? submit.error.rejection.code : s.last_rejection_code;
-  const canReview = !!lastCode && !NOT_REVIEWABLE.includes(lastCode) && remaining > -5 * 60_000;
+  const attemptsLeft = MAX_TICKET_ATTEMPTS - s.ticket_attempts;
+  const canReview =
+    ((!!lastCode && !NOT_REVIEWABLE.includes(lastCode)) || attemptsLeft <= 0) && remaining > -5 * 60_000;
 
   return (
     <>
@@ -191,7 +194,13 @@ function OnTrack({ session: s }: { session: TimeAttackSession }) {
         </Card>
       ) : null}
 
-      {!expired ? (
+      {!expired && attemptsLeft > 0 && attemptsLeft <= 3 ? (
+        <Text variant="caption" style={{ color: colors.orange }}>
+          Encore {attemptsLeft} lecture{attemptsLeft > 1 ? 's' : ''} automatique{attemptsLeft > 1 ? 's' : ''} pour cette session,
+          ensuite vérification manuelle.
+        </Text>
+      ) : null}
+      {!expired && attemptsLeft > 0 ? (
         <Button
           title={submit.isPending ? 'Lecture du ticket…' : 'Prendre le ticket en photo'}
           loading={submit.isPending}

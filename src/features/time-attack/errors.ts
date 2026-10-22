@@ -125,6 +125,12 @@ export function describeTicketRejection(r: TicketRejection): RejectionMessage {
           'Le temps que tu as indiqué n’apparaît pas sur le ticket à côté de ton nom. Seul ton propre meilleur tour, imprimé sur le ticket, est accepté.',
         hint: 'Vérifie le temps (avec les millièmes s’ils sont imprimés) et que la photo est bien lisible.',
       };
+    case 'TOO_MANY_ATTEMPTS':
+      return {
+        title: 'Trop de tickets envoyés pour cette session',
+        message: 'La lecture automatique est limitée à 10 tickets par session.',
+        hint: 'Envoie ton dernier ticket en vérification manuelle : un admin regarde la photo, sans DNF en attendant.',
+      };
     case 'OCR_UNAVAILABLE':
       return {
         title: 'Lecture du ticket indisponible',

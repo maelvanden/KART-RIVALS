@@ -17,7 +17,11 @@ export type TicketErrorCode =
   | 'TICKET_BEFORE_CHECK_IN'
   | 'TICKET_IN_FUTURE'
   | 'TICKET_ALREADY_USED'
-  | 'OCR_UNAVAILABLE';
+  | 'OCR_UNAVAILABLE'
+  | 'TOO_MANY_ATTEMPTS';
+
+/** Lectures de ticket (OCR) au plus par session : au-delà, vérification manuelle par un admin. */
+export const MAX_TICKET_ATTEMPTS = 10;
 
 /** Tolérance sur l'horloge de l'imprimante du circuit. */
 export const FUTURE_TOLERANCE_MS = 10 * 60_000;

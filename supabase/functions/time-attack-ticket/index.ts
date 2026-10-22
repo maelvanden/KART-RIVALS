@@ -15,7 +15,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
 
 import { checkTicketText, compact } from '../_shared/ticket-ocr.ts';
-import { checkTicketTiming, wallClockToUtc, type TicketErrorCode } from '../_shared/time-attack-rules.ts';
+import { MAX_TICKET_ATTEMPTS, checkTicketTiming, wallClockToUtc, type TicketErrorCode } from '../_shared/time-attack-rules.ts';
 import { readTicketText } from './ocr-space.ts';
 
 const BUCKET = 'time-attack-tickets';
@@ -90,6 +90,13 @@ Deno.serve(async (req) => {
 
   // ---------- Lecture du ticket (OCR) ----------
   if (!OCR_SPACE_API_KEY) return refuse(503, 'OCR_UNAVAILABLE', times);
+  // Quota OCR partagé par tous les pilotes : 10 lectures par session, ensuite vérification manuelle.
+  const { data: attempts, error: attemptError } = await admin.rpc('register_ticket_attempt', {
+    p_session_id: sessionId,
+    p_pilot_id: pilotId,
+  });
+  if (attemptError) throw attemptError;
+  if (typeof attempts !== 'number' || attempts > MAX_TICKET_ATTEMPTS) return refuse(429, 'TOO_MANY_ATTEMPTS', times);
   const { data: file, error: fileError } = await admin.storage.from(BUCKET).download(ticketPath);
   if (fileError || !file) return refuse(400, 'BAD_REQUEST', times);
 

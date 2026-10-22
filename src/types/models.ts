@@ -209,6 +209,8 @@ export type TimeAttackSession = {
   best_lap_ms: number | null;
   validated_at: string | null;
   rejection_count: number;
+  /** Tickets lus par l'OCR pour cette session (10 au maximum). */
+  ticket_attempts: number;
   last_rejection_code: string | null;
   last_rejected_ticket_at: string | null;
   dnf_at: string | null;

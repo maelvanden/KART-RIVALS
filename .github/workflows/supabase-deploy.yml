@@ -118,4 +118,6 @@ jobs:
 
       - name: Déployer les Edge Functions
         if: steps.ready.outputs.ok == 'true'
-        run: npx supabase functions deploy time-attack-ticket --project-ref "$PROJECT_REF" --use-api
+        run: |
+          npx supabase functions deploy time-attack-ticket --project-ref "$PROJECT_REF" --use-api
+          npx supabase functions deploy delete-account --project-ref "$PROJECT_REF" --use-api

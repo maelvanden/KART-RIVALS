@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { Avatar } from '@/components/ui/avatar';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { pickSquarePhoto, useSetAvatar } from '@/features/profile/avatar';
+import { DeleteAccountCard } from '@/features/profile/components/delete-account-card';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
 import { colors, rankMeta, spacing } from '@/theme';
@@ -133,6 +134,8 @@ function EditProfileForm({ profile }: { profile: Profile }) {
 
       {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
       <Button title="Enregistrer" onPress={save} loading={update.isPending} disabled={!usernameValid || !numberValid} />
+
+      <DeleteAccountCard />
     </Screen>
   );
 }

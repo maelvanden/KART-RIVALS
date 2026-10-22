@@ -12,7 +12,7 @@ import type { TimeAttackSession } from '@/types/models';
 
 const SESSION_SELECT = `
   id, status, check_in_at, deadline_at, ticket_at, best_lap_ms, validated_at,
-  rejection_count, last_rejection_code, last_rejected_ticket_at, dnf_at, elo_penalty,
+  rejection_count, ticket_attempts, last_rejection_code, last_rejected_ticket_at, dnf_at, elo_penalty,
   review_requested_at, rejected_reason,
   track:tracks (id, name, city)
 `;
@@ -115,7 +115,11 @@ export function useSubmitTicket() {
       const bytes = await compressTicket(photo);
       const path = `${userId}/${sessionId}/${Date.now()}.jpg`;
       const upload = await supabase.storage.from('time-attack-tickets').upload(path, bytes, { contentType: 'image/jpeg' });
-      if (upload.error) throw upload.error;
+      if (upload.error) {
+        throw upload.error.message.includes('row-level security')
+          ? new TicketRejectedError({ code: 'TOO_MANY_ATTEMPTS' })
+          : upload.error;
+      }
 
       const { error } = await supabase.functions.invoke('time-attack-ticket', {
         body: { session_id: sessionId, ticket_path: path, ticket_name: ticketName, best_lap_ms: bestLapMs },
@@ -158,6 +162,8 @@ export function useRequestTimeAttackReview() {
 
 const MINUTE = 60_000;
 const DNF_PENALTY = 15;
+/** Comme l'Edge Function : 10 lectures de ticket par session. */
+export const MAX_TICKET_ATTEMPTS = 10;
 const iso = (ms: number) => new Date(ms).toISOString();
 
 function demoSession(trackIndex: number, checkInMs: number, patch: Partial<TimeAttackSession> = {}): TimeAttackSession {
@@ -170,6 +176,7 @@ function demoSession(trackIndex: number, checkInMs: number, patch: Partial<TimeA
     best_lap_ms: null,
     validated_at: null,
     rejection_count: 0,
+    ticket_attempts: 0,
     last_rejection_code: null,
     last_rejected_ticket_at: null,
     dnf_at: null,
@@ -232,7 +239,9 @@ async function demoSubmit(sessionId: string, bestLapMs: number) {
   const ticketMs = Math.floor((received - 20 * MINUTE) / MINUTE) * MINUTE;
   const times = { check_in_at: s.check_in_at, deadline_at: s.deadline_at, ticket_at: iso(ticketMs) };
   let code: string | null = null;
+  if (s.status === 'on_track' && received <= new Date(s.deadline_at).getTime()) s.ticket_attempts += 1;
   if (s.status !== 'on_track') code = 'SESSION_CLOSED';
+  else if (s.ticket_attempts > MAX_TICKET_ATTEMPTS) code = 'TOO_MANY_ATTEMPTS';
   else if (received > new Date(s.deadline_at).getTime()) code = 'DEADLINE_PASSED';
   else if (ticketMs <= new Date(s.check_in_at).getTime()) code = 'TICKET_BEFORE_CHECK_IN';
   if (code) {

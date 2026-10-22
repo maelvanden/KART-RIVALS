@@ -82,7 +82,7 @@ export default function SignInScreen() {
               onChangeText={setPassword}
               secureTextEntry
               autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-              placeholder="6 caractères minimum"
+              placeholder={mode === 'sign-in' ? 'Ton mot de passe' : '8 caractères minimum'}
             />
             {message ? (
               <Text style={{ color: message.error ? colors.danger : colors.neon }}>{message.text}</Text>
@@ -91,7 +91,8 @@ export default function SignInScreen() {
               title={mode === 'sign-in' ? 'Entrer en piste' : 'Créer ma licence'}
               onPress={submit}
               loading={loading}
-              disabled={!email || password.length < 6}
+              // Nouveaux comptes : 8 caractères minimum ; les anciens comptes à 6 caractères se connectent toujours.
+              disabled={!email || password.length < (mode === 'sign-in' ? 6 : 8)}
             />
           </View>
         </KeyboardAvoidingView>
