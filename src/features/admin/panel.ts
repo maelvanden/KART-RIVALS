@@ -120,6 +120,11 @@ export type Announcement = {
   archived_at: string | null;
   /** Région ciblée ; null = toute la France. */
   region: string | null;
+  /** Début d'affichage (dans le futur : annonce programmée). */
+  starts_at: string;
+  /** Circuit ciblé : pilotes dont c'est le favori ou qui y ont roulé ces 90 jours. */
+  track_id: string | null;
+  track_name: string | null;
 };
 
 /** Pilotes touchés par région (région null = pilotes sans circuit favori ni position). */
@@ -350,6 +355,9 @@ const demo = {
       ends_at: later(6),
       archived_at: null,
       region: null,
+      starts_at: ago(60 * 5),
+      track_id: null,
+      track_name: null,
     },
   ] as Announcement[],
   actions: [
@@ -694,16 +702,20 @@ export function useAdminAnnouncements(enabled: boolean) {
       if (isDemoMode) return demo.announcements.map((a) => ({ ...a }));
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, body, link_url, created_at, ends_at, archived_at, region')
+        .select(ANNOUNCEMENT_COLUMNS)
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw socialError(error);
-      return data as Announcement[];
+      return (data as unknown as AnnouncementRow[]).map(toAnnouncement);
     },
   });
 }
 
-/** Annonce en cours la plus récente, affichée à tous les pilotes. */
+const ANNOUNCEMENT_COLUMNS = 'id, title, body, link_url, created_at, starts_at, ends_at, archived_at, region, track_id, track:tracks (name)';
+type AnnouncementRow = Omit<Announcement, 'track_name'> & { track: { name: string } | null };
+const toAnnouncement = ({ track, ...a }: AnnouncementRow): Announcement => ({ ...a, track_name: track?.name ?? null });
+
+/** Annonce en cours la plus récente qui concerne le pilote (nationale, de sa région ou de ses circuits). */
 export function useLiveAnnouncement() {
   return useQuery({
     queryKey: ['announcements', 'live'],
@@ -713,20 +725,27 @@ export function useLiveAnnouncement() {
         // Le pilote de démo court en Pays de la Loire.
         return (
           demo.announcements.find(
-            (a) => !a.archived_at && Date.parse(a.ends_at) > Date.now() && (!a.region || a.region === 'Pays de la Loire'),
+            (a) =>
+              !a.archived_at &&
+              Date.parse(a.starts_at) <= Date.now() &&
+              Date.parse(a.ends_at) > Date.now() &&
+              (!a.region || a.region === 'Pays de la Loire') &&
+              (!a.track_id || a.track_id === demoProfile.home_track_id),
           ) ?? null
         );
       }
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, body, link_url, created_at, ends_at, archived_at, region')
+        .select(ANNOUNCEMENT_COLUMNS)
         .is('archived_at', null)
-        .gt('ends_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
+        .lte('starts_at', now)
+        .gt('ends_at', now)
+        .order('starts_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as Announcement | null;
+      return data ? toAnnouncement(data as unknown as AnnouncementRow) : null;
     },
   });
 }
@@ -740,28 +759,37 @@ export function usePublishAnnouncement() {
       link,
       days,
       region,
+      track,
+      startsAt,
     }: {
       title: string;
       body: string;
       link?: string;
       days: number;
       region?: string | null;
+      track?: { id: string; name: string } | null;
+      /** Null : tout de suite. */
+      startsAt?: Date | null;
     }) => {
       if (title.trim().length < 3) throw new Error('Le titre doit faire entre 3 et 80 caractères.');
       if (!body.trim()) throw new Error('Écris le message de l’annonce.');
       if (link?.trim() && !/^https:\/\//.test(link.trim())) throw new Error('Le lien doit commencer par https://');
       if (isDemoMode) {
+        const start = startsAt && startsAt.getTime() > Date.now() ? startsAt : new Date();
         demo.announcements.unshift({
           id: `ann-${Date.now()}`,
           title: title.trim(),
           body: body.trim(),
           link_url: link?.trim() || null,
           created_at: new Date().toISOString(),
-          ends_at: later(days),
+          starts_at: start.toISOString(),
+          ends_at: new Date(start.getTime() + days * 86_400_000).toISOString(),
           archived_at: null,
           region: region ?? null,
+          track_id: track?.id ?? null,
+          track_name: track?.name ?? null,
         });
-        logDemo('announcement', null, null, { title: title.trim(), region: region ?? undefined });
+        logDemo('announcement', null, track?.name ?? null, { title: title.trim(), region: region ?? undefined });
         return;
       }
       await rpc('admin_publish_announcement', {
@@ -770,6 +798,8 @@ export function usePublishAnnouncement() {
         p_link: link?.trim() || null,
         p_days: days,
         p_region: region ?? null,
+        p_track_id: track?.id ?? null,
+        p_starts_at: startsAt ? startsAt.toISOString() : null,
       });
     },
     onSuccess: invalidate,
@@ -794,6 +824,19 @@ export function useAnnouncementAudience(enabled: boolean) {
         ];
       }
       return rpc<AnnouncementAudience>('admin_announcement_audience');
+    },
+  });
+}
+
+/** Pilotes touchés par une annonce sur ce circuit. */
+export function useTrackAudience(trackId: string | null) {
+  return useQuery({
+    queryKey: ['announcement-audience', 'track', trackId],
+    enabled: !!trackId,
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<number> => {
+      if (isDemoMode) return trackId === 't2' ? 87 : 34;
+      return rpc<number>('admin_track_audience', { p_track: trackId });
     },
   });
 }
@@ -875,6 +918,60 @@ export function useWarnPilot() {
         return list.length;
       }
       return rpc<number>('admin_warn_pilot', { p_profile: pilotId, p_message: message.trim() });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// Notes internes (jamais visibles du pilote)
+
+export type PilotNote = { id: string; body: string; created_at: string; author: string | null; mine: boolean };
+
+const demoNotes: Record<string, PilotNote[]> = {
+  p4: [{ id: 'n1', body: 'Déjà prévenu oralement au circuit par le gérant de SpeedPark.', created_at: ago(60 * 24 * 5), author: 'Admin', mine: false }],
+};
+
+export function usePilotNotes(pilotId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-pilot-notes', pilotId],
+    enabled: !!pilotId,
+    queryFn: async (): Promise<PilotNote[]> => {
+      if (isDemoMode) return [...(demoNotes[pilotId!] ?? [])];
+      return rpc<PilotNote[]>('admin_pilot_notes', { p_profile: pilotId });
+    },
+  });
+}
+
+export function useAddPilotNote() {
+  const invalidate = useInvalidate('admin-pilot-notes');
+  return useMutation({
+    mutationFn: async ({ pilotId, body }: { pilotId: string; body: string }) => {
+      if (body.trim().length < 2) throw new Error('Écris la note (2 caractères minimum).');
+      if (isDemoMode) {
+        (demoNotes[pilotId] ??= []).unshift({
+          id: `n-${Date.now()}`,
+          body: body.trim(),
+          created_at: new Date().toISOString(),
+          author: demoProfile.username,
+          mine: true,
+        });
+        return;
+      }
+      await rpc('admin_add_pilot_note', { p_profile: pilotId, p_body: body.trim() });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePilotNote() {
+  const invalidate = useInvalidate('admin-pilot-notes');
+  return useMutation({
+    mutationFn: async ({ pilotId, id }: { pilotId: string; id: string }) => {
+      if (isDemoMode) {
+        demoNotes[pilotId] = (demoNotes[pilotId] ?? []).filter((n) => n.id !== id);
+        return;
+      }
+      await rpc('admin_delete_pilot_note', { p_id: id });
     },
     onSuccess: invalidate,
   });
@@ -1297,7 +1394,7 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `${kind} ${a.action === 'hide_content' ? 'masqué' : 'rétabli'}${d.kind === 'post' || d.kind === 'photo' ? 'e' : ''}${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
     }
     case 'announcement':
-      return `Annonce publiée${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
+      return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:
       return a.action;
   }

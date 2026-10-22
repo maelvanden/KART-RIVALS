@@ -12,10 +12,13 @@ import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { ActionLine } from '@/features/admin/components/action-line';
 import {
+  useAddPilotNote,
   useAdminPilot,
   useAdminPilotResults,
   useCancelResult,
+  useDeletePilotNote,
   useModeratePilot,
+  usePilotNotes,
   useReviewTimeAttack,
   useSetElo,
   useWarnPilot,
@@ -117,6 +120,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         {p.is_admin ? <Text style={styles.adminNote}>Admin appli : retire son rôle avant toute sanction.</Text> : null}
         <Button title="Voir sa licence" variant="ghost" onPress={() => router.push({ pathname: '/pilot/[id]', params: { id: p.id } })} />
       </Card>
+
+      <Notes pilotId={p.id} />
 
       <View style={styles.grid}>
         <Stat label="Défis" value={`${p.matches}`} sub={`${p.wins} victoires`} />
@@ -482,6 +487,60 @@ function Warnings({ pilot: p, pending }: { pilot: AdminPilotDetail; pending: num
   );
 }
 
+/** Notes internes : contexte partagé entre admins, jamais montré au pilote. */
+function Notes({ pilotId }: { pilotId: string }) {
+  const notes = usePilotNotes(pilotId);
+  const add = useAddPilotNote();
+  const remove = useDeletePilotNote();
+  const [body, setBody] = useState('');
+  const list = notes.data ?? [];
+
+  return (
+    <>
+      <SectionTitle title="Notes internes" detail={list.length ? `${list.length}` : 'admins seulement'} />
+      <Card style={[styles.card, styles.notes]}>
+        {list.map((n) => (
+          <View key={n.id} style={styles.note}>
+            <Text>{n.body}</Text>
+            <View style={styles.noteMeta}>
+              <Text variant="caption" style={styles.flex}>
+                {n.author ?? 'admin'} · {formatMessageTime(n.created_at)}
+              </Text>
+              {n.mine ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Supprimer la note"
+                  hitSlop={8}
+                  onPress={() => confirmAction('Supprimer cette note ?', n.body, 'Supprimer', () => remove.mutate({ pilotId, id: n.id }))}>
+                  <Text style={styles.noteDelete}>Supprimer</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        ))}
+        <Input
+          label={list.length ? 'Ajouter une note' : 'Première note'}
+          value={body}
+          onChangeText={setBody}
+          maxLength={500}
+          multiline
+          placeholder="Déjà prévenu oralement, ami du gérant de SpeedPark…"
+        />
+        {add.error ? <Text style={styles.error}>{add.error.message}</Text> : null}
+        {remove.error ? <Text style={styles.error}>{remove.error.message}</Text> : null}
+        <Button
+          title="Enregistrer la note"
+          variant="secondary"
+          disabled={body.trim().length < 2}
+          loading={add.isPending}
+          onPress={() => add.mutate({ pilotId, body }, { onSuccess: () => setBody('') })}
+        />
+        <Text variant="caption">Visible uniquement des admins appli, jamais du pilote.</Text>
+      </Card>
+    </>
+  );
+}
+
 function Status({ color, title, reason }: { color: string; title: string; reason: string | null }) {
   return (
     <View style={[styles.status, { borderLeftColor: color }]}>
@@ -507,6 +566,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.md },
   eloInput: { width: 110 },
+  notes: { borderLeftWidth: 3, borderLeftColor: colors.borderStrong },
+  note: { gap: 2, paddingBottom: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  noteMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  noteDelete: { fontSize: 12, fontWeight: '800', color: colors.danger },
   suggestion: { borderWidth: 1, borderColor: colors.danger },
   kicker: { fontSize: 11, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' },
   status: { gap: 2, padding: spacing.md, borderLeftWidth: 3, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
