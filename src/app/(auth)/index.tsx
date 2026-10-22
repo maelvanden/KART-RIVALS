@@ -12,6 +12,19 @@ import { colors, spacing } from '@/theme';
 
 type Mode = 'sign-in' | 'sign-up';
 
+/** Erreurs de connexion Supabase (en anglais) traduites pour le pilote. */
+const AUTH_ERRORS: [string, string][] = [
+  ['Invalid login credentials', 'E-mail ou mot de passe incorrect.'],
+  ['Email not confirmed', 'Confirme d’abord ton e-mail (lien reçu à l’inscription), puis connecte-toi.'],
+  ['User already registered', 'Un compte existe déjà avec cet e-mail : connecte-toi.'],
+  ['Password should be at least', 'Mot de passe trop court : 8 caractères minimum.'],
+  ['Password should contain', 'Mot de passe trop simple : ajoute des majuscules, des chiffres ou des symboles.'],
+  ['valid email', 'Adresse e-mail invalide.'],
+  ['rate limit', 'Trop de tentatives : réessaie dans quelques minutes.'],
+  ['security purposes', 'Trop de tentatives : réessaie dans quelques minutes.'],
+];
+const authError = (message: string) => AUTH_ERRORS.find(([en]) => message.includes(en))?.[1] ?? message;
+
 export default function SignInScreen() {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
@@ -33,7 +46,7 @@ export default function SignInScreen() {
         : await supabase.auth.signUp(credentials);
     setLoading(false);
     if (error) {
-      setMessage({ text: error.message, error: true });
+      setMessage({ text: authError(error.message), error: true });
     } else if (mode === 'sign-up' && !data.session) {
       setMessage({ text: 'Compte créé ! Confirme ton e-mail puis connecte-toi.', error: false });
     }
