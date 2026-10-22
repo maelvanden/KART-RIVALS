@@ -57,3 +57,40 @@ export function parseCoordinates(text: string): { lat: number; lng: number } | n
   const lng = Number(m[2].replace(',', '.'));
   return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null;
 }
+
+/** « de la » / « du » / « des » / « de l’ » devant le nom de chaque région (« 3e des Hauts-de-France »). */
+const REGION_OF: Record<string, string> = {
+  'Auvergne-Rhône-Alpes': 'd’',
+  'Bourgogne-Franche-Comté': 'de ',
+  Bretagne: 'de ',
+  'Centre-Val de Loire': 'du ',
+  Corse: 'de ',
+  'Grand Est': 'du ',
+  'Hauts-de-France': 'des ',
+  'Île-de-France': 'd’',
+  Normandie: 'de ',
+  'Nouvelle-Aquitaine': 'de ',
+  Occitanie: 'd’',
+  'Pays de la Loire': 'des ',
+  'Provence-Alpes-Côte d’Azur': 'de ',
+};
+
+// Départements dont le nom prend « du », « des » ou « de la » ; les autres prennent « de l’ » (voyelle) ou « de ».
+const DEPARTMENT_DU = new Set(['14', '15', '18', '25', '29', '30', '32', '39', '41', '45', '46', '47', '49', '56', '59', '62', '63', '67', '68', '69', '81', '82', '83', '84', '90', '94', '95']);
+const DEPARTMENT_DES = new Set(['04', '05', '06', '08', '13', '22', '40', '64', '65', '66', '78', '79', '88', '92']);
+const DEPARTMENT_DE_LA = new Set(['16', '17', '19', '20', '21', '23', '24', '26', '31', '33', '42', '43', '44', '48', '50', '51', '52', '53', '54', '55', '57', '58', '70', '71', '72', '73', '74', '76', '77', '80', '85', '86', '87', '93']);
+
+/** « des Hauts-de-France », « de Bretagne », « d’Île-de-France ». */
+export const ofRegion = (name: string) => `${REGION_OF[name] ?? 'de '}${name}`;
+
+/** « du Nord », « de la Somme », « des Vosges », « de l’Oise », « de Paris ». */
+export function ofDepartment(code: string) {
+  const name = DEPARTMENT_NAMES[code] ?? code;
+  if (DEPARTMENT_DU.has(code)) return `du ${name}`;
+  if (DEPARTMENT_DES.has(code)) return `des ${name}`;
+  if (DEPARTMENT_DE_LA.has(code)) return `de la ${name}`;
+  return /^[AEIOUYÉÈH]/i.test(name) && code !== '75' ? `de l’${name}` : `de ${name}`;
+}
+
+/** 1 → « 1er », 3 → « 3e ». */
+export const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`);

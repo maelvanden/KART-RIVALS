@@ -5,6 +5,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { useAuth } from '@/features/auth/auth-provider';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
+import { StandingsCard } from '@/features/leaderboard/components/standings-card';
 import {
   useBadgeStats,
   useEloHistory,
@@ -55,6 +56,7 @@ export default function PilotScreen() {
       {profile.data ? (
         <>
           <LicenseCard profile={profile.data} />
+          <StandingsCard pilotId={profile.data.id} isMe={isMe} />
           {!isMe && h2h.data ? <HeadToHeadCard h2h={h2h.data} rival={profile.data.username} /> : null}
           {reachable ? (
             <Button
