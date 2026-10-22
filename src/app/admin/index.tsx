@@ -16,10 +16,10 @@ import {
   useAdminTrackRequests,
   useAppAdmins,
   useClaimAppAdmin,
-  useRespondTrackRequest,
   useSetAppAdmin,
 } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
+import { QueueRow } from '@/features/admin/components/queue-row';
 import {
   useAdminDisputes,
   useAdminRecentActions,
@@ -27,6 +27,7 @@ import {
   useAdminTimeAttacks,
   useTrackCorrections,
 } from '@/features/admin/panel';
+import { useAdminQueue } from '@/features/admin/queue';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSearchPilots } from '@/features/nearby/api';
 import { SectionTitle } from '@/features/social/components/section-title';
@@ -49,7 +50,7 @@ export default function AdminScreen() {
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
   const pendingTickets = useAdminTimeAttacks('pending', isAppAdmin);
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
-  const respond = useRespondTrackRequest();
+  const queue = useAdminQueue(isAppAdmin);
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
   const s = stats.data;
@@ -64,6 +65,7 @@ export default function AdminScreen() {
         reports.refetch();
         requests.refetch();
         actions.refetch();
+        queue.refetch();
       }}>
       {roles.isPending ? <Loading /> : null}
       {roles.error ? <ErrorState error={roles.error} /> : null}
@@ -98,7 +100,13 @@ export default function AdminScreen() {
               alert={(reports.data?.length ?? 0) > 0}
               onPress={() => router.push('/admin/reports')}
             />
-            <Tile icon={icons.recruit} label="Demandes" value={requests.data?.length ?? 0} alert={(requests.data?.length ?? 0) > 0} />
+            <Tile
+              icon={icons.recruit}
+              label="Demandes"
+              value={requests.data?.length ?? 0}
+              alert={(requests.data?.length ?? 0) > 0}
+              onPress={() => router.push('/admin/queue')}
+            />
             <Tile
               icon={icons.block}
               label="Sanctions"
@@ -106,6 +114,21 @@ export default function AdminScreen() {
               onPress={() => router.push({ pathname: '/admin/pilots', params: { filter: 'restricted' } })}
             />
           </View>
+
+          <SectionTitle
+            title="À traiter"
+            detail={queue.isPending ? '…' : `${queue.items.length}`}
+            accent={queue.items.length > 0 ? colors.orange : undefined}
+          />
+          {!queue.isPending && queue.items.length === 0 ? (
+            <Text variant="caption">Rien en attente : signalements, tickets, litiges, remontées et demandes sont à jour. 🏁</Text>
+          ) : null}
+          {queue.items.slice(0, 3).map((item) => (
+            <QueueRow key={item.key} item={item} />
+          ))}
+          {queue.items.length > 3 ? (
+            <Button title={`Toute la file (${queue.items.length})`} variant="secondary" onPress={() => router.push('/admin/queue')} />
+          ) : null}
 
           {stats.error ? <ErrorState error={stats.error} /> : null}
           {s ? (
@@ -200,41 +223,6 @@ export default function AdminScreen() {
             detail="Message officiel affiché à tous les pilotes"
             onPress={() => router.push('/admin/announcements')}
           />
-        </>
-      ) : null}
-
-      {isAppAdmin && requests.data && requests.data.length > 0 ? (
-        <>
-          <SectionTitle title="Demandes de gestion" detail={`${requests.data.length}`} accent={colors.orange} />
-          {requests.data.map((q) => (
-            <Card key={q.id} style={styles.request}>
-              <PilotRow
-                pilotId={q.profile_id}
-                username={q.username}
-                avatarUrl={q.avatar_url}
-                rank={q.rank}
-                elo={q.elo}
-                subtitle={`Veut gérer ${q.track_name}`}
-              />
-              {q.message ? <Text variant="caption">« {q.message} »</Text> : null}
-              <View style={styles.row}>
-                <Button
-                  title="Refuser"
-                  variant="secondary"
-                  style={styles.flex}
-                  disabled={respond.isPending}
-                  onPress={() => respond.mutate({ request: q, accept: false })}
-                />
-                <Button
-                  title="Valider"
-                  style={styles.flex}
-                  loading={respond.isPending}
-                  onPress={() => respond.mutate({ request: q, accept: true })}
-                />
-              </View>
-            </Card>
-          ))}
-          {respond.error ? <Text style={styles.error}>{respond.error.message}</Text> : null}
         </>
       ) : null}
 

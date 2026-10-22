@@ -144,6 +144,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />
         <Stack.Screen name="admin/results" options={{ ...detailHeader, title: 'Résultats' }} />
+        <Stack.Screen name="admin/queue" options={{ ...detailHeader, title: 'À traiter' }} />
         <Stack.Screen name="admin/corrections" options={{ ...detailHeader, title: 'Remontées des pilotes' }} />
         <Stack.Screen name="admin/officials" options={{ ...detailHeader, title: 'Kartings officiels' }} />
         <Stack.Screen name="admin/insights" options={{ ...detailHeader, title: 'Statistiques' }} />
