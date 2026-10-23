@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
+import { SocialButtons } from '@/features/auth/components/social-buttons';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/theme';
 
@@ -107,6 +108,7 @@ export default function SignInScreen() {
               // Nouveaux comptes : 8 caractères minimum ; les anciens comptes à 6 caractères se connectent toujours.
               disabled={!email || password.length < (mode === 'sign-in' ? 6 : 8)}
             />
+            <SocialButtons onError={(text) => setMessage(text ? { text, error: true } : null)} />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
