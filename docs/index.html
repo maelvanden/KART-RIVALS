@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Kart Rivals</title>
+  <style>
+    :root { --night: #161920; --surface: #1f232c; --border: #2c313c; --text: #f2f4f7; --muted: #9aa3b2; --volt: #deff00; --orange: #ff6b1a; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+      background: radial-gradient(circle at 15% 0%, #252c14 0, transparent 45%), radial-gradient(circle at 100% 100%, #2a1a14 0, transparent 45%), var(--night);
+      color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    main { width: 100%; max-width: 420px; text-align: center; }
+    .checker { display: grid; grid-template-columns: repeat(4, 14px); gap: 0; justify-content: center; margin-bottom: 18px; }
+    .checker span { width: 14px; height: 14px; }
+    .checker span:nth-child(odd) { background: var(--text); }
+    .checker span:nth-child(n+5):nth-child(even) { background: var(--text); }
+    .checker span:nth-child(n+5):nth-child(odd) { background: transparent; }
+    h1 { margin: 0 0 28px; font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: 1px; }
+    h1 b { color: var(--volt); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 22px; }
+    .icon { font-size: 44px; line-height: 1; margin-bottom: 12px; }
+    h2 { margin: 0 0 10px; font-size: 22px; text-transform: uppercase; letter-spacing: .5px; }
+    p { margin: 0 0 10px; color: var(--muted); line-height: 1.5; }
+    .ok h2 { color: var(--volt); }
+    .ko h2 { color: var(--orange); }
+    .steps { text-align: left; margin: 18px 0 0; padding: 14px 16px; border-radius: 14px; background: rgba(222, 255, 0, .08); color: var(--text); }
+    .steps li { margin: 4px 0; }
+    footer { margin-top: 20px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="checker" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <h1>KART <b>RIVALS</b></h1>
+    <div class="card ok" id="card">
+      <div class="icon" id="icon">✅</div>
+      <h2 id="title">Adresse confirmée</h2>
+      <p id="message">Ta licence de pilote est activée. Bienvenue sur la grille !</p>
+      <ol class="steps" id="steps">
+        <li>Retourne dans l’appli Kart Rivals.</li>
+        <li>Touche « Entrer en piste ».</li>
+        <li>Connecte-toi avec ton e-mail et ton mot de passe.</li>
+      </ol>
+    </div>
+    <footer>Tu peux fermer cette page.</footer>
+  </main>
+  <script>
+    // Supabase renvoie ici après un lien reçu par e-mail : succès (#access_token=…&type=signup) ou erreur
+    // (#error=…&error_code=otp_expired…). Rien n'est envoyé nulle part : on lit l'adresse, puis on l'efface.
+    (function () {
+      var raw = (location.hash || '').replace(/^#/, '') || (location.search || '').replace(/^\?/, '');
+      var params = new URLSearchParams(raw);
+      if (raw) history.replaceState(null, '', location.pathname);
+      var set = function (cls, icon, title, message, steps) {
+        document.getElementById('card').className = 'card ' + cls;
+        document.getElementById('icon').textContent = icon;
+        document.getElementById('title').textContent = title;
+        document.getElementById('message').textContent = message;
+        var list = document.getElementById('steps');
+        if (steps) {
+          list.innerHTML = '';
+          steps.forEach(function (s) { var li = document.createElement('li'); li.textContent = s; list.appendChild(li); });
+        } else {
+          list.style.display = 'none';
+        }
+      };
+      var code = params.get('error_code') || params.get('error');
+      var type = params.get('type');
+      if (code) {
+        if (code === 'otp_expired') {
+          set('ko', '⏱️', 'Lien expiré', 'Ce lien n’est plus valable (il a déjà servi ou il est trop ancien). Si tu arrives à te connecter dans l’appli, ton adresse est déjà confirmée.', [
+            'Retourne dans l’appli et essaie de te connecter.',
+            'Si l’appli te demande de confirmer ton e-mail, inscris-toi à nouveau pour recevoir un nouveau lien.',
+          ]);
+        } else {
+          set('ko', '⚠️', 'Lien invalide', 'Ce lien n’a pas pu être utilisé. Retourne dans l’appli et réessaie.', null);
+        }
+      } else if (type === 'recovery') {
+        set('ok', '🔑', 'Lien reçu', 'Retourne dans l’appli Kart Rivals pour continuer.', null);
+      } else if (type === 'email_change') {
+        set('ok', '✅', 'Adresse modifiée', 'Ta nouvelle adresse e-mail est confirmée. Retourne dans l’appli Kart Rivals.', null);
+      }
+    })();
+  </script>
+</body>
+</html>
