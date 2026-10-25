@@ -194,7 +194,7 @@ export default function RadioScreen() {
                 Canal ouvert. Premier message radio ?
               </Text>
             </View>
-          ) : null
+          ) : undefined
         }
       />
 

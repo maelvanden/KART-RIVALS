@@ -33,7 +33,7 @@ export default function FeedScreen() {
         data={posts}
         keyExtractor={(p) => p.id}
         contentContainerStyle={[styles.list, { paddingTop: insets.top + spacing.md }]}
-        refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={feed.refetch} tintColor={colors.neon} />}
+        refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={() => void feed.refetch()} tintColor={colors.neon} />}
         onEndReachedThreshold={0.5}
         onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && feed.fetchNextPage()}
         ListHeaderComponent={

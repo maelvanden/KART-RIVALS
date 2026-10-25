@@ -1,8 +1,7 @@
-import type { ImageSourcePropType } from 'react-native';
 
 import type { TrackDetails } from '@/types/models';
 
-export type TrackLayout = { source: ImageSourcePropType; /** largeur / hauteur */ ratio: number };
+export type TrackLayout = { source: number | { uri: string }; /** largeur / hauteur */ ratio: number };
 
 /** Tracés fournis avec l'app (nom du circuit en minuscules → image). */
 const BUNDLED: Record<string, TrackLayout> = {

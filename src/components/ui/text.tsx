@@ -45,7 +45,7 @@ function displayLineHeight(variant: Variant, own: TextStyle | undefined, flat: T
 }
 
 export function Text({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
-  const flat = StyleSheet.flatten([styles.base, styles[variant], style]);
+  const flat: TextStyle = StyleSheet.flatten([styles.base, styles[variant], style]) ?? {};
   const font = resolveFont(variant, flat);
   const own = StyleSheet.flatten(style) as TextStyle | undefined;
   return <RNText style={[flat, font, displayLineHeight(variant, own, flat, font)]} {...rest} />;
