@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { SocialButtons } from '@/features/auth/components/social-buttons';
+import { openPrivacyPolicy } from '@/lib/legal';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/theme';
 
@@ -109,6 +110,13 @@ export default function SignInScreen() {
               disabled={!email || password.length < (mode === 'sign-in' ? 6 : 8)}
             />
             <SocialButtons onError={(text) => setMessage(text ? { text, error: true } : null)} />
+            <Text variant="caption" style={styles.legal}>
+              En continuant, tu acceptes la{' '}
+              <Text variant="caption" style={styles.link} accessibilityRole="link" onPress={openPrivacyPolicy}>
+                politique de confidentialité
+              </Text>
+              .
+            </Text>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -125,4 +133,6 @@ const styles = StyleSheet.create({
   square: { width: 15.5, height: 15.5 },
   tagline: { fontSize: 16, lineHeight: 22, maxWidth: 300 },
   form: { gap: spacing.lg, marginBottom: spacing.lg },
+  legal: { textAlign: 'center' },
+  link: { color: colors.neon, textDecorationLine: 'underline' },
 });
