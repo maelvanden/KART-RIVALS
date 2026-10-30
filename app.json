@@ -38,18 +38,28 @@
         }
       ],
       "expo-image",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Kart Rivals utilise ta position approximative (~1 km) pour te montrer les pilotes et le classement de ta région."
+          "locationWhenInUsePermission": "Kart Rivals utilise ta position pour te montrer les pilotes et le classement de ta région (arrondie à ~1 km, jamais montrée aux autres) et pour placer un circuit sur la carte quand tu signales son emplacement.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "locationFullAccuracyPermission": false,
+          "motionUsagePermission": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Kart Rivals accède à tes photos pour choisir ta photo de profil.",
-          "cameraPermission": "Kart Rivals utilise l'appareil photo pour photographier ton ticket de karting."
+          "photosPermission": "Kart Rivals accède à tes photos pour choisir ta photo de profil et partager des photos ou vidéos (Actu, Radio Paddock, fiches circuit).",
+          "cameraPermission": "Kart Rivals utilise l'appareil photo pour photographier ton ticket de chronométrage et prendre des photos ou vidéos à partager.",
+          "microphonePermission": "Kart Rivals utilise le micro pour enregistrer le son des vidéos que tu filmes et partages dans l'Actu."
         }
       ],
       "expo-apple-authentication"
