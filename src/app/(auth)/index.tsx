@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { SocialButtons } from '@/features/auth/components/social-buttons';
-import { openPrivacyPolicy } from '@/lib/legal';
+import { openPrivacyPolicy, openTerms } from '@/lib/legal';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/theme';
 
@@ -111,7 +111,11 @@ export default function SignInScreen() {
             />
             <SocialButtons onError={(text) => setMessage(text ? { text, error: true } : null)} />
             <Text variant="caption" style={styles.legal}>
-              En continuant, tu acceptes la{' '}
+              En continuant, tu acceptes les{' '}
+              <Text variant="caption" style={styles.link} accessibilityRole="link" onPress={openTerms}>
+                conditions d’utilisation
+              </Text>{' '}
+              et la{' '}
               <Text variant="caption" style={styles.link} accessibilityRole="link" onPress={openPrivacyPolicy}>
                 politique de confidentialité
               </Text>

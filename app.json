@@ -9,6 +9,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon",
+      "bundleIdentifier": "fr.kartrivals.app",
       "usesAppleSignIn": true
     },
     "android": {
