@@ -193,6 +193,3 @@ src/
   theme/          couleurs, espacements, rangs
   types/          modèles partagés
 ```
-
-Les notifications push nécessitent un development build (`npx eas-cli@latest build --profile development`),
-elles ne fonctionnent pas dans Expo Go.
