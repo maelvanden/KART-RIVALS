@@ -1,0 +1,42 @@
+# Publie une mise à jour Expo (EAS Update) pour l'app installée depuis l'App Store / TestFlight (canal « production »).
+# Lancement à la main uniquement : onglet Actions > « Publier en production » > Run workflow, après avoir testé
+# la mise à jour (Expo Go ou build de développement). Seuls les changements de code JavaScript partent ainsi ;
+# grâce à runtimeVersion « fingerprint », une app dont la partie native diffère ne reçoit pas la mise à jour
+# (il faut alors un nouveau build vérifié par Apple).
+name: Publier en production
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Ce qui change (affiché sur expo.dev)
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      # Clés publiques Supabase (la clé « publishable » est faite pour être embarquée dans l'app).
+      EXPO_PUBLIC_SUPABASE_URL: https://ttbnpayuvwvhcceciwdb.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_xbYy6Pttz2hdcHsci1K8xg__jP_jxye
+      EXPO_PUBLIC_DEMO_MODE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Publier la mise à jour
+        env:
+          # Passé par variable d'environnement : un message avec des guillemets ne casse pas la commande.
+          MESSAGE: ${{ inputs.message }}
+        run: eas update --channel production --platform ios --message "$MESSAGE" --non-interactive
