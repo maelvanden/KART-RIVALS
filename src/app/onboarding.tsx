@@ -1,14 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { Icon, icons } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCreateProfile } from '@/features/profile/api';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
+import { openPrivacyPolicy, openTerms } from '@/lib/legal';
 import { colors, spacing } from '@/theme';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
@@ -17,6 +19,7 @@ export default function OnboardingScreen() {
   const [username, setUsername] = useState('');
   const [kartNumber, setKartNumber] = useState('');
   const [homeTrackId, setHomeTrackId] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const createProfile = useCreateProfile();
   const tracks = useTracksMap();
 
@@ -78,10 +81,33 @@ export default function OnboardingScreen() {
         ) : null}
       </View>
 
+      {/* Acceptation explicite (CGU : tolérance zéro, exigée par Apple) ; la date est enregistrée par le serveur. */}
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: termsAccepted }}
+        accessibilityLabel="J’accepte les conditions d’utilisation et la politique de confidentialité"
+        onPress={() => setTermsAccepted((v) => !v)}
+        style={styles.terms}>
+        <View style={[styles.check, termsAccepted && styles.checkOn]}>
+          {termsAccepted ? <Icon name={icons.check} size={14} color={colors.onNeon} /> : null}
+        </View>
+        <Text variant="caption" style={styles.termsText}>
+          J’accepte les{' '}
+          <Text variant="caption" style={styles.link} accessibilityRole="link" onPress={openTerms}>
+            conditions d’utilisation
+          </Text>{' '}
+          et la{' '}
+          <Text variant="caption" style={styles.link} accessibilityRole="link" onPress={openPrivacyPolicy}>
+            politique de confidentialité
+          </Text>
+          . Aucun contenu choquant ni comportement abusif n’est toléré.
+        </Text>
+      </Pressable>
+
       {errorText ? <Text style={{ color: colors.danger }}>{errorText}</Text> : null}
       <Button
         title="Valider ma licence"
-        disabled={!usernameValid || !numberValid}
+        disabled={!usernameValid || !numberValid || !termsAccepted}
         loading={createProfile.isPending}
         onPress={() => createProfile.mutate({ username, kart_number: parsedNumber, home_track_id: homeTrackId })}
       />
@@ -92,4 +118,17 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   intro: { fontSize: 15, lineHeight: 21 },
   form: { gap: spacing.md },
+  terms: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  termsText: { flex: 1, lineHeight: 19 },
+  link: { color: colors.neon, textDecorationLine: 'underline' },
+  check: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: colors.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOn: { backgroundColor: colors.neon, borderColor: colors.neon },
 });
