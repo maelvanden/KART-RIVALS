@@ -70,7 +70,7 @@
     },
     "backgroundColor": "#0A0B0D",
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "fingerprint"
     },
     "owner": "maelvddsh",
     "extra": {
