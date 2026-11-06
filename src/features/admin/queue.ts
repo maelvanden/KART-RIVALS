@@ -2,10 +2,11 @@ import type { Href } from 'expo-router';
 
 import { useAdminReports, useAdminTrackRequests, type TrackAdminRequest } from '@/features/admin/api';
 import { useAdminDisputes, useAdminTimeAttacks, useTrackCorrections } from '@/features/admin/panel';
+import { useSupportInbox } from '@/features/social/radio';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatLapTime } from '@/lib/format';
 
-export type QueueKind = 'report' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request';
+export type QueueKind = 'report' | 'support' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request';
 
 export type QueueItem = {
   key: string;
@@ -21,6 +22,7 @@ export type QueueItem = {
 
 export const QUEUE_LABELS: Record<QueueKind, string> = {
   report: 'Signalement',
+  support: 'Message au support',
   ticket: 'Ticket à vérifier',
   dispute: 'Litige',
   suspect: 'Chrono suspect',
@@ -30,7 +32,8 @@ export const QUEUE_LABELS: Record<QueueKind, string> = {
 
 /**
  * Tout ce qui attend un admin appli, en une seule liste du plus ancien au plus récent :
- * signalements, tickets Time Attack à vérifier, litiges, chronos suspects, remontées et demandes de gestion.
+ * signalements, messages au support sans réponse, tickets Time Attack à vérifier, litiges, chronos suspects, remontées et
+ * demandes de gestion.
  */
 export function useAdminQueue(enabled: boolean) {
   const reports = useAdminReports('open', enabled);
@@ -39,7 +42,8 @@ export function useAdminQueue(enabled: boolean) {
   const suspects = useAdminTimeAttacks('suspect', enabled);
   const corrections = useTrackCorrections('open', enabled);
   const requests = useAdminTrackRequests(enabled);
-  const sources = [reports, tickets, disputes, suspects, corrections, requests];
+  const support = useSupportInbox(enabled);
+  const sources = [reports, support, tickets, disputes, suspects, corrections, requests];
   const reason = (r: string) => REPORT_REASONS.find((x) => x.value === r)?.label ?? r;
 
   const items: QueueItem[] = [
@@ -51,6 +55,16 @@ export function useAdminQueue(enabled: boolean) {
       detail: `Signalé par ${r.reporter_username ?? '?'}${r.details ? ` : « ${r.details} »` : ''}`,
       href: '/admin/reports' as Href,
     })),
+    ...(support.data ?? [])
+      .filter((t) => t.unread > 0)
+      .map((t) => ({
+        key: `support-${t.id}`,
+        kind: 'support' as const,
+        since: t.last_message_at,
+        title: `${t.username} · ${t.unread} message${t.unread > 1 ? 's' : ''}`,
+        detail: t.last_message ? `« ${t.last_message} »` : 'Nouveau message',
+        href: { pathname: '/radio/[id]', params: { id: t.id, title: t.username } } as Href,
+      })),
     ...(tickets.data ?? []).map((t) => ({
       key: `ticket-${t.id}`,
       kind: 'ticket' as const,

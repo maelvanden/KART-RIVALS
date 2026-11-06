@@ -270,7 +270,8 @@ export type TeamInvite = {
 
 export type Conversation = {
   id: string;
-  kind: 'direct' | 'team';
+  /** support : conversation du pilote avec l'équipe Kart Rivals. */
+  kind: 'direct' | 'team' | 'support';
   team_id: string | null;
   title: string;
   tag: string | null;

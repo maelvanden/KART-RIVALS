@@ -10,6 +10,7 @@ import { colors, radius, spacing } from '@/theme';
 
 const QUEUE_ICONS: Record<QueueKind, IconName> = {
   report: icons.report,
+  support: icons.support,
   ticket: icons.ticket,
   dispute: icons.challenge,
   suspect: icons.timer,

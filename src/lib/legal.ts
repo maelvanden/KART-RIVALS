@@ -1,3 +1,4 @@
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 /** Pages légales, publiées sur le site kartrivals.fr. */
@@ -6,3 +7,9 @@ export const TERMS_URL = 'https://kartrivals.fr/cgu';
 
 export const openPrivacyPolicy = () => WebBrowser.openBrowserAsync(PRIVACY_URL).catch(() => {});
 export const openTerms = () => WebBrowser.openBrowserAsync(TERMS_URL).catch(() => {});
+
+/** Adresse de l'équipe (écran de compte suspendu, où l'appli est bloquée). */
+export const CONTACT_EMAIL = 'contact@kartrivals.fr';
+
+export const emailTeam = (subject: string) =>
+  Linking.openURL(`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}`).catch(() => {});

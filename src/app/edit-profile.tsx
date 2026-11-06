@@ -12,6 +12,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { pickSquarePhoto, useSetAvatar } from '@/features/profile/avatar';
 import { DeleteAccountCard } from '@/features/profile/components/delete-account-card';
+import { useOpenSupport } from '@/features/social/radio';
 import { useTracksMap } from '@/features/tracks/api';
 import { openPrivacyPolicy, openTerms } from '@/lib/legal';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
@@ -30,6 +31,7 @@ function EditProfileForm({ profile }: { profile: Profile }) {
   const tracks = useTracksMap();
   const update = useUpdateProfile();
   const setAvatar = useSetAvatar();
+  const openSupport = useOpenSupport();
   const [pickError, setPickError] = useState<string | null>(null);
   const [username, setUsername] = useState(profile.username);
   const [kartNumber, setKartNumber] = useState(profile.kart_number ? String(profile.kart_number) : '');
@@ -136,6 +138,21 @@ function EditProfileForm({ profile }: { profile: Profile }) {
       {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
       <Button title="Enregistrer" onPress={save} loading={update.isPending} disabled={!usernameValid || !numberValid} />
 
+      <Button
+        title="Contacter l’équipe"
+        variant="secondary"
+        loading={openSupport.isPending}
+        onPress={() =>
+          openSupport.mutate(undefined, {
+            // Ferme « Modifier ma licence » (modale) avant d'ouvrir la conversation.
+            onSuccess: (id) => {
+              router.dismiss();
+              router.push({ pathname: '/radio/[id]', params: { id } });
+            },
+          })
+        }
+      />
+      {openSupport.error ? <Text style={styles.error}>{openSupport.error.message}</Text> : null}
       <Button title="Conditions d’utilisation" variant="ghost" onPress={openTerms} />
       <Button title="Politique de confidentialité" variant="ghost" onPress={openPrivacyPolicy} />
       <DeleteAccountCard />

@@ -29,6 +29,7 @@ import {
 } from '@/features/admin/panel';
 import { useAdminQueue } from '@/features/admin/queue';
 import { useAuth } from '@/features/auth/auth-provider';
+import { useSupportInbox } from '@/features/social/radio';
 import { useSearchPilots } from '@/features/nearby/api';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { useTracksMap } from '@/features/tracks/api';
@@ -51,6 +52,8 @@ export default function AdminScreen() {
   const pendingTickets = useAdminTimeAttacks('pending', isAppAdmin);
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
   const queue = useAdminQueue(isAppAdmin);
+  const support = useSupportInbox(isAppAdmin);
+  const supportUnread = (support.data ?? []).filter((t) => t.unread > 0).length;
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
   const s = stats.data;
@@ -168,6 +171,17 @@ export default function AdminScreen() {
           ) : null}
 
           <SectionTitle title="Gestion" />
+          <MenuRow
+            icon={icons.support}
+            title="Support pilotes"
+            detail={
+              supportUnread > 0
+                ? `${supportUnread} conversation${supportUnread > 1 ? 's' : ''} en attente de réponse`
+                : 'Messages « Contacter l’équipe »'
+            }
+            alert={supportUnread > 0}
+            onPress={() => router.push('/admin/support')}
+          />
           <MenuRow
             icon={icons.poll}
             title="Statistiques avancées"

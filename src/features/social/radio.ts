@@ -4,7 +4,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/features/auth/auth-provider';
-import { demoConversations, demoPilots, demoReplies, demoSender, demoSocial } from '@/features/social/demo';
+import { DEMO_SUPPORT_ID, demoConversations, demoPilots, demoReplies, demoSender, demoSocial } from '@/features/social/demo';
 import { socialError } from '@/features/social/errors';
 import { demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
@@ -42,6 +42,9 @@ export function useConversations() {
 }
 
 export type ConversationMeta = {
+  kind: Conversation['kind'] | null;
+  /** Conversation support : le pilote qui l'a ouverte (les autres expéditeurs sont l'équipe). */
+  supportPilotId: string | null;
   pinnedMessageId: string | null;
   /** Les autres membres et jusqu'où ils ont lu. */
   readers: ConversationReader[];
@@ -60,10 +63,16 @@ export function useConversationMeta(conversationId: string | undefined) {
           last_read_at: at,
           username: demoPilots[id]?.username ?? 'Pilote',
         }));
-        return { pinnedMessageId: demoSocial.pinned[conversationId!] ?? null, readers };
+        const support = conversationId === DEMO_SUPPORT_ID;
+        return {
+          kind: support ? 'support' : null,
+          supportPilotId: support ? demoProfile.id : null,
+          pinnedMessageId: demoSocial.pinned[conversationId!] ?? null,
+          readers,
+        };
       }
       const [conversation, members] = await Promise.all([
-        supabase.from('conversations').select('pinned_message_id').eq('id', conversationId!).maybeSingle(),
+        supabase.from('conversations').select('kind, support_profile_id, pinned_message_id').eq('id', conversationId!).maybeSingle(),
         supabase
           .from('conversation_members')
           .select('profile_id, last_read_at, pilot:profiles (username)')
@@ -74,6 +83,8 @@ export function useConversationMeta(conversationId: string | undefined) {
       if (members.error) throw members.error;
       const rows = members.data as unknown as { profile_id: string; last_read_at: string; pilot: { username: string } | null }[];
       return {
+        kind: conversation.data?.kind ?? null,
+        supportPilotId: conversation.data?.support_profile_id ?? null,
         pinnedMessageId: conversation.data?.pinned_message_id ?? null,
         readers: rows.map((r) => ({ profile_id: r.profile_id, last_read_at: r.last_read_at, username: r.pilot?.username ?? 'Pilote' })),
       };
@@ -259,7 +270,10 @@ export function useMarkRead(conversationId: string | undefined, lastMessageId: s
   const queryClient = useQueryClient();
   useEffect(() => {
     if (!conversationId) return;
-    const done = () => queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    const done = () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['support-inbox'] });
+    };
     if (isDemoMode) {
       demoSocial.read[conversationId] = new Date().toISOString();
       done();
@@ -381,6 +395,47 @@ export function useOpenDirectRadio() {
   });
 }
 
+/** Ouvre (ou crée) la conversation « Contacter l'équipe » du pilote connecté ; renvoie son id. */
+export function useOpenSupport() {
+  return useMutation({
+    mutationFn: async (): Promise<string> => {
+      if (isDemoMode) {
+        demoSocial.messages[DEMO_SUPPORT_ID] ??= [];
+        return DEMO_SUPPORT_ID;
+      }
+      const { data, error } = await supabase.rpc('get_support_conversation');
+      if (error) throw socialError(error);
+      return data as string;
+    },
+  });
+}
+
+/** Boîte de réception de l'équipe (admins appli) : conversations support, non lues d'abord. */
+export type SupportThread = {
+  id: string;
+  pilot_id: string;
+  username: string;
+  avatar_url: string | null;
+  /** Compte suspendu ou banni (contestation probable). */
+  restricted: boolean;
+  last_message: string | null;
+  last_message_at: string;
+  unread: number;
+};
+
+export function useSupportInbox(enabled: boolean) {
+  return useQuery({
+    queryKey: ['support-inbox'],
+    enabled,
+    queryFn: async (): Promise<SupportThread[]> => {
+      if (isDemoMode) return [];
+      const { data, error } = await supabase.rpc('admin_support_inbox');
+      if (error) throw socialError(error);
+      return data as SupportThread[];
+    },
+  });
+}
+
 // ---------- Mode démo ----------
 
 /** En démo, un coéquipier « écrit » puis répond, et a lu le message. */
@@ -398,6 +453,8 @@ function demoSend(conversationId: string, outgoing: OutgoingMessage, queryClient
         : { ...base, kind: outgoing.kind, body: null, payload: outgoing.payload };
   list.push(message);
   const withSender = { ...message, sender: demoSender(demoProfile.id) };
+  // L'équipe ne répond pas automatiquement en démo.
+  if (conversationId === DEMO_SUPPORT_ID) return withSender;
 
   const responder = conversationId === 'conv-team' ? 'p1' : conversationId.replace('conv-', '');
   const pilot = demoPilots[responder];
