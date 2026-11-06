@@ -118,6 +118,9 @@ export const demoSocial = {
 };
 
 /** Conversations de la démo (écurie + 1v1 existants). */
+/** Conversation « Contacter l'équipe » du pilote de démo. */
+export const DEMO_SUPPORT_ID = 'conv-support';
+
 export function demoConversations(): Conversation[] {
   const list: Conversation[] = [];
   const t = demoSocial.team;
@@ -125,6 +128,22 @@ export function demoConversations(): Conversation[] {
     const last = messages.at(-1);
     const isTeam = id === 'conv-team';
     if (isTeam && !t) continue;
+    if (id === DEMO_SUPPORT_ID) {
+      if (!last) continue;
+      list.push({
+        id,
+        kind: 'support',
+        team_id: null,
+        title: 'Équipe Kart Rivals',
+        tag: null,
+        avatar_url: null,
+        other_id: null,
+        last_message: messagePreview(last),
+        last_message_at: last.created_at,
+        unread: 0,
+      });
+      continue;
+    }
     const other = isTeam ? null : demoPilots[id.replace('conv-', '')];
     list.push({
       id,

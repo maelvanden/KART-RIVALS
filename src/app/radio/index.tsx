@@ -3,20 +3,23 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { TeamCrest } from '@/features/social/components/team-crest';
 import { TeamTag } from '@/features/social/components/team-tag';
-import { useConversations } from '@/features/social/radio';
+import { useConversations, useOpenSupport } from '@/features/social/radio';
 import { useMyTeam } from '@/features/social/teams';
 import { formatMessageTime } from '@/lib/format';
 import { colors, fonts, radius, spacing } from '@/theme';
 import type { Conversation } from '@/types/models';
 
-/** Radio Paddock : canal de l'écurie et conversations 1v1 avec les coéquipiers. */
+/** Radio Paddock : canal de l'écurie, conversations 1v1 avec les coéquipiers et conversation avec l'équipe. */
 export default function RadioListScreen() {
   const conversations = useConversations();
+  const openSupport = useOpenSupport();
+  const hasSupport = conversations.data?.some((c) => c.kind === 'support');
 
   return (
     <Screen safeTop={false} refreshing={conversations.isRefetching} onRefresh={conversations.refetch}>
@@ -36,6 +39,17 @@ export default function RadioListScreen() {
           <ConversationRow key={c.id} conversation={c} />
         ))}
       </View>
+      {conversations.data && !hasSupport ? (
+        <Button
+          title="Contacter l’équipe Kart Rivals"
+          variant="ghost"
+          loading={openSupport.isPending}
+          onPress={() =>
+            openSupport.mutate(undefined, { onSuccess: (id) => router.push({ pathname: '/radio/[id]', params: { id } }) })
+          }
+        />
+      ) : null}
+      {openSupport.error ? <Text style={styles.error}>{openSupport.error.message}</Text> : null}
     </Screen>
   );
 }
@@ -51,6 +65,10 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
       style={({ pressed }) => [styles.row, unread && styles.rowUnread, pressed && styles.pressed]}>
       {c.kind === 'team' ? (
         <TeamCrest tag={c.tag ?? '?'} logoUrl={c.avatar_url} color={team?.id === c.team_id ? team.color : null} size={42} />
+      ) : c.kind === 'support' ? (
+        <View style={styles.supportBadge}>
+          <Icon name={icons.support} size={22} color={colors.onNeon} />
+        </View>
       ) : (
         <Avatar username={c.title} url={c.avatar_url} size={44} borderColor={colors.borderStrong} />
       )}
@@ -64,7 +82,8 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
         </View>
         <View style={styles.titleRow}>
           <Text variant="caption" numberOfLines={1} style={[styles.preview, unread && styles.previewUnread]}>
-            {c.last_message ?? (c.kind === 'team' ? 'Canal de l’écurie ouvert' : 'Lance la conversation')}
+            {c.last_message ??
+              (c.kind === 'team' ? 'Canal de l’écurie ouvert' : c.kind === 'support' ? 'Une question ? Écris-nous' : 'Lance la conversation')}
           </Text>
           {unread ? (
             <View style={styles.badge}>
@@ -98,4 +117,6 @@ const styles = StyleSheet.create({
   previewUnread: { color: colors.text },
   badge: { minWidth: 22, height: 22, borderRadius: radius.pill, backgroundColor: colors.neon, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   badgeText: { fontFamily: fonts.display, fontSize: 13, color: colors.onNeon },
+  supportBadge: { width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.neon, alignItems: 'center', justifyContent: 'center' },
+  error: { color: colors.danger },
 });

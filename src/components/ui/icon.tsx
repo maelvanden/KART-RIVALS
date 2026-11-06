@@ -77,6 +77,7 @@ export const icons = {
   heart: { ios: 'heart', material: 'favorite_border' },
   heartFill: { ios: 'heart.fill', material: 'favorite' },
   comment: { ios: 'bubble.left', material: 'chat_bubble_outline' },
+  support: { ios: 'questionmark.bubble.fill', material: 'support_agent' },
   feed: { ios: 'newspaper.fill', material: 'newspaper' },
   verified: { ios: 'checkmark.seal.fill', material: 'verified' },
   admin: { ios: 'checkmark.shield.fill', material: 'admin_panel_settings' },

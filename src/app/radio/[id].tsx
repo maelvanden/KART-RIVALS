@@ -44,9 +44,16 @@ import type { Message, PollVote } from '@/types/models';
 
 type Sheet = 'menu' | 'share' | 'poll' | null;
 
-/** Conversation Radio Paddock, en temps réel : texte, photos, partages, sondages, épingle, « Vu » et frappe. */
+/** Nom affiché pour les messages de l'équipe dans une conversation support. */
+const TEAM_NAME = 'Équipe Kart Rivals';
+
+/**
+ * Conversation Radio Paddock, en temps réel : texte, photos, partages, sondages, épingle, « Vu » et frappe.
+ * Conversation support (« Contacter l'équipe ») : texte et photos, messages de l'équipe signés « Équipe Kart Rivals ».
+ */
 export default function RadioScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // title : nom du pilote, passé par la boîte de réception de l'équipe (les admins ne sont pas membres).
+  const { id, title: titleParam } = useLocalSearchParams<{ id: string; title?: string }>();
   const { userId } = useAuth();
   const profile = useMyProfile();
   const insets = useSafeAreaInsets();
@@ -63,6 +70,11 @@ export default function RadioScreen() {
   const [pickError, setPickError] = useState<string | null>(null);
   const [reporting, setReporting] = useState<Message | null>(null);
   const isTeam = conversation?.kind === 'team';
+  const isSupport = conversation?.kind === 'support' || meta.data?.kind === 'support';
+  const supportPilotId = meta.data?.supportPilotId ?? null;
+  // Admin qui répond au nom de l'équipe.
+  const amStaff = isSupport && !!supportPilotId && supportPilotId !== userId;
+  const fromTeam = (m: Message) => isSupport && !!supportPilotId && m.sender_id !== supportPilotId;
   const blockedIds = useBlockedIds();
   const block = useBlockPilot();
   const unblock = useUnblockPilot();
@@ -77,9 +89,9 @@ export default function RadioScreen() {
   const votes = usePollVotes(id, pollIds);
   const pinned = useMessage(meta.data?.pinnedMessageId, messages.data);
   // Canal d'écurie : seul le staff épingle. 1v1 : l'un ou l'autre.
-  const canPin = !isTeam || isStaff(team.data?.members.find((m) => m.pilot.id === userId)?.role);
+  const canPin = !isSupport && (!isTeam || isStaff(team.data?.members.find((m) => m.pilot.id === userId)?.role));
 
-  const title = conversation?.title ?? 'Radio Paddock';
+  const title = isSupport ? (amStaff ? `Support · ${titleParam ?? 'pilote'}` : TEAM_NAME) : (conversation?.title ?? 'Radio Paddock');
   const canSend = draft.trim().length > 0 && !send.isPending;
   const myLast = [...(messages.data ?? [])].reverse().find((m) => m.sender_id === userId);
   const seenBy = myLast ? (meta.data?.readers ?? []).filter((r) => r.last_read_at >= myLast.created_at) : [];
@@ -166,13 +178,15 @@ export default function RadioScreen() {
               <Bubble
                 message={item}
                 mine={mine}
-                // Nom de l'expéditeur au début d'une série, dans le canal d'écurie.
-                showSender={isTeam && !mine && older?.sender_id !== item.sender_id}
+                // Nom de l'expéditeur au début d'une série, dans le canal d'écurie et la conversation support.
+                showSender={(isTeam || isSupport) && !mine && older?.sender_id !== item.sender_id}
+                senderName={fromTeam(item) ? TEAM_NAME : undefined}
                 myId={userId}
                 votes={(votes.data ?? []).filter((v) => v.message_id === item.id)}
                 onVote={(option) => vote.mutate({ messageId: item.id, option })}
-                blocked={!mine && blockedIds.has(item.sender_id)}
-                onLongPress={canPin || !mine ? () => setSelected(item) : undefined}
+                blocked={!isSupport && !mine && blockedIds.has(item.sender_id)}
+                // Support : ni épingle, ni signalement, ni blocage.
+                onLongPress={!isSupport && (canPin || !mine) ? () => setSelected(item) : undefined}
                 pinned={item.id === meta.data?.pinnedMessageId}
               />
               {item.id === myLast?.id && seenBy.length > 0 ? (
@@ -189,9 +203,11 @@ export default function RadioScreen() {
         ListEmptyComponent={
           messages.data ? (
             <View style={styles.empty}>
-              <Icon name={icons.radio} size={28} color={colors.neon} />
+              <Icon name={isSupport ? icons.support : icons.radio} size={28} color={colors.neon} />
               <Text variant="caption" style={styles.emptyText}>
-                Canal ouvert. Premier message radio ?
+                {isSupport
+                  ? 'Une question, un bug, une erreur sur un circuit ou une sanction à contester ? Écris-nous ici, l’équipe Kart Rivals te répond sous 24 h.'
+                  : 'Canal ouvert. Premier message radio ?'}
               </Text>
             </View>
           ) : undefined
@@ -222,7 +238,7 @@ export default function RadioScreen() {
         <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Ajouter une photo, un partage ou un sondage"
+            accessibilityLabel={isSupport ? 'Ajouter une photo' : 'Ajouter une photo, un partage ou un sondage'}
             onPress={() => setSheet('menu')}
             style={({ pressed }) => [styles.plus, pressed && styles.pressed]}>
             <Icon name={icons.plus} size={22} color={colors.neon} />
@@ -231,9 +247,9 @@ export default function RadioScreen() {
             value={draft}
             onChangeText={(t) => {
               setDraft(t);
-              if (t.trim() && profile.data) notifyTyping(profile.data.username);
+              if (t.trim() && profile.data) notifyTyping(amStaff ? 'L’équipe' : profile.data.username);
             }}
-            placeholder="Message radio…"
+            placeholder={isSupport ? 'Message à l’équipe…' : 'Message radio…'}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             multiline
@@ -256,8 +272,12 @@ export default function RadioScreen() {
         <View style={styles.menu}>
           <MenuItem icon={icons.camera} label="Prendre une photo" onPress={() => addPhoto('camera')} />
           <MenuItem icon={icons.gallery} label="Photo de la galerie" onPress={() => addPhoto('library')} />
-          <MenuItem icon={icons.share} label="Partager un défi, une course, un record…" onPress={() => setSheet('share')} />
-          <MenuItem icon={icons.poll} label="Sondage rapide" onPress={() => setSheet('poll')} />
+          {isSupport ? null : (
+            <>
+              <MenuItem icon={icons.share} label="Partager un défi, une course, un record…" onPress={() => setSheet('share')} />
+              <MenuItem icon={icons.poll} label="Sondage rapide" onPress={() => setSheet('poll')} />
+            </>
+          )}
         </View>
       </BottomSheet>
       <SharePicker
@@ -339,6 +359,8 @@ type BubbleProps = {
   message: Message;
   mine: boolean;
   showSender: boolean;
+  /** Nom à afficher à la place du pseudo (messages de l'équipe dans une conversation support). */
+  senderName?: string;
   myId: string | null;
   votes: PollVote[];
   onVote: (option: number) => void;
@@ -348,11 +370,13 @@ type BubbleProps = {
   blocked?: boolean;
 };
 
-function Bubble({ message, mine, showSender, myId, votes, onVote, onLongPress, pinned, blocked }: BubbleProps) {
+function Bubble({ message, mine, showSender, senderName, myId, votes, onVote, onLongPress, pinned, blocked }: BubbleProps) {
   const share = asShare(message);
   const poll = asPoll(message);
   const image = asImage(message);
-  const sender = showSender ? <Text style={styles.sender}>{message.sender?.username ?? 'Ancien pilote'}</Text> : null;
+  const sender = showSender ? (
+    <Text style={styles.sender}>{senderName ?? message.sender?.username ?? 'Ancien pilote'}</Text>
+  ) : null;
   const time = (
     <View style={[styles.timeRow, mine && styles.timeRowMine]}>
       {pinned ? <Icon name={icons.pinned} size={10} color={colors.textMuted} /> : null}

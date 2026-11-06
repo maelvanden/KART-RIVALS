@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { AccountStatus } from '@/features/admin/panel';
+import { CONTACT_EMAIL, emailTeam } from '@/lib/legal';
 import { colors, spacing } from '@/theme';
 
 /** Écran affiché à l'ouverture de l'appli quand le compte est suspendu ou banni. */
@@ -25,8 +26,13 @@ export function RestrictedAccount({ status, onSignOut, onRetry }: { status: Acco
       </Text>
       {status.reason ? <Text variant="caption" style={styles.center}>Motif : {status.reason}</Text> : null}
       <Text variant="caption" style={styles.center}>
-        Une erreur ? Réponds au message de l’équipe ou contacte un admin.
+        Une erreur ? Écris à l’équipe pour contester : {CONTACT_EMAIL}
       </Text>
+      <Button
+        title="Écrire à l’équipe"
+        variant="secondary"
+        onPress={() => emailTeam(banned ? 'Contestation de bannissement' : 'Contestation de suspension')}
+      />
       {!banned ? <Button title="Vérifier à nouveau" variant="secondary" onPress={onRetry} /> : null}
       <Button title="Se déconnecter" variant="quiet" onPress={onSignOut} />
     </View>
