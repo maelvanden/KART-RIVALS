@@ -27,6 +27,7 @@ import { useSocialRealtime } from '@/features/social/realtime';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { useTimeAttackLiveActivity } from '@/features/time-attack/live-activity';
 import { useWelcomeSeen } from '@/features/welcome/seen';
+import { usePilotWidget } from '@/features/widgets/pilot-widget';
 import { WelcomeTour } from '@/features/welcome/welcome-tour';
 import { useMyProfile } from '@/features/profile/api';
 import { colors } from '@/theme';
@@ -75,6 +76,8 @@ function RootNavigator() {
   usePushNotifications(userId, !!profile.data && !restricted && !!welcome.seen);
   // Compte à rebours Time Attack sur l'écran verrouillé et la Dynamic Island (iOS).
   useTimeAttackLiveActivity(TIME_ATTACK_ENABLED && !!profile.data && !restricted);
+  // Widget d'écran d'accueil : ELO, rang et prochain défi (iOS).
+  usePilotWidget(!!profile.data && !restricted);
 
   if (isLoading || welcome.seen === null || (userId && profile.isPending)) {
     return (

@@ -19,6 +19,8 @@ import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilo
 import { BadgesCard } from '@/features/profile/components/badges-card';
 import { EloChart } from '@/features/profile/components/elo-chart';
 import { LapRecordsCard } from '@/features/profile/components/lap-records-card';
+import { useMyLapProgress } from '@/features/lap-progress/api';
+import { LapProgressCard } from '@/features/lap-progress/components/lap-progress-card';
 import { MatchHistory } from '@/features/profile/components/match-history';
 import { PaddockHero } from '@/features/profile/components/paddock-hero';
 import { StatTiles } from '@/features/profile/components/stat-tiles';
@@ -34,6 +36,7 @@ export default function PaddockScreen() {
   const matches = usePilotMatches(profile.data?.id);
   const badges = useBadgeStats(profile.data?.id);
   const laps = usePilotLapRecords(profile.data?.id);
+  const progress = useMyLapProgress();
   const points = useMyPoints();
   const challenges = useMyChallenges();
   const races = useMyRaces();
@@ -57,6 +60,7 @@ export default function PaddockScreen() {
         matches.refetch();
         badges.refetch();
         laps.refetch();
+        progress.refetch();
         points.refetch();
         challenges.refetch();
         races.refetch();
@@ -129,6 +133,7 @@ export default function PaddockScreen() {
           <VirtualGarage profileId={p.id} editable />
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
+          {progress.data ? <LapProgressCard points={progress.data} /> : null}
           {laps.data ? <LapRecordsCard records={laps.data} isMe /> : null}
           {matches.data ? <MatchHistory matches={matches.data} /> : null}
         </>

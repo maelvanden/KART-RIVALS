@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kart Rivals",
     "slug": "kart-rivals",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "kartrivals",
@@ -64,7 +64,19 @@
       ],
       "expo-apple-authentication",
       "expo-notifications",
-      "expo-widgets"
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "PilotCard",
+              "displayName": "Ma licence",
+              "description": "Ton ELO, ton rang et ton prochain défi.",
+              "supportedFamilies": ["systemSmall", "systemMedium", "accessoryRectangular", "accessoryInline"]
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

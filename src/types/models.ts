@@ -168,6 +168,15 @@ export type PilotLapRecord = {
   pilots: number;
 };
 
+/** Un chrono validé du pilote connecté (défi, course de groupe ou Time Attack), pour sa courbe de progression. */
+export type LapProgressPoint = {
+  track_id: string;
+  track_name: string;
+  lap_ms: number;
+  driven_at: string;
+  source: 'challenge' | 'race' | 'time_attack';
+};
+
 export type TrackRecord = { track_id: string; lap_ms: number; username: string };
 
 export type RaceStatus = 'open' | 'awaiting_confirmation' | 'confirmed' | 'disputed' | 'cancelled';
