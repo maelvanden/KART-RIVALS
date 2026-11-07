@@ -761,6 +761,7 @@ export function usePublishAnnouncement() {
       region,
       track,
       startsAt,
+      push,
     }: {
       title: string;
       body: string;
@@ -770,6 +771,8 @@ export function usePublishAnnouncement() {
       track?: { id: string; name: string } | null;
       /** Null : tout de suite. */
       startsAt?: Date | null;
+      /** Notification : information de service (tous les destinataires) ou promo (ceux qui ont accepté). */
+      push?: 'important' | 'promo' | null;
     }) => {
       if (title.trim().length < 3) throw new Error('Le titre doit faire entre 3 et 80 caractères.');
       if (!body.trim()) throw new Error('Écris le message de l’annonce.');
@@ -800,6 +803,7 @@ export function usePublishAnnouncement() {
         p_region: region ?? null,
         p_track_id: track?.id ?? null,
         p_starts_at: startsAt ? startsAt.toISOString() : null,
+        p_push: push ?? null,
       });
     },
     onSuccess: invalidate,

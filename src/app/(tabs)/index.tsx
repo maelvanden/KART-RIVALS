@@ -13,6 +13,7 @@ import { challengeStep, needsMe } from '@/features/challenges/state';
 import { useMyPoints } from '@/features/garage/api';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
 import { MissionsCard } from '@/features/missions/missions-card';
+import { PromoConsentSheet } from '@/features/notifications/promo-consent';
 import { CommunityCard } from '@/features/social/components/community-card';
 import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
 import { BadgesCard } from '@/features/profile/components/badges-card';
@@ -132,6 +133,7 @@ export default function PaddockScreen() {
           {matches.data ? <MatchHistory matches={matches.data} /> : null}
         </>
       ) : null}
+      <PromoConsentSheet profile={p} />
     </Screen>
   );
 }

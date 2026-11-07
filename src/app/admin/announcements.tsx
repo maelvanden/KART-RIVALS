@@ -86,6 +86,7 @@ export default function AdminAnnouncementsScreen() {
   const [hour, setHour] = useState(18);
   const [minute, setMinute] = useState('0');
   const [notice, setNotice] = useState<string | null>(null);
+  const [push, setPush] = useState<'none' | 'important' | 'promo'>('none');
   const trackAudience = useTrackAudience(target === 'track' ? (track?.id ?? null) : null);
 
   if (!isAppAdmin) {
@@ -147,7 +148,7 @@ export default function AdminAnnouncementsScreen() {
       scheduled ? 'Programmer' : 'Publier',
       () =>
         publish.mutate(
-          { title, body, link, days: Number(days), region: chosenRegion, track: chosenTrack, startsAt },
+          { title, body, link, days: Number(days), region: chosenRegion, track: chosenTrack, startsAt, push: push === 'none' ? null : push },
           {
             onSuccess: () => {
               setTitle('');
@@ -259,6 +260,25 @@ export default function AdminAnnouncementsScreen() {
           </Text>
         </>
       ) : null}
+
+      <Text variant="label">Notification</Text>
+      <Segmented
+        options={[
+          { value: 'none', label: 'Aucune' },
+          { value: 'important', label: 'Importante' },
+          { value: 'promo', label: 'Promo' },
+        ]}
+        value={push}
+        onChange={(v) => (setPush(v), setNotice(null))}
+      />
+      <Text variant="caption">
+        {push === 'important'
+          ? 'Information de service (maintenance, règles, problème sur un circuit) : envoyée à tous les destinataires. Pas de pub ici, sinon Apple peut retirer l’appli.'
+          : push === 'promo'
+            ? 'Promo ou événement : envoyée seulement aux destinataires qui ont accepté les promos.'
+            : 'Bannière dans l’appli uniquement, sans notification.'}
+        {push !== 'none' && scheduled ? ' Elle partira à l’heure de publication.' : ''}
+      </Text>
 
       <Text variant="label">Affichée pendant</Text>
       <Segmented options={DURATIONS} value={days} onChange={setDays} />

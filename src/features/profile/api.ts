@@ -17,7 +17,7 @@ import type { BadgeStats, EloPoint, HeadToHead, PilotLapRecord, PilotMatch, Prof
 
 const PROFILE_COLUMNS = `
   id, username, avatar_url, kart_number, home_track_id, elo, rank, wins, losses, draws, matches_played,
-  is_discoverable, race_count, race_wins, race_podiums, home_track:tracks!profiles_home_track_id_fkey (id, name, city)
+  is_discoverable, promo_push, race_count, race_wins, race_podiums, home_track:tracks!profiles_home_track_id_fkey (id, name, city)
 `;
 
 async function fetchProfile(id: string): Promise<Profile | null> {
@@ -131,6 +131,22 @@ export function useUpdateProfile() {
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
         queryClient.invalidateQueries({ queryKey: ['nearby'] }),
       ]),
+  });
+}
+
+/** Accord (ou refus) pour les notifications promos et événements des kartings ; la date est enregistrée par le serveur. */
+export function useSetPromoPush() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (isDemoMode) {
+        demoProfile.promo_push = enabled;
+        return;
+      }
+      const { error } = await supabase.rpc('set_promo_push', { p_enabled: enabled });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile'] }),
   });
 }
 

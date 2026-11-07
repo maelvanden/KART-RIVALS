@@ -15,6 +15,8 @@ export type Profile = {
   draws: number;
   matches_played: number;
   is_discoverable: boolean;
+  /** Notifications promos et événements des kartings : null tant que le pilote n'a pas répondu. */
+  promo_push: boolean | null;
   home_track: Track | null;
   race_count: number;
   race_wins: number;
