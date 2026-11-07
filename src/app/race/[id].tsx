@@ -22,6 +22,7 @@ import {
 } from '@/features/races/api';
 import { RaceResultForm } from '@/features/races/components/race-result-form';
 import { acceptedEntries, confirmationsNeeded, raceStep, raceStepLabel } from '@/features/races/state';
+import { useAskReviewAfterWin } from '@/features/review/ask-review';
 import { dateTimeFormat, formatLapTime } from '@/lib/format';
 import { colors, spacing } from '@/theme';
 import type { RaceEntry } from '@/types/models';
@@ -42,6 +43,9 @@ export default function RaceScreen() {
   const [reason, setReason] = useState('');
   const r = race.data;
   const deltas = useRaceEloDeltas(id, r?.status === 'confirmed');
+  // Course gagnée et validée : bon moment pour demander une note App Store.
+  const won = r?.status === 'confirmed' && r.entries.some((e) => e.pilot_id === userId && e.position === 1);
+  useAskReviewAfterWin(won ? `race-${r!.id}` : null, r?.confirmed_at ?? null);
 
   if (race.isPending) return <Screen safeTop={false}><Loading /></Screen>;
   if (race.error) return <Screen safeTop={false}><ErrorState error={race.error} /></Screen>;
