@@ -1,6 +1,7 @@
 import type {
   Challenge,
   EloPoint,
+  LapProgressPoint,
   LeaderboardEntry,
   NearbyPilot,
   PilotLapRecord,
@@ -1097,4 +1098,32 @@ export function demoEquipGearItem(profileId: string, item: GearItem) {
   if (item.rarity === 'starter') delete garage.equipped[item.slot];
   else if (garage.owned.includes(item.id)) garage.equipped[item.slot] = item.id;
   else throw new Error('NOT_OWNED');
+}
+
+/**
+ * Démo : chronos successifs du pilote de démo sur chaque circuit où il a un record. Le dernier meilleur temps
+ * correspond à son record (demoLaps) ; les sorties précédentes sont plus lentes, avec quelques ratés.
+ */
+export function demoLapProgress(): LapProgressPoint[] {
+  const day = 86400000;
+  // [jours avant aujourd'hui, écart en ms par rapport au record]
+  const series: Record<string, [number, number][]> = {
+    t1: [[95, 1460], [81, 1120], [68, 1190], [52, 640], [37, 410], [23, 520], [12, 150], [3, 0]],
+    t2: [[60, 1830], [41, 1210], [26, 760], [9, 0]],
+    t3: [[70, 1240], [64, 1310], [47, 820], [33, 450], [15, 0], [6, 230]],
+  };
+  return Object.entries(series)
+    .flatMap(([trackId, laps]) => {
+      const record = (demoLaps[trackId] ?? []).find(([id]) => id === demoProfile.id)?.[1];
+      const track = demoTracks.find((t) => t.id === trackId);
+      if (!record || !track) return [];
+      return laps.map(([daysAgo, gap], i) => ({
+        track_id: trackId,
+        track_name: track.name,
+        lap_ms: record + gap,
+        driven_at: new Date(Date.now() - daysAgo * day).toISOString(),
+        source: (i % 3 === 2 ? 'time_attack' : i % 3 === 1 ? 'race' : 'challenge') as LapProgressPoint['source'],
+      }));
+    })
+    .sort((a, b) => Date.parse(a.driven_at) - Date.parse(b.driven_at));
 }
