@@ -63,7 +63,8 @@
         }
       ],
       "expo-apple-authentication",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-widgets"
     ],
     "experiments": {
       "typedRoutes": true,
