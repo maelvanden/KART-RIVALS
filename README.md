@@ -160,6 +160,12 @@ rebours des 90 min sur l'écran verrouillé et dans la Dynamic Island, démarré
 session (chrono validé affiché 10 min). Extension iOS `ExpoWidgetsTarget` (`fr.kartrivals.app.ExpoWidgetsTarget`,
 groupe `group.fr.kartrivals.app`) générée par le plugin ; nécessite un build.
 
+Widget « Ma licence » (iOS, `src/features/widgets/pilot-widget.ios.tsx`, déclaré dans `app.json`) : ELO, rang et
+progression vers le rang suivant, place nationale et prochain défi (le prochain planifié, sinon celui qui attend une
+action du pilote). Petit et moyen formats sur l'écran d'accueil, rectangulaire et en ligne sur l'écran verrouillé.
+Mis à jour par l'appli à chaque changement de profil, de classement ou de défi ; vidé à la déconnexion. Toucher le
+widget ouvre le défi. Même extension que l'activité en direct ; nécessite un build.
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
