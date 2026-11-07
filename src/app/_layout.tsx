@@ -24,6 +24,8 @@ import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { usePushNotifications } from '@/features/notifications/push';
 import { useSocialRealtime } from '@/features/social/realtime';
+import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
+import { useTimeAttackLiveActivity } from '@/features/time-attack/live-activity';
 import { useWelcomeSeen } from '@/features/welcome/seen';
 import { WelcomeTour } from '@/features/welcome/welcome-tour';
 import { useMyProfile } from '@/features/profile/api';
@@ -71,6 +73,8 @@ function RootNavigator() {
   const restricted = !!(account.data?.banned_at || account.data?.suspended_until);
   // Après la présentation : la demande d'autorisation du téléphone ne la recouvre pas.
   usePushNotifications(userId, !!profile.data && !restricted && !!welcome.seen);
+  // Compte à rebours Time Attack sur l'écran verrouillé et la Dynamic Island (iOS).
+  useTimeAttackLiveActivity(TIME_ATTACK_ENABLED && !!profile.data && !restricted);
 
   if (isLoading || welcome.seen === null || (userId && profile.isPending)) {
     return (

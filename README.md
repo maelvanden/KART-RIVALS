@@ -155,6 +155,11 @@ et support (un seul tant que la conversation n'est pas relue), demandes de coéq
 d'écurie, pilote qui rejoint une session, commentaire sur une publication. Toucher la notification ouvre l'écran concerné
 (`data.url`). Module natif : nécessite un build (pas d'Expo Go).
 
+Activité en direct Time Attack (iOS, `expo-widgets`, `src/features/time-attack/live-activity.ios.tsx`) : compte à
+rebours des 90 min sur l'écran verrouillé et dans la Dynamic Island, démarré au check-in et terminé à la clôture de la
+session (chrono validé affiché 10 min). Extension iOS `ExpoWidgetsTarget` (`fr.kartrivals.app.ExpoWidgetsTarget`,
+groupe `group.fr.kartrivals.app`) générée par le plugin ; nécessite un build.
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
