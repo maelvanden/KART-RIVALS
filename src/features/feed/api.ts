@@ -147,6 +147,9 @@ export function usePost(id: string | undefined) {
 }
 
 // ---------- Publier ----------
+/** Poids maximal d'un média de l'Actu (même limite sur le bucket feed-media). */
+const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
+
 async function uploadMedia(userId: string, media: NonNullable<NewPost['media']>) {
   let uri = media.uri;
   let { width, height } = media;
@@ -168,7 +171,7 @@ async function uploadMedia(userId: string, media: NonNullable<NewPost['media']>)
   }
   if (isDemoMode) return { path: uri, width, height };
   const bytes = await (await fetch(uri)).arrayBuffer();
-  if (bytes.byteLength > 50 * 1024 * 1024) throw new Error('Vidéo trop lourde (50 Mo max) : raccourcis-la.');
+  if (bytes.byteLength > MAX_MEDIA_BYTES) throw new Error('Vidéo trop lourde (25 Mo max) : raccourcis-la.');
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType });
   if (error) throw error;
