@@ -22,6 +22,7 @@ import { ChallengeCard } from '@/features/challenges/components/challenge-card';
 import { ResultForm } from '@/features/challenges/components/result-form';
 import { ResultSummary } from '@/features/challenges/components/result-summary';
 import { challengeStep } from '@/features/challenges/state';
+import { useAskReviewAfterWin } from '@/features/review/ask-review';
 import { colors, spacing } from '@/theme';
 
 export default function ChallengeScreen() {
@@ -40,6 +41,10 @@ export default function ChallengeScreen() {
   const isDone = c?.status === 'completed' || c?.match?.status === 'confirmed';
   const eloDelta = useMatchEloDelta(c?.match?.id, isDone);
   const actionError = [respond, cancel, submit, confirm, dispute].find((m) => m.error)?.error as Error | undefined;
+  // Victoire validée : bon moment pour demander une note App Store.
+  const won = !!c?.match && c.match.status === 'confirmed' && !!userId && c.match.winner_id === userId;
+  const confirmedAt = [c?.match?.challenger_confirmed_at, c?.match?.opponent_confirmed_at].filter(Boolean).sort().at(-1) ?? null;
+  useAskReviewAfterWin(won ? `match-${c!.match!.id}` : null, confirmedAt);
 
   if (challenge.isPending) return <Screen safeTop={false}><Loading /></Screen>;
   if (challenge.error) return <Screen safeTop={false}><ErrorState error={challenge.error} /></Screen>;
