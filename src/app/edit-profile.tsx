@@ -9,7 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { Avatar } from '@/components/ui/avatar';
-import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
+import { useMyProfile, useSetPromoPush, useUpdateProfile } from '@/features/profile/api';
 import { pickSquarePhoto, useSetAvatar } from '@/features/profile/avatar';
 import { DeleteAccountCard } from '@/features/profile/components/delete-account-card';
 import { useOpenSupport } from '@/features/social/radio';
@@ -32,6 +32,7 @@ function EditProfileForm({ profile }: { profile: Profile }) {
   const update = useUpdateProfile();
   const setAvatar = useSetAvatar();
   const openSupport = useOpenSupport();
+  const setPromo = useSetPromoPush();
   const [pickError, setPickError] = useState<string | null>(null);
   const [username, setUsername] = useState(profile.username);
   const [kartNumber, setKartNumber] = useState(profile.kart_number ? String(profile.kart_number) : '');
@@ -132,6 +133,24 @@ function EditProfileForm({ profile }: { profile: Profile }) {
           trackColor={{ true: colors.neon, false: colors.surfaceAlt }}
           thumbColor={colors.text}
           accessibilityLabel="Visible dans Pilotes"
+        />
+      </Card>
+
+      <Card style={styles.switchRow}>
+        <View style={styles.switchText}>
+          <Text variant="heading">Promos et événements</Text>
+          <Text variant="caption">
+            Notifications des réductions, Grand Prix et soirées des kartings de tes circuits. Les notifications de tes
+            défis et messages restent actives.
+          </Text>
+        </View>
+        <Switch
+          value={!!profile.promo_push}
+          disabled={setPromo.isPending}
+          onValueChange={(v) => setPromo.mutate(v)}
+          trackColor={{ true: colors.neon, false: colors.surfaceAlt }}
+          thumbColor={colors.text}
+          accessibilityLabel="Promos et événements des kartings"
         />
       </Card>
 

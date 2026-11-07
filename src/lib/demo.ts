@@ -40,6 +40,7 @@ export const demoProfile: Profile = {
   race_wins: 1,
   race_podiums: 2,
   is_discoverable: true,
+  promo_push: null,
   home_track: { id: 't1', name: 'SpeedPark Angers', city: 'Beaucouzé' },
 };
 
@@ -898,6 +899,7 @@ export function demoPilot(id: string): Profile | null {
     race_wins: 0,
     race_podiums: 0,
     is_discoverable: true,
+    promo_push: null,
     home_track: null,
   };
 }
