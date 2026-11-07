@@ -22,6 +22,7 @@ import { WarningScreen } from '@/features/admin/components/warning-screen';
 import { useAccountStatus, useAcknowledgeWarning, useMyPendingWarning } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
+import { usePushNotifications } from '@/features/notifications/push';
 import { useSocialRealtime } from '@/features/social/realtime';
 import { useMyProfile } from '@/features/profile/api';
 import { colors } from '@/theme';
@@ -64,6 +65,8 @@ function RootNavigator() {
   const acknowledge = useAcknowledgeWarning();
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
+  const restricted = !!(account.data?.banned_at || account.data?.suspended_until);
+  usePushNotifications(userId, !!profile.data && !restricted);
 
   if (isLoading || (userId && profile.isPending)) {
     return (

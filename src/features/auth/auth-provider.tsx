@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, use, useEffect, useState, type PropsWithChildren } from 'react';
 
+import { unregisterPushToken } from '@/features/notifications/push';
 import { demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 
@@ -30,7 +31,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     isLoading,
     userId: isDemoMode ? demoProfile.id : (session?.user.id ?? null),
     signOut: async () => {
-      if (!isDemoMode) await supabase.auth.signOut();
+      if (isDemoMode) return;
+      await unregisterPushToken().catch(() => {});
+      await supabase.auth.signOut();
     },
   };
 

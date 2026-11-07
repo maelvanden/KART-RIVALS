@@ -147,6 +147,14 @@ quand la publication est liée à un Time Attack validé, record s'il égale le 
 `feed(p_filter)` : tout, coéquipiers, records, certifiés ; j'aime et réactions 🔥 👏 😤 (`toggle_reaction`), commentaires
 (`add_comment`), signalement (`report_post`, masqué après 3) traité dans l'écran Signalements.
 
+Notifications push (migration `…_push_notifications.sql`, `src/features/notifications/push.ts`) : à la connexion,
+l'appli demande l'autorisation et enregistre le jeton Expo de l'appareil (`push_tokens`, `register_push_token`) ; il est
+retiré à la déconnexion. Les envois partent de la base (déclencheurs → `send_push` → service de push d'Expo via `pg_net`) :
+défi reçu / accepté / refusé, résultat à confirmer / validé / contesté, invitation et résultats de course, messages Radio
+et support (un seul tant que la conversation n'est pas relue), demandes de coéquipier, invitations et candidatures
+d'écurie, pilote qui rejoint une session, commentaire sur une publication. Toucher la notification ouvre l'écran concerné
+(`data.url`). Module natif : nécessite un build (pas d'Expo Go).
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 

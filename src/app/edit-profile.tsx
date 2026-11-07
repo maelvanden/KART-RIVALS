@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Switch, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -153,6 +153,10 @@ function EditProfileForm({ profile }: { profile: Profile }) {
         }
       />
       {openSupport.error ? <Text style={styles.error}>{openSupport.error.message}</Text> : null}
+      {Platform.OS !== 'web' ? (
+        // Choix des notifications : réglages de l'appli dans iOS / Android.
+        <Button title="Réglages des notifications" variant="ghost" onPress={() => Linking.openSettings()} />
+      ) : null}
       <Button title="Conditions d’utilisation" variant="ghost" onPress={openTerms} />
       <Button title="Politique de confidentialité" variant="ghost" onPress={openPrivacyPolicy} />
       <DeleteAccountCard />

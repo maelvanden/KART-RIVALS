@@ -62,7 +62,8 @@
           "microphonePermission": "Kart Rivals utilise le micro pour enregistrer le son des vidéos que tu filmes et partages dans l'Actu."
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
