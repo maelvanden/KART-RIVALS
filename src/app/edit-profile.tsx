@@ -176,6 +176,7 @@ function EditProfileForm({ profile }: { profile: Profile }) {
         // Choix des notifications : réglages de l'appli dans iOS / Android.
         <Button title="Réglages des notifications" variant="ghost" onPress={() => Linking.openSettings()} />
       ) : null}
+      <Button title="Revoir la présentation" variant="ghost" onPress={() => router.push('/welcome')} />
       <Button title="Conditions d’utilisation" variant="ghost" onPress={openTerms} />
       <Button title="Politique de confidentialité" variant="ghost" onPress={openPrivacyPolicy} />
       <DeleteAccountCard />

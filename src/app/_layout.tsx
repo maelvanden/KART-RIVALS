@@ -24,6 +24,8 @@ import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { usePushNotifications } from '@/features/notifications/push';
 import { useSocialRealtime } from '@/features/social/realtime';
+import { useWelcomeSeen } from '@/features/welcome/seen';
+import { WelcomeTour } from '@/features/welcome/welcome-tour';
 import { useMyProfile } from '@/features/profile/api';
 import { colors } from '@/theme';
 
@@ -65,10 +67,12 @@ function RootNavigator() {
   const acknowledge = useAcknowledgeWarning();
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
+  const welcome = useWelcomeSeen();
   const restricted = !!(account.data?.banned_at || account.data?.suspended_until);
-  usePushNotifications(userId, !!profile.data && !restricted);
+  // Après la présentation : la demande d'autorisation du téléphone ne la recouvre pas.
+  usePushNotifications(userId, !!profile.data && !restricted && !!welcome.seen);
 
-  if (isLoading || (userId && profile.isPending)) {
+  if (isLoading || welcome.seen === null || (userId && profile.isPending)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
         <Loading />
@@ -87,6 +91,9 @@ function RootNavigator() {
   }
 
   const hasProfile = !!profile.data;
+
+  // Première ouverture sur cet appareil : présentation de l'appli.
+  if (!welcome.seen) return <WelcomeTour onDone={welcome.markSeen} />;
 
   // Compte suspendu ou banni par un admin : on bloque l'appli et on affiche le motif.
   const restriction = account.data;
@@ -152,6 +159,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/corrections" options={{ ...detailHeader, title: 'Remontées des pilotes' }} />
         <Stack.Screen name="admin/officials" options={{ ...detailHeader, title: 'Kartings officiels' }} />
         <Stack.Screen name="admin/insights" options={{ ...detailHeader, title: 'Statistiques' }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         <Stack.Screen name="radio/index" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen name="radio/[id]" options={{ ...detailHeader, title: 'Radio Paddock' }} />
         <Stack.Screen
