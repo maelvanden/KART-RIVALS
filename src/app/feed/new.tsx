@@ -21,6 +21,9 @@ import { colors, radius, spacing } from '@/theme';
 const CATEGORIES = ['270cc', '390cc', '2T', 'Rotax', 'Électrique', 'Enfant'];
 type Conditions = 'none' | 'dry' | 'wet';
 
+/** Durée maximale d'une vidéo de l'Actu. */
+const MAX_VIDEO_SECONDS = 30;
+
 /** Publier : chrono (certifié par un Time Attack ou déclaré), photo ou vidéo, circuit et texte. */
 export default function NewPostScreen() {
   const params = useLocalSearchParams<{ sessionId?: string }>();
@@ -54,13 +57,17 @@ export default function NewPostScreen() {
       const options: ImagePicker.ImagePickerOptions = {
         mediaTypes: ['images', 'videos'],
         quality: 1,
-        videoMaxDuration: 60,
+        videoMaxDuration: MAX_VIDEO_SECONDS,
+        // Filmée : qualité moyenne. Galerie (iOS) : recompressée en 960×540 au lieu de l'original (souvent 1080p ou 4K).
         videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+        videoExportPreset: ImagePicker.VideoExportPreset.H264_960x540,
       };
       const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled) return;
       const a = result.assets[0];
-      if (a.type === 'video' && (a.duration ?? 0) > 61_000) throw new Error('Vidéo trop longue : 60 secondes maximum.');
+      if (a.type === 'video' && (a.duration ?? 0) > (MAX_VIDEO_SECONDS + 1) * 1000) {
+        throw new Error(`Vidéo trop longue : ${MAX_VIDEO_SECONDS} secondes maximum. Coupe-la dans Photos puis réessaie.`);
+      }
       setMedia({ uri: a.uri, type: a.type === 'video' ? 'video' : 'image', width: a.width, height: a.height });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Impossible d’ajouter le média.');
@@ -99,7 +106,7 @@ export default function NewPostScreen() {
         style={styles.multiline}
       />
 
-      <Text variant="label">Photo ou vidéo (60 s max)</Text>
+      <Text variant="label">Photo ou vidéo ({MAX_VIDEO_SECONDS} s max)</Text>
       {media ? (
         <View style={styles.preview}>
           {media.type === 'image' ? (

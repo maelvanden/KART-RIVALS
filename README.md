@@ -141,7 +141,7 @@ l'écurie), les autres le rejoignent (`join_open_session`, `leave_open_session`)
 avec tous les inscrits, 2 pilotes → défi déjà accepté, 1 pilote → session expirée.
 
 Actualité (migration `…_feed.sql`, onglet `src/app/(tabs)/feed.tsx`, écrans `src/app/feed/`) : publications avec chrono
-(temps, catégorie de kart, piste sèche / mouillée, poids), photo ou vidéo (bucket public `feed-media`, vidéo 60 s / 50 Mo,
+(temps, catégorie de kart, piste sèche / mouillée, poids), photo ou vidéo (bucket public `feed-media`, vidéo 30 s / 25 Mo recompressée,
 lecture `expo-video` si le module natif est présent, sinon navigateur), circuit et texte (`create_post`). Chrono certifié
 quand la publication est liée à un Time Attack validé, record s'il égale le meilleur Time Attack validé du circuit. Fil
 `feed(p_filter)` : tout, coéquipiers, records, certifiés ; j'aime et réactions 🔥 👏 😤 (`toggle_reaction`), commentaires

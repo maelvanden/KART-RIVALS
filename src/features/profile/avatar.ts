@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/features/auth/auth-provider';
@@ -18,13 +19,19 @@ export async function pickSquarePhoto(): Promise<string | null> {
   return result.canceled ? null : result.assets[0].uri;
 }
 
+/** Côté d'une photo de profil : affichée au plus en 84 px, 512 px suffisent pour les écrans Retina. */
+const AVATAR_SIZE = 512;
+
 async function uploadAvatar(userId: string, localUri: string): Promise<string> {
-  const response = await fetch(localUri);
-  const blob = await response.arrayBuffer();
-  const isPng = localUri.toLowerCase().endsWith('.png') || localUri.startsWith('data:image/png');
-  const path = `${userId}/avatar.${isPng ? 'png' : 'jpg'}`;
+  // Recadrée carrée par le sélecteur : redimensionnée en JPEG léger (quelques dizaines de Ko au lieu de plusieurs Mo).
+  const context = ImageManipulator.manipulate(localUri);
+  context.resize({ width: AVATAR_SIZE, height: AVATAR_SIZE });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  const blob = await (await fetch(saved.uri)).arrayBuffer();
+  const path = `${userId}/avatar.jpg`;
   const { error } = await supabase.storage.from('avatars').upload(path, blob, {
-    contentType: isPng ? 'image/png' : 'image/jpeg',
+    contentType: 'image/jpeg',
     upsert: true,
   });
   if (error) throw error;
