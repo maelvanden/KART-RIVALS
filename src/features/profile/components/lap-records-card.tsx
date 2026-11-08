@@ -21,7 +21,7 @@ export function LapRecordsCard({ records, isMe }: { records: PilotLapRecord[]; i
       {records.length === 0 ? (
         <Text variant="caption">
           {isMe
-            ? 'Aucun chrono validé pour l’instant. Lance un défi au format « meilleur tour » pour poser ton premier temps.'
+            ? 'Aucun chrono validé pour l’instant. Un défi, une course ou un Time Attack validé pose ton premier temps.'
             : 'Aucun chrono validé pour l’instant.'}
         </Text>
       ) : (

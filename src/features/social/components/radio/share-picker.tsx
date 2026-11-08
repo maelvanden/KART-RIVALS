@@ -52,7 +52,7 @@ function Items({ type, onShare }: { type: ShareType; onShare: (share: SharePaylo
           : type === 'race'
             ? 'Aucune course pour l’instant.'
             : type === 'lap_record'
-              ? 'Aucun record : valide un défi au meilleur tour pour en établir un.'
+              ? 'Aucun record : valide un défi, une course ou un Time Attack pour en établir un.'
               : 'Aucune session Time Attack validée.'}
       </Text>
     );

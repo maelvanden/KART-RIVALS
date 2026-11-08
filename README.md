@@ -143,7 +143,7 @@ avec tous les inscrits, 2 pilotes → défi déjà accepté, 1 pilote → sessio
 Actualité (migration `…_feed.sql`, onglet `src/app/(tabs)/feed.tsx`, écrans `src/app/feed/`) : publications avec chrono
 (temps, catégorie de kart, piste sèche / mouillée, poids), photo ou vidéo (bucket public `feed-media`, vidéo 30 s / 25 Mo recompressée,
 lecture `expo-video` si le module natif est présent, sinon navigateur), circuit et texte (`create_post`). Chrono certifié
-quand la publication est liée à un Time Attack validé, record s'il égale le meilleur Time Attack validé du circuit. Fil
+quand la publication est liée à un Time Attack validé, record s'il égale le record du circuit (toutes sources). Fil
 `feed(p_filter)` : tout, coéquipiers, records, certifiés ; j'aime et réactions 🔥 👏 😤 (`toggle_reaction`), commentaires
 (`add_comment`), signalement (`report_post`, masqué après 3) traité dans l'écran Signalements.
 
@@ -153,7 +153,7 @@ retiré à la déconnexion. Les envois partent de la base (déclencheurs → `se
 défi reçu / accepté / refusé, résultat à confirmer / validé / contesté, invitation et résultats de course, messages Radio
 et support (un seul tant que la conversation n'est pas relue), demandes de coéquipier, invitations et candidatures
 d'écurie, pilote qui rejoint une session, commentaire sur une publication, record du circuit battu (« 👑 Ton record est
-tombé », à l'ancien détenteur, migration `…_push_lap_record.sql`). Toucher la notification ouvre l'écran concerné
+tombé », à l'ancien détenteur, migrations `…_push_lap_record.sql` et `…_lap_records_all_sources.sql`). Toucher la notification ouvre l'écran concerné
 (`data.url`). Module natif : nécessite un build (pas d'Expo Go).
 
 Activité en direct Time Attack (iOS, `expo-widgets`, `src/features/time-attack/live-activity.ios.tsx`) : compte à
@@ -166,6 +166,11 @@ progression vers le rang suivant, place nationale et prochain défi (le prochain
 action du pilote). Petit et moyen formats sur l'écran d'accueil, rectangulaire et en ligne sur l'écran verrouillé.
 Mis à jour par l'appli à chaque changement de profil, de classement ou de défi ; vidé à la déconnexion. Toucher le
 widget ouvre le défi. Même extension que l'activité en direct ; nécessite un build.
+
+Records du tour (migration `…_lap_records_all_sources.sql`, vue `lap_times_private`) : un seul record par circuit,
+calculé sur tous les chronos validés (défis quel que soit le format, courses de groupe, Time Attack), comptes de démo
+exclus. Utilisé par la fiche circuit, le profil, la liste des circuits, le badge « Record » de l'Actu et la notification
+« Ton record est tombé ».
 
 Progression par circuit (migration `…_lap_progress.sql`, `src/features/lap-progress/`) : courbe des chronos validés du
 pilote (défis, courses de groupe, Time Attack) sur chaque circuit, plus rapide = plus haut, avec la phrase d'accroche
