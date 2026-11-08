@@ -152,7 +152,8 @@ l'appli demande l'autorisation et enregistre le jeton Expo de l'appareil (`push_
 retiré à la déconnexion. Les envois partent de la base (déclencheurs → `send_push` → service de push d'Expo via `pg_net`) :
 défi reçu / accepté / refusé, résultat à confirmer / validé / contesté, invitation et résultats de course, messages Radio
 et support (un seul tant que la conversation n'est pas relue), demandes de coéquipier, invitations et candidatures
-d'écurie, pilote qui rejoint une session, commentaire sur une publication. Toucher la notification ouvre l'écran concerné
+d'écurie, pilote qui rejoint une session, commentaire sur une publication, record du circuit battu (« 👑 Ton record est
+tombé », à l'ancien détenteur, migration `…_push_lap_record.sql`). Toucher la notification ouvre l'écran concerné
 (`data.url`). Module natif : nécessite un build (pas d'Expo Go).
 
 Activité en direct Time Attack (iOS, `expo-widgets`, `src/features/time-attack/live-activity.ios.tsx`) : compte à
