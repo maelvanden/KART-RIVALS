@@ -167,6 +167,10 @@ action du pilote). Petit et moyen formats sur l'écran d'accueil, rectangulaire 
 Mis à jour par l'appli à chaque changement de profil, de classement ou de défi ; vidé à la déconnexion. Toucher le
 widget ouvre le défi. Même extension que l'activité en direct ; nécessite un build.
 
+Classement Time Attack (migration `…_time_attack_leaderboard.sql`, onglet Podium, mode « Time Attack ») : par
+circuit (circuit favori en premier), le meilleur tour certifié par ticket de chaque pilote, avec l'écart au premier
+(`time_attack_tracks`, `time_attack_leaderboard` ; démo et bannis exclus).
+
 Records du tour (migration `…_lap_records_all_sources.sql`, vue `lap_times_private`) : un seul record par circuit,
 calculé sur tous les chronos validés (défis quel que soit le format, courses de groupe, Time Attack), comptes de démo
 exclus. Utilisé par la fiche circuit, le profil, la liste des circuits, le badge « Record » de l'Actu et la notification
