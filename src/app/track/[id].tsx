@@ -113,7 +113,7 @@ export default function TrackScreen() {
           {laps.data?.length === 0 ? (
             <EmptyState
               title="Aucun chrono validé"
-              message="Le premier défi au format « meilleur tour » validé ici établira le record."
+              message="Le premier chrono validé ici (défi, course ou Time Attack) établira le record."
             />
           ) : null}
           {laps.data && laps.data.length > 0 ? <TrackLapRecords records={laps.data} myId={profile.data?.id} /> : null}

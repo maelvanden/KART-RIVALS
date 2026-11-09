@@ -177,6 +177,18 @@ export type LapProgressPoint = {
   source: 'challenge' | 'race' | 'time_attack';
 };
 
+/** Circuit qui a au moins un chrono Time Attack validé (sélecteur du classement Time Attack). */
+export type TimeAttackTrack = { track_id: string; track_name: string; city: string | null; pilots: number; best_lap_ms: number };
+
+/** Ligne du classement Time Attack d'un circuit : le meilleur tour certifié de chaque pilote. */
+export type TimeAttackLeaderboardEntry = Pick<Profile, 'username' | 'avatar_url' | 'rank'> & {
+  position: number;
+  pilot_id: string;
+  lap_ms: number;
+  set_at: string;
+  sessions: number;
+};
+
 export type TrackRecord = { track_id: string; lap_ms: number; username: string };
 
 export type RaceStatus = 'open' | 'awaiting_confirmation' | 'confirmed' | 'disputed' | 'cancelled';

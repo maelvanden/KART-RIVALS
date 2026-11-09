@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -10,17 +11,25 @@ import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useLeaderboard, usePilotStandings, type LeaderboardScope } from '@/features/leaderboard/api';
 import { StandingsCard } from '@/features/leaderboard/components/standings-card';
+import { TimeAttackBoard } from '@/features/leaderboard/components/time-attack-board';
 import { useApproxLocation } from '@/features/nearby/api';
+import { useMyProfile } from '@/features/profile/api';
+import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { DEPARTMENT_NAMES, REGIONS, ofDepartment, ofRegion, regionOfDepartment } from '@/lib/regions';
 import { colors } from '@/theme';
 
 const podium = ['#FFC83D', '#C0C7D1', '#CD7F32'];
 
 type Tab = 'department' | 'region' | 'local' | 'global';
+/** ELO (classement des duels) ou Time Attack (chronos certifiés, circuit par circuit). */
+type Mode = 'elo' | 'time_attack';
 
 export default function LeaderboardScreen() {
   const { userId } = useAuth();
+  const [mode, setMode] = useState<Mode>('elo');
   const [tab, setTab] = useState<Tab>('global');
+  const profile = useMyProfile();
+  const queryClient = useQueryClient();
   // Région / département consultés : null = ceux du pilote connecté.
   const [region, setRegion] = useState<string | null>(null);
   const [department, setDepartment] = useState<string | null>(null);
@@ -48,7 +57,7 @@ export default function LeaderboardScreen() {
           : shownDepartment
             ? { kind: 'department', code: shownDepartment }
             : null;
-  const board = useLeaderboard(scope);
+  const board = useLeaderboard(mode === 'elo' ? scope : null);
 
   const title =
     tab === 'region' && shownRegion
@@ -63,92 +72,113 @@ export default function LeaderboardScreen() {
       title="Classement"
       refreshing={board.isRefetching}
       onRefresh={() => {
+        if (mode === 'time_attack') {
+          queryClient.invalidateQueries({ queryKey: ['time-attack'] });
+          return;
+        }
         board.refetch();
         standings.refetch();
       }}>
-      {userId ? (
-        <StandingsCard
-          pilotId={userId}
-          isMe
-          active={tab === 'local' ? undefined : tab}
-          onSelect={(s) => {
-            setTab(s);
-            setRegion(null);
-            setDepartment(null);
-          }}
+      {TIME_ATTACK_ENABLED ? (
+        <Segmented
+          options={[
+            { value: 'elo', label: 'ELO' },
+            { value: 'time_attack', label: 'Time Attack' },
+          ]}
+          value={mode}
+          onChange={setMode}
         />
       ) : null}
 
-      <Segmented
-        options={[
-          { value: 'department', label: 'Dépt' },
-          { value: 'region', label: 'Région' },
-          { value: 'local', label: '50 km' },
-          { value: 'global', label: 'France' },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      {mode === 'time_attack' ? (
+        <TimeAttackBoard myId={userId} homeTrackId={profile.data?.home_track_id ?? null} />
+      ) : (
+        <>
+          {userId ? (
+            <StandingsCard
+              pilotId={userId}
+              isMe
+              active={tab === 'local' ? undefined : tab}
+              onSelect={(s) => {
+                setTab(s);
+                setRegion(null);
+                setDepartment(null);
+              }}
+            />
+          ) : null}
 
-      {tab === 'region' ? (
-        <Chips
-          options={[...REGIONS]
-            .sort((a, b) => Number(b.name === mine?.region) - Number(a.name === mine?.region))
-            .map((r) => ({ value: r.name, label: r.name === mine?.region ? `${r.name} · moi` : r.name }))}
-          value={shownRegion}
-          onChange={setRegion}
-        />
-      ) : null}
-      {tab === 'department' && departments.length > 0 ? (
-        <Chips
-          options={departments.map((d) => ({
-            value: d,
-            label: `${DEPARTMENT_NAMES[d] ?? d}${d === mine?.department ? ' · moi' : ''}`,
-          }))}
-          value={shownDepartment}
-          onChange={setDepartment}
-        />
-      ) : null}
-      {title ? <Text variant="label">{title}</Text> : null}
+          <Segmented
+            options={[
+              { value: 'department', label: 'Dépt' },
+              { value: 'region', label: 'Région' },
+              { value: 'local', label: '50 km' },
+              { value: 'global', label: 'France' },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
 
-      {board.isLoading ? <Loading /> : null}
-      {board.error ? <ErrorState error={board.error} /> : null}
-      {tab === 'local' && location.data === null ? (
-        <EmptyState title="Localisation désactivée" message="Active-la pour voir le classement autour de toi." />
-      ) : null}
-      {(tab === 'region' && !shownRegion) || (tab === 'department' && !shownDepartment) ? (
-        <EmptyState
-          title="Région inconnue"
-          message={
-            tab === 'region'
-              ? 'Choisis une région ci-dessus, ou ton circuit favori dans ton profil pour voir la tienne.'
-              : 'Choisis ton circuit favori dans ton profil pour voir le classement de ton département.'
-          }
-        />
-      ) : null}
-      {board.data?.length === 0 ? (
-        <EmptyState
-          title="Classement vide"
-          message={tab === 'global' ? 'Valide ton premier match pour y apparaître !' : 'Aucun pilote classé ici pour l’instant : sois le premier !'}
-        />
-      ) : null}
-      {board.data?.map((entry) => (
-        <PilotRow
-          key={entry.id}
-          pilotId={entry.id}
-          username={entry.username}
-          avatarUrl={entry.avatar_url}
-          rank={entry.rank}
-          elo={entry.elo}
-          subtitle={`${entry.wins} V · ${entry.losses} D`}
-          highlighted={entry.id === userId}
-          leading={
-            <Text style={[styles.position, { color: podium[entry.position - 1] ?? colors.textMuted }]}>
-              {entry.position}
-            </Text>
-          }
-        />
-      ))}
+          {tab === 'region' ? (
+            <Chips
+              options={[...REGIONS]
+                .sort((a, b) => Number(b.name === mine?.region) - Number(a.name === mine?.region))
+                .map((r) => ({ value: r.name, label: r.name === mine?.region ? `${r.name} · moi` : r.name }))}
+              value={shownRegion}
+              onChange={setRegion}
+            />
+          ) : null}
+          {tab === 'department' && departments.length > 0 ? (
+            <Chips
+              options={departments.map((d) => ({
+                value: d,
+                label: `${DEPARTMENT_NAMES[d] ?? d}${d === mine?.department ? ' · moi' : ''}`,
+              }))}
+              value={shownDepartment}
+              onChange={setDepartment}
+            />
+          ) : null}
+          {title ? <Text variant="label">{title}</Text> : null}
+
+          {board.isLoading ? <Loading /> : null}
+          {board.error ? <ErrorState error={board.error} /> : null}
+          {tab === 'local' && location.data === null ? (
+            <EmptyState title="Localisation désactivée" message="Active-la pour voir le classement autour de toi." />
+          ) : null}
+          {(tab === 'region' && !shownRegion) || (tab === 'department' && !shownDepartment) ? (
+            <EmptyState
+              title="Région inconnue"
+              message={
+                tab === 'region'
+                  ? 'Choisis une région ci-dessus, ou ton circuit favori dans ton profil pour voir la tienne.'
+                  : 'Choisis ton circuit favori dans ton profil pour voir le classement de ton département.'
+              }
+            />
+          ) : null}
+          {board.data?.length === 0 ? (
+            <EmptyState
+              title="Classement vide"
+              message={tab === 'global' ? 'Valide ton premier match pour y apparaître !' : 'Aucun pilote classé ici pour l’instant : sois le premier !'}
+            />
+          ) : null}
+          {board.data?.map((entry) => (
+            <PilotRow
+              key={entry.id}
+              pilotId={entry.id}
+              username={entry.username}
+              avatarUrl={entry.avatar_url}
+              rank={entry.rank}
+              elo={entry.elo}
+              subtitle={`${entry.wins} V · ${entry.losses} D`}
+              highlighted={entry.id === userId}
+              leading={
+                <Text style={[styles.position, { color: podium[entry.position - 1] ?? colors.textMuted }]}>
+                  {entry.position}
+                </Text>
+              }
+            />
+          ))}
+        </>
+      )}
     </Screen>
   );
 }

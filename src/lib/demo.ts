@@ -8,6 +8,8 @@ import type {
   PilotMatch,
   Profile,
   Race,
+  TimeAttackLeaderboardEntry,
+  TimeAttackTrack,
   Track,
   TrackDetails,
   TrackLapRecord,
@@ -1126,4 +1128,28 @@ export function demoLapProgress(): LapProgressPoint[] {
       }));
     })
     .sort((a, b) => Date.parse(a.driven_at) - Date.parse(b.driven_at));
+}
+
+/** Démo : circuits qui ont des chronos Time Attack (mêmes temps que les records du tour). */
+export function demoTimeAttackTracks(): TimeAttackTrack[] {
+  return Object.entries(demoLaps)
+    .filter(([, laps]) => laps.length > 0)
+    .map(([trackId, laps]) => {
+      const t = demoTrackDetails.find((d) => d.id === trackId);
+      return { track_id: trackId, track_name: t?.name ?? 'Circuit', city: t?.city ?? null, pilots: laps.length, best_lap_ms: laps[0][1] };
+    })
+    .sort((a, b) => b.pilots - a.pilots || a.track_name.localeCompare(b.track_name));
+}
+
+export function demoTimeAttackLeaderboard(trackId: string): TimeAttackLeaderboardEntry[] {
+  return demoTrackLapRecords(trackId).map((r, i) => ({
+    position: r.position,
+    pilot_id: r.pilot_id,
+    username: r.username,
+    avatar_url: r.avatar_url,
+    rank: r.rank,
+    lap_ms: r.lap_ms,
+    set_at: r.set_at,
+    sessions: 1 + ((i * 3) % 5),
+  }));
 }
