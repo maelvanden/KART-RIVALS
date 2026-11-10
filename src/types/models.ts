@@ -113,6 +113,8 @@ export type Challenge = {
   opponent: Pick<Profile, 'id' | 'username' | 'elo' | 'rank'>;
   track: Track;
   match: Match | null;
+  /** Duel d'un tableau de tournoi (pas d'égalité, abandon au lieu d'annulation). */
+  tournament_id?: string | null;
 };
 
 export type NearbyPilot = Pick<Profile, 'id' | 'username' | 'avatar_url' | 'elo' | 'rank' | 'wins' | 'losses'> & {
@@ -358,4 +360,47 @@ export type TeamApplication = {
   created_at: string;
   applicant: PilotSummary;
   team: Pick<Team, 'id' | 'name' | 'tag' | 'logo_url' | 'color'>;
+};
+
+export type TournamentStatus = 'registration' | 'running' | 'completed' | 'cancelled';
+export type TournamentSize = 8 | 16;
+
+export type TournamentEntry = {
+  pilot_id: string;
+  seed: number | null;
+  joined_at: string;
+  pilot: PilotSummary;
+};
+
+/** Une case du tableau. round 1 = premier tour ; le dernier round est la finale. */
+export type TournamentMatch = {
+  id: string;
+  round: number;
+  slot: number;
+  pilot_a: string | null;
+  pilot_b: string | null;
+  challenge_id: string | null;
+  winner_id: string | null;
+  /** race : duel validé ; forfeit : abandon ou forfait ; bye : qualifié d'office. */
+  outcome: 'race' | 'forfeit' | 'bye' | null;
+  decided_at: string | null;
+};
+
+export type Tournament = {
+  id: string;
+  organizer_id: string;
+  name: string;
+  size: TournamentSize;
+  format: RaceFormat;
+  starts_at: string | null;
+  message: string | null;
+  status: TournamentStatus;
+  champion_id: string | null;
+  runner_up_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  track: Track;
+  entries: TournamentEntry[];
+  matches: TournamentMatch[];
 };

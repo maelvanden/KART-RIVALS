@@ -25,6 +25,8 @@ import { MatchHistory } from '@/features/profile/components/match-history';
 import { FollowButton } from '@/features/social/components/follow-button';
 import { PilotSafety } from '@/features/social/components/pilot-safety';
 import { useIsBlocked } from '@/features/social/safety';
+import { usePilotTrophies } from '@/features/tournaments/api';
+import { TrophyCabinet } from '@/features/tournaments/components/trophy-cabinet';
 
 export default function PilotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +37,7 @@ export default function PilotScreen() {
   const h2h = useHeadToHead(id);
   const badges = useBadgeStats(id);
   const laps = usePilotLapRecords(id);
+  const trophies = usePilotTrophies(id);
   const isMe = id === userId;
   // Historique détaillé des chronos : visible seulement sur sa propre fiche.
   const progress = useMyLapProgress();
@@ -52,6 +55,7 @@ export default function PilotScreen() {
         h2h.refetch();
         badges.refetch();
         laps.refetch();
+        trophies.refetch();
         if (isMe) progress.refetch();
       }}>
       <Stack.Screen options={{ title: profile.data?.username ?? 'Pilote' }} />
@@ -87,6 +91,7 @@ export default function PilotScreen() {
             />
           ) : null}
           <VirtualGarage profileId={profile.data.id} editable={isMe} />
+          {trophies.data ? <TrophyCabinet trophies={trophies.data} /> : null}
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
           {isMe && progress.data ? <LapProgressCard points={progress.data} /> : null}

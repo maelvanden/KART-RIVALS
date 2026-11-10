@@ -134,6 +134,8 @@ function RootNavigator() {
         <Stack.Screen name="track/correction" options={{ ...detailHeader, presentation: 'modal', title: 'Signaler une erreur' }} />
         <Stack.Screen name="race/new" options={{ ...detailHeader, presentation: 'modal', title: 'Organiser une course' }} />
         <Stack.Screen name="race/[id]" options={{ ...detailHeader, title: 'Course' }} />
+        <Stack.Screen name="tournament/new" options={{ ...detailHeader, presentation: 'modal', title: 'Organiser un tournoi' }} />
+        <Stack.Screen name="tournament/[id]" options={{ ...detailHeader, title: 'Tournoi' }} />
         <Stack.Screen name="time-attack" options={{ ...detailHeader, title: 'Time Attack' }} />
         <Stack.Screen name="shop" options={{ ...detailHeader, title: 'Boutique' }} />
         <Stack.Screen name="team/index" options={{ ...detailHeader, title: 'Mon Écurie' }} />
