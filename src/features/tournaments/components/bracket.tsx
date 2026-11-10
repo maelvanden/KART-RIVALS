@@ -1,39 +1,89 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Chips } from '@/components/ui/chips';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { bracketRounds, roundCount, roundLabel } from '@/features/tournaments/bracket';
+import { bracketRounds, currentRound, roundCount, roundLabel } from '@/features/tournaments/bracket';
+import { formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { PilotSummary, Tournament, TournamentMatch } from '@/types/models';
 
 const BOX_HEIGHT = 68;
 const BOX_GAP = spacing.md;
-const COLUMN_WIDTH = 168;
+// Deux colonnes et leurs traits tiennent sur un écran de téléphone.
+const COLUMN_WIDTH = 160;
+/** Largeur des traits qui relient deux duels à celui du tour suivant. */
+const LINK_WIDTH = 22;
+const LINE = colors.borderStrong;
 
-/** Tableau à élimination : une colonne par tour, défilant horizontalement. */
+/**
+ * Tableau à élimination : une colonne par tour, reliées par des traits, défilant horizontalement.
+ * Les puces choisissent le tour de départ : sur un grand tableau, on saute les tours déjà joués.
+ */
 export function Bracket({ tournament, myId }: { tournament: Tournament; myId: string }) {
   const rounds = bracketRounds(tournament);
   const total = roundCount(tournament.size);
+  const [from, setFrom] = useState(() => Math.min(currentRound(tournament), Math.max(1, total - 1)));
   const pilots = new Map(tournament.entries.map((e) => [e.pilot_id, { ...e.pilot, seed: e.seed }]));
-  // Hauteur fixée par le premier tour : les tours suivants se centrent entre leurs deux cases d'origine.
-  const height = (tournament.size / 2) * (BOX_HEIGHT + BOX_GAP);
+  const visible = rounds.slice(from - 1);
+  // Hauteur fixée par le premier tour affiché : chaque tour suivant se centre entre ses deux duels d'origine.
+  const height = (visible[0]?.length ?? 1) * (BOX_HEIGHT + BOX_GAP);
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-      {rounds.map((matches, i) => (
-        <View key={i} style={styles.column}>
-          <Text variant="label" style={styles.roundTitle}>
-            {roundLabel(i + 1, total, true)}
-          </Text>
-          <View style={[styles.matches, { height }]}>
-            {matches.map((m) => (
-              <MatchBox key={m.id} match={m} pilots={pilots} myId={myId} isFinal={i + 1 === total} />
-            ))}
-          </View>
+    <View style={styles.wrapper}>
+      {total > 2 ? (
+        <Chips
+          options={rounds.slice(0, total - 1).map((_, i) => ({ value: i + 1, label: roundLabel(i + 1, total, true) }))}
+          value={from}
+          onChange={setFrom}
+        />
+      ) : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {visible.map((matches, i) => {
+          const round = from + i;
+          const cell = height / matches.length;
+          return (
+            <View key={round} style={styles.round}>
+              <View style={styles.column}>
+                <Text variant="label" style={[styles.roundTitle, round === total && styles.finalTitle]}>
+                  {roundLabel(round, total, true)}
+                </Text>
+                <View style={{ height }}>
+                  {matches.map((m) => (
+                    <View key={m.id} style={[styles.cell, { height: cell }]}>
+                      <MatchBox
+                        match={m}
+                        pilots={pilots}
+                        myId={myId}
+                        isFinal={round === total}
+                        lapTime={tournament.format === 'lap_time'}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+              {round < total ? <Links count={matches.length / 2} cell={cell} height={height} /> : null}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Traits entre deux tours : une accolade par paire de duels, puis un trait vers le duel suivant. */
+function Links({ count, cell, height }: { count: number; cell: number; height: number }) {
+  return (
+    <View style={[styles.links, { height }]}>
+      {Array.from({ length: count }, (_, k) => (
+        <View key={k}>
+          <View style={[styles.brace, { top: (2 * k + 0.5) * cell, height: cell }]} />
+          <View style={[styles.stub, { top: (2 * k + 1) * cell }]} />
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -44,22 +94,34 @@ function MatchBox({
   pilots,
   myId,
   isFinal,
+  lapTime,
 }: {
   match: TournamentMatch;
   pilots: Map<string, Pilot>;
   myId: string;
   isFinal: boolean;
+  lapTime: boolean;
 }) {
   const mine = match.pilot_a === myId || match.pilot_b === myId;
   const live = !match.decided_at && !!match.challenge_id;
   // Le défi n'est lisible que par ses deux pilotes.
   const canOpen = mine && !!match.challenge_id && match.outcome !== 'forfeit';
+  const score = (side: 'a' | 'b') => {
+    if (match.outcome !== 'race') return null;
+    if (lapTime) {
+      const ms = side === 'a' ? match.a_best_lap_ms : match.b_best_lap_ms;
+      return ms ? formatLapTime(ms) : null;
+    }
+    const position = side === 'a' ? match.a_position : match.b_position;
+    return position ? `P${position}` : null;
+  };
 
   const box = (
-    <View style={[styles.box, live && styles.live, mine && live && styles.mine, isFinal && match.decided_at && styles.final]}>
-      <Line pilotId={match.pilot_a} match={match} pilots={pilots} myId={myId} />
+    <View style={[styles.box, live && styles.live, mine && live && styles.mine, isFinal && styles.final]}>
+      {live ? <View style={[styles.liveDot, mine && { backgroundColor: colors.orange }]} /> : null}
+      <Line pilotId={match.pilot_a} match={match} pilots={pilots} myId={myId} score={score('a')} />
       <View style={styles.divider} />
-      <Line pilotId={match.pilot_b} match={match} pilots={pilots} myId={myId} />
+      <Line pilotId={match.pilot_b} match={match} pilots={pilots} myId={myId} score={score('b')} />
     </View>
   );
 
@@ -80,11 +142,13 @@ function Line({
   match,
   pilots,
   myId,
+  score,
 }: {
   pilotId: string | null;
   match: TournamentMatch;
   pilots: Map<string, Pilot>;
   myId: string;
+  score: string | null;
 }) {
   const pilot = pilotId ? pilots.get(pilotId) : undefined;
   const won = !!match.decided_at && !!pilotId && match.winner_id === pilotId;
@@ -106,7 +170,9 @@ function Line({
         ]}>
         {pilot?.username ?? placeholder}
       </Text>
-      {won ? (
+      {score && pilot ? (
+        <Text style={[styles.score, won && styles.winner]}>{score}</Text>
+      ) : won ? (
         match.outcome === 'race' ? (
           <Icon name={icons.check} size={14} color={colors.neon} />
         ) : (
@@ -118,10 +184,27 @@ function Line({
 }
 
 const styles = StyleSheet.create({
-  scroll: { gap: spacing.md, paddingRight: spacing.lg },
+  wrapper: { gap: spacing.md },
+  scroll: { paddingRight: spacing.lg },
+  round: { flexDirection: 'row' },
   column: { width: COLUMN_WIDTH, gap: spacing.sm },
   roundTitle: { textAlign: 'center' },
-  matches: { justifyContent: 'space-around' },
+  finalTitle: { color: colors.neon },
+  cell: { justifyContent: 'center' },
+  // Décalé de la hauteur du titre de colonne (libellé + espace) pour s'aligner sur les cases.
+  links: { width: LINK_WIDTH, marginTop: 24 },
+  brace: {
+    position: 'absolute',
+    left: 0,
+    width: LINK_WIDTH / 2,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: LINE,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  stub: { position: 'absolute', left: LINK_WIDTH / 2, width: LINK_WIDTH / 2, height: 1, backgroundColor: LINE },
   box: {
     height: BOX_HEIGHT,
     borderRadius: radius.md,
@@ -133,7 +216,8 @@ const styles = StyleSheet.create({
   },
   live: { borderColor: colors.borderStrong },
   mine: { borderColor: colors.orange, backgroundColor: colors.orangeDim },
-  final: { borderColor: colors.neon },
+  final: { borderColor: colors.neon, backgroundColor: colors.selected },
+  liveDot: { position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.neon },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 4 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 24 },
   seed: { width: 18, fontSize: 11, color: colors.textMuted, textAlign: 'right' },
@@ -142,5 +226,6 @@ const styles = StyleSheet.create({
   winner: { color: colors.neon },
   loser: { color: colors.textMuted, textDecorationLine: 'line-through' },
   me: { fontWeight: '900' },
+  score: { fontSize: 12, fontWeight: '800', color: colors.textMuted, fontVariant: ['tabular-nums'] },
   outcome: { fontSize: 10, fontWeight: '900', color: colors.textMuted, letterSpacing: 1 },
 });

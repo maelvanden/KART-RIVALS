@@ -69,6 +69,10 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
         <View style={styles.supportBadge}>
           <Icon name={icons.support} size={22} color={colors.onNeon} />
         </View>
+      ) : c.kind === 'tournament' ? (
+        <View style={[styles.supportBadge, styles.tournamentBadge]}>
+          <Icon name={icons.trophy} size={22} color={colors.neon} />
+        </View>
       ) : (
         <Avatar username={c.title} url={c.avatar_url} size={44} borderColor={colors.borderStrong} />
       )}
@@ -83,7 +87,7 @@ function ConversationRow({ conversation: c }: { conversation: Conversation }) {
         <View style={styles.titleRow}>
           <Text variant="caption" numberOfLines={1} style={[styles.preview, unread && styles.previewUnread]}>
             {c.last_message ??
-              (c.kind === 'team' ? 'Canal de l’écurie ouvert' : c.kind === 'support' ? 'Une question ? Écris-nous' : 'Lance la conversation')}
+              (c.kind === 'team' ? 'Canal de l’écurie ouvert' : c.kind === 'support' ? 'Une question ? Écris-nous' : c.kind === 'tournament' ? 'Discussion du tournoi ouverte' : 'Lance la conversation')}
           </Text>
           {unread ? (
             <View style={styles.badge}>
@@ -117,6 +121,7 @@ const styles = StyleSheet.create({
   previewUnread: { color: colors.text },
   badge: { minWidth: 22, height: 22, borderRadius: radius.pill, backgroundColor: colors.neon, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   badgeText: { fontFamily: fonts.display, fontSize: 13, color: colors.onNeon },
+  tournamentBadge: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.neon },
   supportBadge: { width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.neon, alignItems: 'center', justifyContent: 'center' },
   error: { color: colors.danger },
 });

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Card } from '@/components/ui/card';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { eliminatedIn, isStillIn, matchLabel, myCurrentMatch, roundCount, statusLabel } from '@/features/tournaments/bracket';
 import { dateTimeFormat } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
@@ -33,6 +34,9 @@ export function TournamentCard({ tournament: t, myId }: { tournament: Tournament
     <Link href={{ pathname: '/tournament/[id]', params: { id: t.id } }} asChild>
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
         <Card style={[styles.card, mine?.urgent && styles.highlight]}>
+          <View style={styles.banner}>
+            <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={84} />
+          </View>
           <View style={styles.header}>
             <View style={[styles.status, { backgroundColor: mine?.urgent ? colors.orangeDim : t.status === 'registration' ? colors.neonDim : colors.surfaceAlt }]}>
               <Text style={[styles.statusText, { color: tone }]}>{mine?.text ?? statusLabel[t.status]}</Text>
@@ -65,7 +69,9 @@ export function TournamentCard({ tournament: t, myId }: { tournament: Tournament
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
-  card: { gap: spacing.sm },
+  card: { gap: spacing.sm, overflow: 'hidden' },
+  // Bord à bord en haut de la carte.
+  banner: { marginHorizontal: -spacing.lg, marginTop: -spacing.lg, marginBottom: spacing.xs },
   highlight: { borderColor: colors.orange },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   status: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },

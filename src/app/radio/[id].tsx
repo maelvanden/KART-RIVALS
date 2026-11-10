@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,6 +71,9 @@ export default function RadioScreen() {
   const [reporting, setReporting] = useState<Message | null>(null);
   const isTeam = conversation?.kind === 'team';
   const isSupport = conversation?.kind === 'support' || meta.data?.kind === 'support';
+  const tournament = meta.data?.tournament ?? null;
+  // Discussion à plusieurs : on affiche qui parle, comme dans le canal d'écurie.
+  const isGroup = isTeam || conversation?.kind === 'tournament' || !!tournament;
   const supportPilotId = meta.data?.supportPilotId ?? null;
   // Admin qui répond au nom de l'équipe.
   const amStaff = isSupport && !!supportPilotId && supportPilotId !== userId;
@@ -89,9 +92,14 @@ export default function RadioScreen() {
   const votes = usePollVotes(id, pollIds);
   const pinned = useMessage(meta.data?.pinnedMessageId, messages.data);
   // Canal d'écurie : seul le staff épingle. 1v1 : l'un ou l'autre.
-  const canPin = !isSupport && (!isTeam || isStaff(team.data?.members.find((m) => m.pilot.id === userId)?.role));
+  // Tournoi : seul l'organisateur.
+  const canPin =
+    !isSupport &&
+    (tournament
+      ? tournament.organizer_id === userId
+      : !isTeam || isStaff(team.data?.members.find((m) => m.pilot.id === userId)?.role));
 
-  const title = isSupport ? (amStaff ? `Support · ${titleParam ?? 'pilote'}` : TEAM_NAME) : (conversation?.title ?? 'Radio Paddock');
+  const title = isSupport ? (amStaff ? `Support · ${titleParam ?? 'pilote'}` : TEAM_NAME) : (conversation?.title ?? titleParam ?? 'Radio Paddock');
   const canSend = draft.trim().length > 0 && !send.isPending;
   const myLast = [...(messages.data ?? [])].reverse().find((m) => m.sender_id === userId);
   const seenBy = myLast ? (meta.data?.readers ?? []).filter((r) => r.last_read_at >= myLast.created_at) : [];
@@ -143,7 +151,23 @@ export default function RadioScreen() {
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      <Stack.Screen options={{ title }} />
+      <Stack.Screen
+        options={{
+          title,
+          // Discussion d'un tournoi : raccourci vers le tableau.
+          headerRight: tournament
+            ? () => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Voir le tournoi"
+                  hitSlop={10}
+                  onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: tournament.id } })}>
+                  <Icon name={icons.trophy} size={22} color={colors.neon} />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <CarbonBackdrop />
 
       {pinned ? (
@@ -179,7 +203,7 @@ export default function RadioScreen() {
                 message={item}
                 mine={mine}
                 // Nom de l'expéditeur au début d'une série, dans le canal d'écurie et la conversation support.
-                showSender={(isTeam || isSupport) && !mine && older?.sender_id !== item.sender_id}
+                showSender={(isGroup || isSupport) && !mine && older?.sender_id !== item.sender_id}
                 senderName={fromTeam(item) ? TEAM_NAME : undefined}
                 myId={userId}
                 votes={(votes.data ?? []).filter((v) => v.message_id === item.id)}
@@ -193,7 +217,7 @@ export default function RadioScreen() {
                 <View style={styles.seen}>
                   <Icon name={icons.seen} size={12} color={colors.neon} />
                   <Text style={styles.seenText}>
-                    {isTeam ? `Vu par ${seenBy.length === 1 ? seenBy[0].username : `${seenBy.length} pilotes`}` : 'Vu'}
+                    {isGroup ? `Vu par ${seenBy.length === 1 ? seenBy[0].username : `${seenBy.length} pilotes`}` : 'Vu'}
                   </Text>
                 </View>
               ) : null}
@@ -303,7 +327,7 @@ export default function RadioScreen() {
           ) : (
             <MenuItem
               icon={icons.pinned}
-              label={isTeam ? 'Épingler pour toute l’écurie' : 'Épingler'}
+              label={isTeam ? 'Épingler pour toute l’écurie' : tournament ? 'Épingler pour tout le tournoi' : 'Épingler'}
               onPress={() => (selected && pin.mutate(selected.id), setSelected(null))}
             />
           )}

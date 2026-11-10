@@ -45,6 +45,8 @@ export type ConversationMeta = {
   kind: Conversation['kind'] | null;
   /** Conversation support : le pilote qui l'a ouverte (les autres expéditeurs sont l'équipe). */
   supportPilotId: string | null;
+  /** Discussion d'un tournoi : son id et son organisateur (seul à épingler). */
+  tournament: { id: string; organizer_id: string } | null;
   pinnedMessageId: string | null;
   /** Les autres membres et jusqu'où ils ont lu. */
   readers: ConversationReader[];
@@ -67,12 +69,13 @@ export function useConversationMeta(conversationId: string | undefined) {
         return {
           kind: support ? 'support' : null,
           supportPilotId: support ? demoProfile.id : null,
+          tournament: null,
           pinnedMessageId: demoSocial.pinned[conversationId!] ?? null,
           readers,
         };
       }
       const [conversation, members] = await Promise.all([
-        supabase.from('conversations').select('kind, support_profile_id, pinned_message_id').eq('id', conversationId!).maybeSingle(),
+        supabase.from('conversations').select('kind, support_profile_id, pinned_message_id, tournament:tournaments (id, organizer_id)').eq('id', conversationId!).maybeSingle(),
         supabase
           .from('conversation_members')
           .select('profile_id, last_read_at, pilot:profiles (username)')
@@ -85,6 +88,7 @@ export function useConversationMeta(conversationId: string | undefined) {
       return {
         kind: conversation.data?.kind ?? null,
         supportPilotId: conversation.data?.support_profile_id ?? null,
+        tournament: (conversation.data?.tournament as unknown as ConversationMeta['tournament']) ?? null,
         pinnedMessageId: conversation.data?.pinned_message_id ?? null,
         readers: rows.map((r) => ({ profile_id: r.profile_id, last_read_at: r.last_read_at, username: r.pilot?.username ?? 'Pilote' })),
       };

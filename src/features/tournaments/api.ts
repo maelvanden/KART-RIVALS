@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/features/auth/auth-provider';
 import { tournamentError } from '@/features/tournaments/errors';
@@ -8,10 +10,13 @@ import type { RaceFormat, Tournament, TournamentSize } from '@/types/models';
 
 const TOURNAMENT_SELECT = `
   id, organizer_id, name, size, format, starts_at, message, status, champion_id, runner_up_id,
-  created_at, started_at, completed_at,
-  track:tracks (id, name, city),
+  created_at, started_at, completed_at, banner_url,
+  track:tracks (id, name, city, cover_url),
   entries:tournament_entries (pilot_id, seed, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
-  matches:tournament_matches (id, round, slot, pilot_a, pilot_b, challenge_id, winner_id, outcome, decided_at)
+  matches:tournament_matches (
+    id, round, slot, pilot_a, pilot_b, challenge_id, winner_id, outcome, decided_at,
+    a_position, b_position, a_best_lap_ms, b_best_lap_ms
+  )
 `;
 
 const DEMO_ERROR = 'Mode démo : les tournois sont disponibles avec un vrai compte.';
@@ -74,6 +79,8 @@ export function useTournament(id: string | undefined) {
   return useQuery({
     queryKey: ['tournaments', 'detail', id],
     enabled: !!id,
+    // Tableau en direct : les résultats des autres duels arrivent sans tirer pour rafraîchir.
+    refetchInterval: (query) => (query.state.data?.status === 'running' ? 30_000 : false),
     queryFn: async (): Promise<Tournament | null> => {
       if (isDemoMode) return null;
       const { data, error } = await supabase.from('tournaments').select(TOURNAMENT_SELECT).eq('id', id!).maybeSingle();
@@ -151,6 +158,88 @@ async function rpc(fn: string, args: Record<string, unknown>) {
   const { data, error } = await supabase.rpc(fn, args);
   if (error) throw tournamentError(error);
   return data;
+}
+
+// ---------- Bannière ----------
+
+/** Format de la bannière : large, comme un en-tête. */
+const BANNER = { width: 1280, height: 640 };
+
+/** Ouvre la galerie, recadrage 2:1. Renvoie l'URI locale, ou null si annulé. */
+export async function pickBanner(): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) throw new Error('Autorise l’accès à tes photos pour choisir une bannière.');
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [2, 1],
+    quality: 0.8,
+  });
+  return result.canceled ? null : result.assets[0].uri;
+}
+
+/** Redimensionne en JPEG léger et envoie dans tournament-banners/<mon id>/<id du tournoi>.jpg. */
+async function uploadBanner(userId: string, tournamentId: string, localUri: string): Promise<string> {
+  const context = ImageManipulator.manipulate(localUri);
+  context.resize({ width: BANNER.width });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  const blob = await (await fetch(saved.uri)).arrayBuffer();
+  const path = `${userId}/${tournamentId}.jpg`;
+  const { error } = await supabase.storage.from('tournament-banners').upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from('tournament-banners').getPublicUrl(path);
+  // Même chemin à chaque envoi : le paramètre de version force le rafraîchissement des caches.
+  return `${data.publicUrl}?v=${Date.now()}`;
+}
+
+export type TournamentEdit = {
+  id: string;
+  name?: string;
+  startsAt?: string | null;
+  message?: string | null;
+  /** URI locale d'une nouvelle bannière, ou null pour la retirer ; absent = inchangée. */
+  bannerUri?: string | null;
+};
+
+/** Modification par l'organisateur : seuls les champs fournis changent. */
+export function useUpdateTournament() {
+  const { userId } = useAuth();
+  const invalidate = useInvalidateTournaments();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (edit: TournamentEdit) => {
+      if (isDemoMode) throw new Error(DEMO_ERROR);
+      const data: Record<string, string> = {};
+      if (edit.name !== undefined) data.name = edit.name;
+      if (edit.startsAt !== undefined) data.starts_at = edit.startsAt ?? '';
+      if (edit.message !== undefined) data.message = edit.message ?? '';
+      if (edit.bannerUri !== undefined) {
+        data.banner_url = edit.bannerUri ? await uploadBanner(userId!, edit.id, edit.bannerUri) : '';
+      }
+      await rpc('update_tournament', { p_tournament_id: edit.id, p_data: data });
+    },
+    // Le nom et la bannière s'affichent aussi dans la liste de la Radio.
+    onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ['conversations'] })]),
+  });
+}
+
+// ---------- Discussion ----------
+
+/** Conversation Radio du tournoi : null tant que le pilote n'est pas inscrit (seuls les inscrits la lisent). */
+export function useTournamentConversation(tournamentId: string | undefined, registered: boolean) {
+  return useQuery({
+    queryKey: ['tournaments', 'conversation', tournamentId, registered],
+    enabled: !!tournamentId && registered && !isDemoMode,
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase.from('conversations').select('id').eq('tournament_id', tournamentId!).maybeSingle();
+      if (error) throw error;
+      return data?.id ?? null;
+    },
+  });
 }
 
 export type NewTournament = {
