@@ -26,6 +26,8 @@ import { PaddockHero } from '@/features/profile/components/paddock-hero';
 import { StatTiles } from '@/features/profile/components/stat-tiles';
 import { useMyRaces } from '@/features/races/api';
 import { raceNeedsMe, raceStep } from '@/features/races/state';
+import { usePilotTrophies } from '@/features/tournaments/api';
+import { TrophyCabinet } from '@/features/tournaments/components/trophy-cabinet';
 import { colors, radius, spacing } from '@/theme';
 
 /** Le Paddock : tableau de bord du pilote connecté. */
@@ -36,6 +38,7 @@ export default function PaddockScreen() {
   const matches = usePilotMatches(profile.data?.id);
   const badges = useBadgeStats(profile.data?.id);
   const laps = usePilotLapRecords(profile.data?.id);
+  const trophies = usePilotTrophies(profile.data?.id);
   const progress = useMyLapProgress();
   const points = useMyPoints();
   const challenges = useMyChallenges();
@@ -60,6 +63,7 @@ export default function PaddockScreen() {
         matches.refetch();
         badges.refetch();
         laps.refetch();
+        trophies.refetch();
         progress.refetch();
         points.refetch();
         challenges.refetch();
@@ -131,6 +135,7 @@ export default function PaddockScreen() {
           <MissionsCard />
           <CommunityCard />
           <VirtualGarage profileId={p.id} editable />
+          {trophies.data ? <TrophyCabinet trophies={trophies.data} /> : null}
           {badges.data ? <BadgesCard stats={badges.data} /> : null}
           {history.data && history.data.length > 1 ? <EloChart points={history.data} /> : null}
           {progress.data ? <LapProgressCard points={progress.data} /> : null}

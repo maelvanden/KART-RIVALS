@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -23,6 +23,9 @@ import { ResultForm } from '@/features/challenges/components/result-form';
 import { ResultSummary } from '@/features/challenges/components/result-summary';
 import { challengeStep } from '@/features/challenges/state';
 import { useAskReviewAfterWin } from '@/features/review/ask-review';
+import { useForfeitTournamentMatch, useTournamentMatchForChallenge } from '@/features/tournaments/api';
+import { matchLabel, roundCount } from '@/features/tournaments/bracket';
+import { confirmAction } from '@/lib/confirm';
 import { colors, spacing } from '@/theme';
 
 export default function ChallengeScreen() {
@@ -34,13 +37,16 @@ export default function ChallengeScreen() {
   const submit = useSubmitResult();
   const confirm = useConfirmMatch();
   const dispute = useDisputeMatch();
+  const forfeit = useForfeitTournamentMatch();
   const [disputing, setDisputing] = useState(false);
   const [reason, setReason] = useState('');
 
   const c = challenge.data;
   const isDone = c?.status === 'completed' || c?.match?.status === 'confirmed';
   const eloDelta = useMatchEloDelta(c?.match?.id, isDone);
-  const actionError = [respond, cancel, submit, confirm, dispute].find((m) => m.error)?.error as Error | undefined;
+  const bracketMatch = useTournamentMatchForChallenge(c?.id, c?.tournament_id);
+  const tm = bracketMatch.data;
+  const actionError = [respond, cancel, submit, confirm, dispute, forfeit].find((m) => m.error)?.error as Error | undefined;
   // Victoire validée : bon moment pour demander une note App Store.
   const won = !!c?.match && c.match.status === 'confirmed' && !!userId && c.match.winner_id === userId;
   const confirmedAt = [c?.match?.challenger_confirmed_at, c?.match?.opponent_confirmed_at].filter(Boolean).sort().at(-1) ?? null;
@@ -56,6 +62,14 @@ export default function ChallengeScreen() {
   return (
     <Screen safeTop={false} refreshing={challenge.isRefetching} onRefresh={challenge.refetch}>
       <ChallengeCard challenge={c} myId={userId} />
+
+      {tm ? (
+        <Button
+          title={`${matchLabel(tm.round, roundCount(tm.tournament.size))} · voir le tableau`}
+          variant="ghost"
+          onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: tm.tournament.id } })}
+        />
+      ) : null}
 
       {step === 'awaiting_my_answer' ? (
         <View style={styles.actions}>
@@ -152,7 +166,23 @@ export default function ChallengeScreen() {
 
       {actionError ? <Text style={{ color: colors.danger }}>{actionError.message}</Text> : null}
 
-      {step === 'awaiting_their_answer' || step === 'to_race' ? (
+      {c.tournament_id && step === 'to_race' && tm && !tm.decided_at && tm.tournament.status === 'running' ? (
+        <Button
+          title="Abandonner le duel"
+          variant="quiet"
+          loading={forfeit.isPending}
+          onPress={() =>
+            confirmAction(
+              'Abandonner ce duel ?',
+              `${rival.username} sera qualifié pour le tour suivant du tournoi.`,
+              'Abandonner',
+              () => forfeit.mutate(tm.id),
+            )
+          }
+        />
+      ) : null}
+
+      {!c.tournament_id && (step === 'awaiting_their_answer' || step === 'to_race') ? (
         <Button
           title="Annuler le défi"
           variant="quiet"

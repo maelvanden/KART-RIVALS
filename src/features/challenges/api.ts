@@ -5,10 +5,11 @@ import { demoChallenges, demoEloHistory, demoNearby, demoProfile, demoTracks, is
 import { supabase } from '@/lib/supabase';
 import { isExpired } from '@/features/challenges/state';
 import { socialError } from '@/features/social/errors';
+import { tournamentError } from '@/features/tournaments/errors';
 import type { Challenge, Match, RaceFormat } from '@/types/models';
 
 const CHALLENGE_SELECT = `
-  id, challenger_id, opponent_id, status, format, scheduled_at, message, created_at, expires_at,
+  id, challenger_id, opponent_id, status, format, scheduled_at, message, created_at, expires_at, tournament_id,
   challenger:profiles!challenges_challenger_id_fkey (id, username, elo, rank),
   opponent:profiles!challenges_opponent_id_fkey (id, username, elo, rank),
   track:tracks (id, name, city),
@@ -70,6 +71,8 @@ function useInvalidateChallenges() {
       queryClient.invalidateQueries({ queryKey: ['profile'] }),
       queryClient.invalidateQueries({ queryKey: ['elo-history'] }),
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+      // Un duel de tournoi validé fait avancer le tableau.
+      queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
     ]);
 }
 
@@ -122,7 +125,7 @@ export function useCancelChallenge() {
     mutationFn: async (id: string) => {
       if (isDemoMode) return demoUpdate(id, (c) => ({ ...c, status: 'cancelled' }));
       const { error } = await supabase.rpc('cancel_challenge', { p_challenge_id: id });
-      if (error) throw error;
+      if (error) throw tournamentError(error);
     },
     onSuccess: invalidate,
   });
@@ -144,7 +147,7 @@ export function useSubmitResult() {
         p_challenger_best_lap_ms: result.format === 'lap_time' ? result.challengerLapMs : null,
         p_opponent_best_lap_ms: result.format === 'lap_time' ? result.opponentLapMs : null,
       });
-      if (error) throw error;
+      if (error) throw tournamentError(error); // Égalité refusée en tournoi.
     },
     onSuccess: invalidate,
   });

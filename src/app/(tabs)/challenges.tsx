@@ -12,14 +12,19 @@ import { useMyRaces } from '@/features/races/api';
 import { RaceCard } from '@/features/races/components/race-card';
 import { raceStep } from '@/features/races/state';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
+import { useMyTournaments, useOpenTournaments } from '@/features/tournaments/api';
+import { TournamentCard } from '@/features/tournaments/components/tournament-card';
+import { Text } from '@/components/ui/text';
 
-type Filter = 'received' | 'sent' | 'races';
+type Filter = 'received' | 'sent' | 'races' | 'tournaments';
 
 export default function ChallengesScreen() {
   const { userId } = useAuth();
   const [filter, setFilter] = useState<Filter>('received');
   const challenges = useMyChallenges();
   const races = useMyRaces();
+  const myTournaments = useMyTournaments();
+  const openTournaments = useOpenTournaments();
 
   const list = (challenges.data ?? []).filter((c) =>
     filter === 'received' ? c.opponent_id === userId : c.challenger_id === userId,
@@ -27,7 +32,10 @@ export default function ChallengesScreen() {
   // Les courses closes (refusées, annulées) n'encombrent pas la liste.
   const raceList = (races.data ?? []).filter((r) => userId && raceStep(r, userId) !== 'closed');
 
-  const active = filter === 'races' ? races : challenges;
+  // Tournois ouverts où je ne suis pas encore inscrit (les miens sont déjà listés au-dessus).
+  const joinable = (openTournaments.data ?? []).filter((t) => !t.entries.some((e) => e.pilot_id === userId));
+
+  const active = filter === 'races' ? races : filter === 'tournaments' ? myTournaments : challenges;
 
   return (
     <Screen subtitle="Grille de départ" title="Défis" refreshing={active.isRefetching} onRefresh={active.refetch}>
@@ -36,12 +44,33 @@ export default function ChallengesScreen() {
           { value: 'received', label: 'Reçus' },
           { value: 'sent', label: 'Envoyés' },
           { value: 'races', label: 'Courses' },
+          { value: 'tournaments', label: 'Tournois' },
         ]}
         value={filter}
         onChange={setFilter}
       />
 
-      {filter === 'races' ? (
+      {filter === 'tournaments' ? (
+        <>
+          <Button title="Organiser un tournoi" onPress={() => router.push('/tournament/new')} />
+          {myTournaments.isPending ? <Loading /> : null}
+          {myTournaments.error ? <ErrorState error={myTournaments.error} /> : null}
+          {(myTournaments.data ?? []).map((t) => (
+            <TournamentCard key={t.id} tournament={t} myId={userId!} />
+          ))}
+          <Text variant="label">Inscriptions ouvertes</Text>
+          {openTournaments.error ? <ErrorState error={openTournaments.error} /> : null}
+          {openTournaments.data && joinable.length === 0 ? (
+            <EmptyState
+              title="Aucun tournoi ouvert"
+              message="Organise le premier : un tableau de 8 ou 16 pilotes sur ton circuit, et un trophée pour le vainqueur."
+            />
+          ) : null}
+          {joinable.map((t) => (
+            <TournamentCard key={t.id} tournament={t} myId={userId!} />
+          ))}
+        </>
+      ) : filter === 'races' ? (
         <>
           <Button title="Organiser une course" onPress={() => router.push('/race/new')} />
           {TIME_ATTACK_ENABLED ? (
