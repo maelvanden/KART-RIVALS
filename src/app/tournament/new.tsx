@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { useCanManageTrack } from '@/features/admin/api';
 import { useMyProfile } from '@/features/profile/api';
 import { useCreateTournament, useUpdateTournament } from '@/features/tournaments/api';
 import { minPilotsToStart, sizeSummary, TOURNAMENT_SIZES } from '@/features/tournaments/bracket';
@@ -40,10 +41,16 @@ export default function NewTournamentScreen() {
   const [message, setMessage] = useState('');
   const [banner, setBanner] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [prize, setPrize] = useState('');
+  const [official, setOfficial] = useState(true);
+  const [participate, setParticipate] = useState(false);
   const [bannerFailed, setBannerFailed] = useState<string | null>(null);
 
   const chosenTrack = trackId === undefined ? (profile.data?.home_track_id ?? null) : trackId;
   const track = tracks.data?.find((t) => t.id === chosenTrack) ?? null;
+  // Admin de ce karting : le tournoi peut être officiel (choix proposé, coché par défaut).
+  const canBeOfficial = useCanManageTrack(chosenTrack ?? undefined);
+  const isOfficial = canBeOfficial && official;
   const validName = name.trim().length >= 3;
   const pending = create.isPending || update.isPending;
 
@@ -56,7 +63,10 @@ export default function NewTournamentScreen() {
       format,
       startsAt: toScheduledAt(day, hour),
       message: message.trim() || null,
-      isPrivate,
+      isPrivate: isPrivate && !isOfficial,
+      prize: prize.trim() || null,
+      isOfficial,
+      participate: isOfficial ? participate : true,
     });
     if (banner) {
       try {
@@ -69,7 +79,7 @@ export default function NewTournamentScreen() {
     }
     router.replace({ pathname: '/tournament/[id]', params: { id } });
     // Tournoi privé : personne ne le voit tant que personne n'est invité.
-    if (isPrivate) router.push({ pathname: '/tournament/invite', params: { id } });
+    if (isPrivate && !isOfficial) router.push({ pathname: '/tournament/invite', params: { id } });
   }
 
   if (bannerFailed) {
@@ -118,9 +128,47 @@ export default function NewTournamentScreen() {
         </Text>
       </Section>
 
-      <Section label="Accès">
-        <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
-      </Section>
+      {canBeOfficial ? (
+        <Section label="Tournoi du karting">
+          <Segmented
+            options={[
+              { value: 'official', label: 'Officiel' },
+              { value: 'personal', label: 'Personnel' },
+            ]}
+            value={official ? 'official' : 'personal'}
+            onChange={(v) => setOfficial(v === 'official')}
+          />
+          <Text variant="caption">
+            {official
+              ? `Organisé au nom de ${track?.name ?? 'ton karting'} : badge « Officiel », mis en avant dans les listes et annoncé aux pilotes du circuit qui acceptent les notifications.`
+              : 'Un tournoi entre pilotes comme un autre, sans badge ni mise en avant.'}
+          </Text>
+          {official ? (
+            <Segmented
+              options={[
+                { value: 'referee', label: 'J’arbitre' },
+                { value: 'drive', label: 'Je roule aussi' },
+              ]}
+              value={participate ? 'drive' : 'referee'}
+              onChange={(v) => setParticipate(v === 'drive')}
+            />
+          ) : null}
+        </Section>
+      ) : null}
+
+      {isOfficial ? null : (
+        <Section label="Accès">
+          <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
+        </Section>
+      )}
+
+      <Input
+        label="Lot du vainqueur (optionnel)"
+        value={prize}
+        onChangeText={setPrize}
+        maxLength={120}
+        placeholder="Une session offerte, un casque…"
+      />
 
       <Section label="Classement des duels">
         <Segmented

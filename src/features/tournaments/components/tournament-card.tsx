@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Card } from '@/components/ui/card';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { OfficialTag } from '@/features/tournaments/components/official-tag';
 import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { eliminatedIn, isStillIn, matchLabel, myCurrentMatch, roundCount, statusLabel } from '@/features/tournaments/bracket';
 import { dateTimeFormat } from '@/lib/format';
@@ -25,7 +26,16 @@ function myStatus(t: Tournament, myId: string): { text: string; urgent: boolean 
   return out ? { text: `Éliminé · ${matchLabel(out.round, roundCount(t.size)).toLowerCase()}`, urgent: false } : null;
 }
 
-export function TournamentCard({ tournament: t, myId }: { tournament: Tournament; myId: string }) {
+type Props = {
+  tournament: Tournament;
+  myId: string;
+  /** Distance au pilote, affichée à côté du circuit (liste « autour de moi »). */
+  km?: number | null;
+  /** Carte étroite pour une rangée défilante. */
+  width?: number;
+};
+
+export function TournamentCard({ tournament: t, myId, km, width }: Props) {
   const mine = myStatus(t, myId);
   const champion = t.champion_id ? t.entries.find((e) => e.pilot_id === t.champion_id)?.pilot : undefined;
   const tone = mine?.urgent ? colors.orange : t.status === 'registration' ? colors.neon : colors.textMuted;
@@ -33,9 +43,11 @@ export function TournamentCard({ tournament: t, myId }: { tournament: Tournament
   return (
     <Link href={{ pathname: '/tournament/[id]', params: { id: t.id } }} asChild>
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
-        <Card style={[styles.card, mine?.urgent && styles.highlight]}>
+        <Card style={[styles.card, t.is_official && styles.official, mine?.urgent && styles.highlight, width ? { width } : null]}>
           <View style={styles.banner}>
-            <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={84} />
+            <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={84}>
+              {t.is_official ? <OfficialTag /> : null}
+            </TournamentBanner>
           </View>
           <View style={styles.header}>
             <View style={[styles.status, { backgroundColor: mine?.urgent ? colors.orangeDim : t.status === 'registration' ? colors.neonDim : colors.surfaceAlt }]}>
@@ -55,12 +67,21 @@ export function TournamentCard({ tournament: t, myId }: { tournament: Tournament
               {t.name}
             </Text>
           </View>
-          <Text variant="caption">
+          <Text variant="caption" numberOfLines={width ? 2 : undefined}>
             {t.is_private ? '🔒 Privé · ' : ''}
             {t.track.name} · {t.track.city}
+            {km != null ? ` · à ${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km` : ''}
             {t.starts_at ? ` · ${dateTimeFormat.format(new Date(t.starts_at))}` : ''}
             {t.format === 'lap_time' ? ' · meilleur tour' : ' · position'}
           </Text>
+          {t.prize && !champion ? (
+            <View style={styles.prize}>
+              <Icon name={icons.gift} size={15} color={colors.neon} />
+              <Text numberOfLines={1} style={styles.prizeText}>
+                {t.prize}
+              </Text>
+            </View>
+          ) : null}
           {champion ? <Text style={styles.champion}>Vainqueur : {champion.username}</Text> : null}
         </Card>
       </Pressable>
@@ -73,7 +94,10 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm, overflow: 'hidden' },
   // Bord à bord en haut de la carte.
   banner: { marginHorizontal: -spacing.lg, marginTop: -spacing.lg, marginBottom: spacing.xs },
+  official: { borderColor: colors.neon },
   highlight: { borderColor: colors.orange },
+  prize: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  prizeText: { flex: 1, color: colors.neon, fontWeight: '700', fontSize: 13 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   status: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },

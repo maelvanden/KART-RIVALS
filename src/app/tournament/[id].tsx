@@ -36,6 +36,7 @@ import {
   statusLabel,
 } from '@/features/tournaments/bracket';
 import { Bracket } from '@/features/tournaments/components/bracket';
+import { OfficialTag } from '@/features/tournaments/components/official-tag';
 import { Podium } from '@/features/tournaments/components/podium';
 import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { confirmAction } from '@/lib/confirm';
@@ -59,7 +60,8 @@ export default function TournamentScreen() {
 
   const t = tournament.data;
   const registered = !!t && !!userId && t.entries.some((e) => e.pilot_id === userId);
-  const chat = useTournamentConversation(t?.id, registered);
+  // L'organisateur d'un tournoi officiel suit la discussion sans forcément être inscrit.
+  const chat = useTournamentConversation(t?.id, registered || (!!t && t.organizer_id === userId));
   const unread = useConversations().data?.find((c) => c.id === chat.data)?.unread ?? 0;
 
   if (tournament.isPending) return <Screen safeTop={false}><Loading /></Screen>;
@@ -99,6 +101,7 @@ export default function TournamentScreen() {
       <Stack.Screen options={{ title: 'Tournoi' }} />
 
       <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={200}>
+        {t.is_official ? <OfficialTag /> : null}
         <View style={[styles.status, t.status === 'registration' ? styles.statusOpen : t.status === 'running' ? styles.statusLive : null]}>
           <Text style={[styles.statusText, t.status === 'registration' && { color: colors.onNeon }]}>{statusLabel[t.status]}</Text>
         </View>
@@ -134,8 +137,18 @@ export default function TournamentScreen() {
           <Quick icon={icons.edit} label="Modifier" onPress={() => router.push({ pathname: '/tournament/edit', params: { id: t.id } })} />
         ) : null}
       </View>
-      {!registered ? (
+      {!registered && !isOrganizer ? (
         <Text variant="caption">La discussion du tournoi est réservée aux inscrits.</Text>
+      ) : null}
+
+      {t.prize ? (
+        <Card style={styles.prize}>
+          <Icon name={icons.gift} size={26} color={colors.neon} />
+          <View style={styles.prizeBody}>
+            <Text variant="label">À gagner</Text>
+            <Text style={styles.prizeText}>{t.prize}</Text>
+          </View>
+        </Card>
       ) : null}
 
       {myInvite && t.status === 'registration' ? (
@@ -160,7 +173,11 @@ export default function TournamentScreen() {
       <Card style={styles.info}>
         {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : <Meta icon={icons.clock} text="Date à définir" />}
         <Meta icon={icons.bolt} text={`${sizeSummary(t.size)} · ${t.format === 'lap_time' ? 'duels au meilleur tour' : 'duels à la position'}`} />
-        {organizer ? <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} /> : null}
+        {t.is_official ? (
+          <Meta icon={icons.verified} text={`Tournoi officiel de ${t.track.name}${isOrganizer ? ' · tu l’organises' : ''}`} />
+        ) : organizer ? (
+          <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} />
+        ) : null}
         {t.message ? <Text style={styles.message}>« {t.message} »</Text> : null}
       </Card>
 
@@ -216,7 +233,7 @@ export default function TournamentScreen() {
           {!registered && !full && !myInvite ? (
             <Button title="M’inscrire" loading={join.isPending} onPress={() => join.mutate(t.id)} />
           ) : null}
-          {registered && !isOrganizer ? (
+          {registered && (!isOrganizer || t.is_official) ? (
             <Button title="Me désinscrire" variant="secondary" loading={leave.isPending} onPress={() => leave.mutate(t.id)} />
           ) : null}
           {isOrganizer ? (
@@ -520,6 +537,9 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, fontWeight: '900', color: colors.onNeon },
   info: { gap: spacing.sm },
+  prize: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderColor: colors.neon },
+  prizeBody: { flex: 1, gap: 2 },
+  prizeText: { fontSize: 17, fontWeight: '800', color: colors.neon },
   invite: { gap: spacing.md, borderColor: colors.neon },
   inviteText: { fontWeight: '700' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

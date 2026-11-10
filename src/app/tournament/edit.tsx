@@ -41,6 +41,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
   const [banner, setBanner] = useState<string | null | undefined>(undefined);
 
   const [isPrivate, setIsPrivate] = useState(t.is_private);
+  const [prize, setPrize] = useState(t.prize ?? '');
 
   const validName = name.trim().length >= 3;
 
@@ -49,6 +50,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
     if (day !== undefined) edit.startsAt = toScheduledAt(day, hour);
     if (banner !== undefined) edit.bannerUri = banner;
     if (isPrivate !== t.is_private) edit.isPrivate = isPrivate;
+    if (prize.trim() !== (t.prize ?? '')) edit.prize = prize.trim() || null;
     await update.mutateAsync(edit);
     router.back();
   }
@@ -62,7 +64,9 @@ function Form({ tournament: t }: { tournament: Tournament }) {
 
       <Input label="Nom du tournoi" value={name} onChangeText={setName} maxLength={60} />
 
-      {t.status === 'registration' ? (
+      <Input label="Lot du vainqueur" value={prize} onChangeText={setPrize} maxLength={120} placeholder="Une session offerte, un casque…" />
+
+      {t.status === 'registration' && !t.is_official ? (
         <View style={styles.section}>
           <Text variant="label">Accès</Text>
           <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />

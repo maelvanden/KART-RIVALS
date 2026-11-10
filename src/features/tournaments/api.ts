@@ -10,7 +10,7 @@ import type { RaceFormat, Tournament, TournamentInvite, TournamentSize } from '@
 
 const TOURNAMENT_SELECT = `
   id, organizer_id, name, size, format, starts_at, message, status, champion_id, runner_up_id,
-  created_at, started_at, completed_at, banner_url, is_private,
+  created_at, started_at, completed_at, banner_url, is_private, prize, is_official,
   track:tracks (id, name, city, cover_url),
   entries:tournament_entries (pilot_id, seed, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
   matches:tournament_matches (
@@ -20,6 +20,9 @@ const TOURNAMENT_SELECT = `
 `;
 
 const DEMO_ERROR = 'Mode démo : les tournois sont disponibles avec un vrai compte.';
+
+/** Les tournois officiels d'abord, puis l'ordre reçu. */
+const officialFirst = (list: Tournament[]) => [...list].sort((a, b) => Number(b.is_official) - Number(a.is_official));
 
 /** Inscrits rangés par tête de série (puis ordre d'inscription tant que le tableau n'est pas tiré). */
 const sortEntries = (t: Tournament): Tournament => ({
@@ -40,14 +43,34 @@ export function useOpenTournaments() {
         .select(TOURNAMENT_SELECT)
         .eq('status', 'registration')
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(60);
       if (error) throw error;
-      return (data as unknown as Tournament[]).map(sortEntries);
+      return officialFirst((data as unknown as Tournament[]).map(sortEntries));
     },
   });
 }
 
-/** Tournois où le pilote connecté est inscrit (hors annulés). */
+/** Fiche circuit : tournois à venir ou en cours sur ce circuit (les privés seulement pour qui y a accès). */
+export function useTrackTournaments(trackId: string | undefined) {
+  return useQuery({
+    queryKey: ['tournaments', 'track', trackId],
+    enabled: !!trackId,
+    queryFn: async (): Promise<Tournament[]> => {
+      if (isDemoMode) return [];
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select(TOURNAMENT_SELECT)
+        .eq('track_id', trackId!)
+        .in('status', ['registration', 'running'])
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return officialFirst((data as unknown as Tournament[]).map(sortEntries));
+    },
+  });
+}
+
+/** Tournois où le pilote connecté est inscrit, ou qu'il organise (hors annulés). */
 export function useMyTournaments() {
   const { userId } = useAuth();
   return useQuery({
@@ -62,11 +85,20 @@ export function useMyTournaments() {
         .order('joined_at', { ascending: false })
         .limit(30);
       if (idsError) throw idsError;
-      if (mine.length === 0) return [];
+      // Un karting organise son tournoi officiel sans forcément y rouler.
+      const { data: organized, error: organizedError } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('organizer_id', userId!)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (organizedError) throw organizedError;
+      const ids = [...new Set([...mine.map((e) => e.tournament_id), ...organized.map((t) => t.id)])];
+      if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('tournaments')
         .select(TOURNAMENT_SELECT)
-        .in('id', mine.map((e) => e.tournament_id))
+        .in('id', ids)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -205,6 +237,7 @@ export type TournamentEdit = {
   bannerUri?: string | null;
   /** Modifiable tant que les inscriptions sont ouvertes. */
   isPrivate?: boolean;
+  prize?: string | null;
 };
 
 /** Modification par l'organisateur : seuls les champs fournis changent. */
@@ -217,6 +250,7 @@ export function useUpdateTournament() {
       if (isDemoMode) throw new Error(DEMO_ERROR);
       const data: Record<string, string | boolean> = {};
       if (edit.isPrivate !== undefined) data.is_private = edit.isPrivate;
+      if (edit.prize !== undefined) data.prize = edit.prize ?? '';
       if (edit.name !== undefined) data.name = edit.name;
       if (edit.startsAt !== undefined) data.starts_at = edit.startsAt ?? '';
       if (edit.message !== undefined) data.message = edit.message ?? '';
@@ -253,6 +287,11 @@ export type NewTournament = {
   startsAt: string | null;
   message: string | null;
   isPrivate: boolean;
+  prize: string | null;
+  /** Tournoi officiel du karting (réservé aux admins de la fiche circuit). */
+  isOfficial: boolean;
+  /** Tournoi officiel : l'organisateur roule-t-il aussi ? (toujours inscrit sinon) */
+  participate: boolean;
 };
 
 export function useCreateTournament() {
@@ -267,6 +306,9 @@ export function useCreateTournament() {
         p_starts_at: input.startsAt,
         p_message: input.message,
         p_is_private: input.isPrivate,
+        p_prize: input.prize,
+        p_is_official: input.isOfficial,
+        p_participate: input.participate,
       }),
     onSuccess: invalidate,
   });

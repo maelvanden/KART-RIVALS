@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { AgendaBanner } from '@/features/events/components/agenda-banner';
 import { useApproxLocation } from '@/features/nearby/api';
+import { NearbyTournaments } from '@/features/tournaments/components/nearby-tournaments';
 import { useMyProfile } from '@/features/profile/api';
 import { useTrackRecords, useTracksMap } from '@/features/tracks/api';
 import { TrackMap } from '@/features/tracks/components/track-map';
@@ -116,6 +117,7 @@ export default function TracksScreen() {
   return (
     <Screen subtitle={place} title="Circuits" refreshing={tracks.isRefetching} onRefresh={tracks.refetch}>
       <AgendaBanner />
+      <NearbyTournaments />
       {tracks.isPending ? <Loading /> : null}
       {tracks.error ? <ErrorState error={tracks.error} /> : null}
 

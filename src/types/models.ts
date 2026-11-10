@@ -410,6 +410,10 @@ export type Tournament = {
   banner_url: string | null;
   /** Privé : visible et ouvert aux seuls invités. */
   is_private: boolean;
+  /** Lot affiché pour le vainqueur. */
+  prize: string | null;
+  /** Organisé par le karting lui-même (admin de la fiche circuit) : mis en avant, toujours public. */
+  is_official: boolean;
   track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
   matches: TournamentMatch[];
