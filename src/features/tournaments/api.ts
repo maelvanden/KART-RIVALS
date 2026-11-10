@@ -6,11 +6,11 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { tournamentError } from '@/features/tournaments/errors';
 import { isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
-import type { RaceFormat, Tournament, TournamentSize } from '@/types/models';
+import type { RaceFormat, Tournament, TournamentInvite, TournamentSize } from '@/types/models';
 
 const TOURNAMENT_SELECT = `
   id, organizer_id, name, size, format, starts_at, message, status, champion_id, runner_up_id,
-  created_at, started_at, completed_at, banner_url,
+  created_at, started_at, completed_at, banner_url, is_private,
   track:tracks (id, name, city, cover_url),
   entries:tournament_entries (pilot_id, seed, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
   matches:tournament_matches (
@@ -203,6 +203,8 @@ export type TournamentEdit = {
   message?: string | null;
   /** URI locale d'une nouvelle bannière, ou null pour la retirer ; absent = inchangée. */
   bannerUri?: string | null;
+  /** Modifiable tant que les inscriptions sont ouvertes. */
+  isPrivate?: boolean;
 };
 
 /** Modification par l'organisateur : seuls les champs fournis changent. */
@@ -213,7 +215,8 @@ export function useUpdateTournament() {
   return useMutation({
     mutationFn: async (edit: TournamentEdit) => {
       if (isDemoMode) throw new Error(DEMO_ERROR);
-      const data: Record<string, string> = {};
+      const data: Record<string, string | boolean> = {};
+      if (edit.isPrivate !== undefined) data.is_private = edit.isPrivate;
       if (edit.name !== undefined) data.name = edit.name;
       if (edit.startsAt !== undefined) data.starts_at = edit.startsAt ?? '';
       if (edit.message !== undefined) data.message = edit.message ?? '';
@@ -249,6 +252,7 @@ export type NewTournament = {
   format: RaceFormat;
   startsAt: string | null;
   message: string | null;
+  isPrivate: boolean;
 };
 
 export function useCreateTournament() {
@@ -262,6 +266,7 @@ export function useCreateTournament() {
         p_format: input.format,
         p_starts_at: input.startsAt,
         p_message: input.message,
+        p_is_private: input.isPrivate,
       }),
     onSuccess: invalidate,
   });
@@ -298,6 +303,84 @@ export function useAwardWalkover() {
   return useMutation({
     mutationFn: async ({ matchId, winnerId }: { matchId: string; winnerId: string }) => {
       await rpc('award_tournament_walkover', { p_match_id: matchId, p_winner_id: winnerId });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ---------- Invitations ----------
+
+/** Tournois où je suis invité et n'ai pas encore répondu, avec le pilote qui m'invite. */
+export function useMyTournamentInvites() {
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: ['tournaments', 'my-invites', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<(Tournament & { invited_by_name: string | null })[]> => {
+      if (isDemoMode) return [];
+      const { data: invites, error: invitesError } = await supabase
+        .from('tournament_invites')
+        .select('tournament_id, inviter:profiles!tournament_invites_invited_by_fkey (username)')
+        .eq('pilot_id', userId!)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (invitesError) throw invitesError;
+      if (invites.length === 0) return [];
+      const inviter = new Map(
+        (invites as unknown as { tournament_id: string; inviter: { username: string } | null }[]).map((i) => [
+          i.tournament_id,
+          i.inviter?.username ?? null,
+        ]),
+      );
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select(TOURNAMENT_SELECT)
+        .in('id', [...inviter.keys()])
+        .eq('status', 'registration');
+      if (error) throw error;
+      return (data as unknown as Tournament[]).map((t) => ({ ...sortEntries(t), invited_by_name: inviter.get(t.id) ?? null }));
+    },
+  });
+}
+
+/** Invitations d'un tournoi visibles par moi : la mienne, celles que j'ai envoyées, toutes si je l'organise. */
+export function useTournamentInvites(tournamentId: string | undefined) {
+  return useQuery({
+    queryKey: ['tournaments', 'invites', tournamentId],
+    enabled: !!tournamentId && !isDemoMode,
+    queryFn: async (): Promise<TournamentInvite[]> => {
+      const { data, error } = await supabase
+        .from('tournament_invites')
+        .select(
+          `pilot_id, invited_by, status, created_at,
+           pilot:profiles!tournament_invites_pilot_id_fkey (id, username, avatar_url, elo, rank),
+           inviter:profiles!tournament_invites_invited_by_fkey (username)`,
+        )
+        .eq('tournament_id', tournamentId!)
+        .order('created_at');
+      if (error) throw error;
+      return data as unknown as TournamentInvite[];
+    },
+  });
+}
+
+/** Invite des pilotes ; renvoie le nombre d'invitations réellement envoyées (ni inscrits, ni déjà invités). */
+export function useInviteToTournament() {
+  const invalidate = useInvalidateTournaments();
+  return useMutation({
+    mutationFn: async ({ tournamentId, pilotIds }: { tournamentId: string; pilotIds: string[] }): Promise<number> =>
+      rpc('invite_to_tournament', { p_tournament_id: tournamentId, p_pilot_ids: pilotIds }),
+    onSuccess: invalidate,
+  });
+}
+
+export const useDeclineTournamentInvite = () => useTournamentAction('decline_tournament_invite');
+
+export function useRevokeTournamentInvite() {
+  const invalidate = useInvalidateTournaments();
+  return useMutation({
+    mutationFn: async ({ tournamentId, pilotId }: { tournamentId: string; pilotId: string }) => {
+      await rpc('revoke_tournament_invite', { p_tournament_id: tournamentId, p_pilot_id: pilotId });
     },
     onSuccess: invalidate,
   });

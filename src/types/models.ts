@@ -408,7 +408,19 @@ export type Tournament = {
   completed_at: string | null;
   /** Bannière choisie par l'organisateur (sinon la photo du circuit, sinon un fond par défaut). */
   banner_url: string | null;
+  /** Privé : visible et ouvert aux seuls invités. */
+  is_private: boolean;
   track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
   matches: TournamentMatch[];
+};
+
+/** Invitation à un tournoi, en attente ou refusée. */
+export type TournamentInvite = {
+  pilot_id: string;
+  invited_by: string;
+  status: 'pending' | 'declined';
+  created_at: string;
+  pilot: PilotSummary;
+  inviter: { username: string } | null;
 };

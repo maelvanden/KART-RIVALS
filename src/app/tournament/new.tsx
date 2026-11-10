@@ -13,6 +13,7 @@ import { useMyProfile } from '@/features/profile/api';
 import { useCreateTournament, useUpdateTournament } from '@/features/tournaments/api';
 import { minPilotsToStart, sizeSummary, TOURNAMENT_SIZES } from '@/features/tournaments/bracket';
 import { BannerField } from '@/features/tournaments/components/banner-field';
+import { PrivacyField } from '@/features/tournaments/components/privacy-field';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
 import { nextDays, toScheduledAt } from '@/lib/schedule';
@@ -38,6 +39,7 @@ export default function NewTournamentScreen() {
   const [hour, setHour] = useState(14);
   const [message, setMessage] = useState('');
   const [banner, setBanner] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [bannerFailed, setBannerFailed] = useState<string | null>(null);
 
   const chosenTrack = trackId === undefined ? (profile.data?.home_track_id ?? null) : trackId;
@@ -54,6 +56,7 @@ export default function NewTournamentScreen() {
       format,
       startsAt: toScheduledAt(day, hour),
       message: message.trim() || null,
+      isPrivate,
     });
     if (banner) {
       try {
@@ -65,6 +68,8 @@ export default function NewTournamentScreen() {
       }
     }
     router.replace({ pathname: '/tournament/[id]', params: { id } });
+    // Tournoi privé : personne ne le voit tant que personne n'est invité.
+    if (isPrivate) router.push({ pathname: '/tournament/invite', params: { id } });
   }
 
   if (bannerFailed) {
@@ -111,6 +116,10 @@ export default function NewTournamentScreen() {
           {sizeSummary(size)}. Le tirage se fait tout seul quand le tableau est complet ; tu peux aussi le lancer dès{' '}
           {minPilotsToStart(size)} inscrits (les meilleurs ELO sont alors qualifiés d’office au premier tour).
         </Text>
+      </Section>
+
+      <Section label="Accès">
+        <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
       </Section>
 
       <Section label="Classement des duels">

@@ -56,6 +56,7 @@ export function TournamentCard({ tournament: t, myId }: { tournament: Tournament
             </Text>
           </View>
           <Text variant="caption">
+            {t.is_private ? '🔒 Privé · ' : ''}
             {t.track.name} · {t.track.city}
             {t.starts_at ? ` · ${dateTimeFormat.format(new Date(t.starts_at))}` : ''}
             {t.format === 'lap_time' ? ' · meilleur tour' : ' · position'}

@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useTournament, useUpdateTournament, type TournamentEdit } from '@/features/tournaments/api';
 import { BannerField } from '@/features/tournaments/components/banner-field';
+import { PrivacyField } from '@/features/tournaments/components/privacy-field';
 import { dateTimeFormat } from '@/lib/format';
 import { nextDays, toScheduledAt } from '@/lib/schedule';
 import { colors, spacing } from '@/theme';
@@ -39,12 +40,15 @@ function Form({ tournament: t }: { tournament: Tournament }) {
   // undefined = bannière inchangée ; null = retirée ; sinon l'URI locale de la nouvelle image.
   const [banner, setBanner] = useState<string | null | undefined>(undefined);
 
+  const [isPrivate, setIsPrivate] = useState(t.is_private);
+
   const validName = name.trim().length >= 3;
 
   async function save() {
     const edit: TournamentEdit = { id: t.id, name: name.trim(), message: message.trim() || null };
     if (day !== undefined) edit.startsAt = toScheduledAt(day, hour);
     if (banner !== undefined) edit.bannerUri = banner;
+    if (isPrivate !== t.is_private) edit.isPrivate = isPrivate;
     await update.mutateAsync(edit);
     router.back();
   }
@@ -57,6 +61,13 @@ function Form({ tournament: t }: { tournament: Tournament }) {
       </View>
 
       <Input label="Nom du tournoi" value={name} onChangeText={setName} maxLength={60} />
+
+      {t.status === 'registration' ? (
+        <View style={styles.section}>
+          <Text variant="label">Accès</Text>
+          <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text variant="label">Date</Text>

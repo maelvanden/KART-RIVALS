@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
@@ -12,7 +13,7 @@ import { useMyRaces } from '@/features/races/api';
 import { RaceCard } from '@/features/races/components/race-card';
 import { raceStep } from '@/features/races/state';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
-import { useMyTournaments, useOpenTournaments } from '@/features/tournaments/api';
+import { useMyTournamentInvites, useMyTournaments, useOpenTournaments } from '@/features/tournaments/api';
 import { TournamentCard } from '@/features/tournaments/components/tournament-card';
 import { Text } from '@/components/ui/text';
 
@@ -25,6 +26,7 @@ export default function ChallengesScreen() {
   const races = useMyRaces();
   const myTournaments = useMyTournaments();
   const openTournaments = useOpenTournaments();
+  const tournamentInvites = useMyTournamentInvites();
 
   const list = (challenges.data ?? []).filter((c) =>
     filter === 'received' ? c.opponent_id === userId : c.challenger_id === userId,
@@ -33,12 +35,22 @@ export default function ChallengesScreen() {
   const raceList = (races.data ?? []).filter((r) => userId && raceStep(r, userId) !== 'closed');
 
   // Tournois ouverts où je ne suis pas encore inscrit (les miens sont déjà listés au-dessus).
-  const joinable = (openTournaments.data ?? []).filter((t) => !t.entries.some((e) => e.pilot_id === userId));
+  const invitedIds = new Set((tournamentInvites.data ?? []).map((t) => t.id));
+  const joinable = (openTournaments.data ?? []).filter(
+    (t) => !t.is_private && !invitedIds.has(t.id) && !t.entries.some((e) => e.pilot_id === userId),
+  );
 
   const active = filter === 'races' ? races : filter === 'tournaments' ? myTournaments : challenges;
+  const refresh = () => {
+    active.refetch();
+    if (filter === 'tournaments') {
+      openTournaments.refetch();
+      tournamentInvites.refetch();
+    }
+  };
 
   return (
-    <Screen subtitle="Grille de départ" title="Défis" refreshing={active.isRefetching} onRefresh={active.refetch}>
+    <Screen subtitle="Grille de départ" title="Défis" refreshing={active.isRefetching} onRefresh={refresh}>
       <Segmented
         options={[
           { value: 'received', label: 'Reçus' },
@@ -53,6 +65,17 @@ export default function ChallengesScreen() {
       {filter === 'tournaments' ? (
         <>
           <Button title="Organiser un tournoi" onPress={() => router.push('/tournament/new')} />
+          {(tournamentInvites.data ?? []).length > 0 ? (
+            <>
+              <Text variant="label">Invitations · {tournamentInvites.data!.length}</Text>
+              {tournamentInvites.data!.map((t) => (
+                <View key={t.id} style={{ gap: 4 }}>
+                  <Text variant="caption">{t.invited_by_name ?? 'Un pilote'} t’invite :</Text>
+                  <TournamentCard tournament={t} myId={userId!} />
+                </View>
+              ))}
+            </>
+          ) : null}
           {myTournaments.isPending ? <Loading /> : null}
           {myTournaments.error ? <ErrorState error={myTournaments.error} /> : null}
           {(myTournaments.data ?? []).map((t) => (
