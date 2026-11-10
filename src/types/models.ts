@@ -414,8 +414,16 @@ export type Tournament = {
   prize: string | null;
   /** Organisé par le karting lui-même (admin de la fiche circuit) : mis en avant, toujours public. */
   is_official: boolean;
+  /** true : le tableau se lance tout seul quand il est plein. false : l'organisateur le lance, et un tableau plein
+   *  accepte des remplaçants. */
+  auto_start: boolean;
+  /** Conditions d'entrée : fourchette d'ELO (null = pas de borne). */
+  min_elo: number | null;
+  max_elo: number | null;
   track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
+  /** Remplaçants, dans l'ordre d'arrivée. */
+  waitlist: { pilot_id: string; joined_at: string; pilot: PilotSummary }[];
   matches: TournamentMatch[];
 };
 

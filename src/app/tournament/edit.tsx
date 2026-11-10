@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useTournament, useUpdateTournament, type TournamentEdit } from '@/features/tournaments/api';
 import { BannerField } from '@/features/tournaments/components/banner-field';
 import { PrivacyField } from '@/features/tournaments/components/privacy-field';
+import { StartModeField } from '@/features/tournaments/components/start-mode-field';
 import { dateTimeFormat } from '@/lib/format';
 import { nextDays, toScheduledAt } from '@/lib/schedule';
 import { colors, spacing } from '@/theme';
@@ -42,6 +43,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
 
   const [isPrivate, setIsPrivate] = useState(t.is_private);
   const [prize, setPrize] = useState(t.prize ?? '');
+  const [autoStart, setAutoStart] = useState(t.auto_start);
 
   const validName = name.trim().length >= 3;
 
@@ -51,6 +53,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
     if (banner !== undefined) edit.bannerUri = banner;
     if (isPrivate !== t.is_private) edit.isPrivate = isPrivate;
     if (prize.trim() !== (t.prize ?? '')) edit.prize = prize.trim() || null;
+    if (autoStart !== t.auto_start) edit.autoStart = autoStart;
     await update.mutateAsync(edit);
     router.back();
   }
@@ -70,6 +73,16 @@ function Form({ tournament: t }: { tournament: Tournament }) {
         <View style={styles.section}>
           <Text variant="label">Accès</Text>
           <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
+        </View>
+      ) : null}
+
+      {t.status === 'registration' ? (
+        <View style={styles.section}>
+          <Text variant="label">Lancement</Text>
+          <StartModeField autoStart={autoStart} onChange={setAutoStart} />
+          {autoStart && !t.auto_start && t.entries.length >= t.size ? (
+            <Text style={{ color: colors.orange }}>Le tableau est déjà plein : il sera lancé dès l’enregistrement.</Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -98,7 +111,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
         multiline
       />
 
-      <Text variant="caption">Le circuit, la taille du tableau et le format des duels ne se modifient plus après la création.</Text>
+      <Text variant="caption">Le circuit, la taille du tableau, le format des duels et les conditions d’entrée ne se modifient plus après la création.</Text>
 
       {update.error ? <Text style={{ color: colors.danger }}>{(update.error as Error).message}</Text> : null}
       <Button title="Enregistrer" onPress={save} loading={update.isPending} disabled={!validName} />

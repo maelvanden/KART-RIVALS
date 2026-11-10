@@ -14,6 +14,7 @@ import { useApproxLocation, useNearbyPilots, useSearchPilots } from '@/features/
 import { useTeammates } from '@/features/social/friends';
 import { useBlockedIds } from '@/features/social/safety';
 import { useMyTeam } from '@/features/social/teams';
+import { meetsConditions } from '@/features/tournaments/bracket';
 import { useInviteToTournament, useTournament, useTournamentInvites } from '@/features/tournaments/api';
 import { colors, radius, rankMeta, spacing } from '@/theme';
 import type { PilotSummary } from '@/types/models';
@@ -40,6 +41,7 @@ export default function InviteToTournamentScreen() {
   const taken = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of t?.entries ?? []) map.set(e.pilot_id, 'Inscrit');
+    for (const w of t?.waitlist ?? []) map.set(w.pilot_id, 'En attente');
     for (const i of invites.data ?? []) map.set(i.pilot_id, i.status === 'declined' ? 'A refusé' : 'Déjà invité');
     return map;
   }, [t, invites.data]);
@@ -58,7 +60,9 @@ export default function InviteToTournamentScreen() {
     .filter(usable)
     .filter((p) => searching || !listed.has(p.id));
   const isPicked = (pilotId: string) => picked.some((p) => p.id === pilotId);
-  const free = (list: PilotSummary[]) => list.filter((p) => !taken.has(p.id));
+  // Inscrit, déjà invité, ou hors des conditions d'entrée.
+  const stateOf = (p: PilotSummary) => taken.get(p.id) ?? (meetsConditions(t, p.elo) ? undefined : 'Hors conditions');
+  const free = (list: PilotSummary[]) => list.filter((p) => !stateOf(p));
 
   const toggle = (p: PilotSummary) =>
     setPicked((list) => (isPicked(p.id) ? list.filter((x) => x.id !== p.id) : [...list, p]));
@@ -89,7 +93,7 @@ export default function InviteToTournamentScreen() {
           ) : null}
         </View>
         {list.map((p) => (
-          <Candidate key={p.id} pilot={p} on={isPicked(p.id)} state={taken.get(p.id)} onPress={() => toggle(p)} />
+          <Candidate key={p.id} pilot={p} on={isPicked(p.id)} state={stateOf(p)} onPress={() => toggle(p)} />
         ))}
       </View>
     ) : null;
@@ -128,7 +132,7 @@ export default function InviteToTournamentScreen() {
           placeholder="ou choisis parmi les pilotes proches"
         />
         {others.map((p) => (
-          <Candidate key={p.id} pilot={p} on={isPicked(p.id)} state={taken.get(p.id)} onPress={() => toggle(p)} />
+          <Candidate key={p.id} pilot={p} on={isPicked(p.id)} state={stateOf(p)} onPress={() => toggle(p)} />
         ))}
         {others.length === 0 ? (
           <Text variant="caption">{searching ? 'Aucun pilote trouvé.' : 'Aucun pilote proche. Cherche un pseudo.'}</Text>

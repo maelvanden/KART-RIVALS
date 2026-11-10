@@ -1,4 +1,5 @@
-import type { Tournament, TournamentMatch, TournamentSize, TournamentStatus } from '@/types/models';
+import { rankMeta, rankThresholds } from '@/theme';
+import type { RankTier, Tournament, TournamentMatch, TournamentSize, TournamentStatus } from '@/types/models';
 
 export const TOURNAMENT_SIZES: TournamentSize[] = [4, 8, 16, 32];
 
@@ -93,3 +94,40 @@ export function semiFinalLosers(t: Tournament): string[] {
     .map((m) => (m.winner_id === m.pilot_a ? m.pilot_b : m.pilot_a))
     .filter((id): id is string => !!id);
 }
+
+// ---------- Conditions d'entrée ----------
+
+export type EloRange = { minElo: number | null; maxElo: number | null };
+
+/** Fourchette d'ELO couverte par les rangs de `from` à `to` (inclus). Le premier et le dernier rang n'ont pas de borne. */
+export function rankRange(from: RankTier, to: RankTier): EloRange {
+  const i = rankThresholds.findIndex((t) => t.tier === from);
+  const j = rankThresholds.findIndex((t) => t.tier === to);
+  const [lo, hi] = i <= j ? [i, j] : [j, i];
+  return {
+    minElo: lo === 0 ? null : rankThresholds[lo].min,
+    maxElo: hi === rankThresholds.length - 1 ? null : rankThresholds[hi + 1].min - 1,
+  };
+}
+
+/** « Bronze à Or » quand la fourchette tombe sur des rangs entiers, sinon « 1200 à 1500 ELO » ; null si ouvert à tous. */
+export function conditionsLabel(t: { min_elo: number | null; max_elo: number | null }): string | null {
+  const { min_elo: min, max_elo: max } = t;
+  if (min === null && max === null) return null;
+  const lo = min === null ? 0 : rankThresholds.findIndex((r) => r.min === min);
+  const hi = max === null ? rankThresholds.length - 1 : rankThresholds.findIndex((r) => r.min === max + 1) - 1;
+  if (lo >= 0 && hi >= lo) {
+    const a = rankMeta[rankThresholds[lo].tier].label;
+    const b = rankMeta[rankThresholds[hi].tier].label;
+    if (lo === hi) return `Rang ${a}`;
+    if (min === null) return `Jusqu’à ${b}`;
+    if (max === null) return `${a} et plus`;
+    return `${a} à ${b}`;
+  }
+  if (min === null) return `${max} ELO maximum`;
+  if (max === null) return `${min} ELO minimum`;
+  return `${min} à ${max} ELO`;
+}
+
+export const meetsConditions = (t: { min_elo: number | null; max_elo: number | null }, elo: number) =>
+  (t.min_elo === null || elo >= t.min_elo) && (t.max_elo === null || elo <= t.max_elo);

@@ -9,6 +9,7 @@ import { TournamentCard } from '@/features/tournaments/components/tournament-car
 import { useTracksMap } from '@/features/tracks/api';
 import { distanceKm } from '@/lib/geo';
 import { spacing } from '@/theme';
+import type { Tournament } from '@/types/models';
 
 /** Rayon des tournois proposés dans l'onglet Circuits. */
 const NEARBY_KM = 100;
@@ -34,7 +35,7 @@ export function NearbyTournaments() {
         const track = byId.get(t.track.id);
         return { tournament: t, km: track ? distanceKm(here, track) : null };
       })
-      .filter((x): x is { tournament: (typeof open.data)[number]; km: number } => x.km !== null && x.km <= NEARBY_KM)
+      .filter((x): x is { tournament: Tournament; km: number } => x.km !== null && x.km <= NEARBY_KM)
       .sort((a, b) => Number(b.tournament.is_official) - Number(a.tournament.is_official) || a.km - b.km);
   }, [location.data, tracks.data, open.data]);
 

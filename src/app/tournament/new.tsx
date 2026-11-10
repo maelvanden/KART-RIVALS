@@ -13,7 +13,10 @@ import { useCanManageTrack } from '@/features/admin/api';
 import { useMyProfile } from '@/features/profile/api';
 import { useCreateTournament, useUpdateTournament } from '@/features/tournaments/api';
 import { minPilotsToStart, sizeSummary, TOURNAMENT_SIZES } from '@/features/tournaments/bracket';
+import type { EloRange } from '@/features/tournaments/bracket';
 import { BannerField } from '@/features/tournaments/components/banner-field';
+import { ConditionsField } from '@/features/tournaments/components/conditions-field';
+import { StartModeField } from '@/features/tournaments/components/start-mode-field';
 import { PrivacyField } from '@/features/tournaments/components/privacy-field';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
@@ -42,6 +45,11 @@ export default function NewTournamentScreen() {
   const [banner, setBanner] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [prize, setPrize] = useState('');
+  const [autoStart, setAutoStart] = useState(true);
+  const [conditions, setConditions] = useState<{ range: EloRange; valid: boolean }>({
+    range: { minElo: null, maxElo: null },
+    valid: true,
+  });
   const [official, setOfficial] = useState(true);
   const [participate, setParticipate] = useState(false);
   const [bannerFailed, setBannerFailed] = useState<string | null>(null);
@@ -55,7 +63,7 @@ export default function NewTournamentScreen() {
   const pending = create.isPending || update.isPending;
 
   async function submit() {
-    if (!chosenTrack || !validName) return;
+    if (!chosenTrack || !validName || !conditions.valid) return;
     const id = await create.mutateAsync({
       trackId: chosenTrack,
       name: name.trim(),
@@ -67,6 +75,9 @@ export default function NewTournamentScreen() {
       prize: prize.trim() || null,
       isOfficial,
       participate: isOfficial ? participate : true,
+      autoStart,
+      minElo: conditions.range.minElo,
+      maxElo: conditions.range.maxElo,
     });
     if (banner) {
       try {
@@ -123,9 +134,17 @@ export default function NewTournamentScreen() {
           })}
         </View>
         <Text variant="caption">
-          {sizeSummary(size)}. Le tirage se fait tout seul quand le tableau est complet ; tu peux aussi le lancer dès{' '}
-          {minPilotsToStart(size)} inscrits (les meilleurs ELO sont alors qualifiés d’office au premier tour).
+          {sizeSummary(size)}. Tu peux lancer le tableau dès {minPilotsToStart(size)} inscrits : les meilleurs ELO sont alors
+          qualifiés d’office au premier tour.
         </Text>
+      </Section>
+
+      <Section label="Lancement">
+        <StartModeField autoStart={autoStart} onChange={setAutoStart} />
+      </Section>
+
+      <Section label="Qui peut s’inscrire">
+        <ConditionsField myElo={profile.data?.elo} onChange={(range, valid) => setConditions({ range, valid })} />
       </Section>
 
       {canBeOfficial ? (
@@ -209,7 +228,7 @@ export default function NewTournamentScreen() {
       </Text>
 
       {create.error ? <Text style={{ color: colors.danger }}>{(create.error as Error).message}</Text> : null}
-      <Button title="Ouvrir les inscriptions" onPress={submit} loading={pending} disabled={!validName || !chosenTrack} />
+      <Button title="Ouvrir les inscriptions" onPress={submit} loading={pending} disabled={!validName || !chosenTrack || !conditions.valid} />
       {!chosenTrack || !validName ? (
         <Text variant="caption" style={styles.hint}>
           {!validName ? 'Donne un nom au tournoi (3 caractères minimum).' : 'Choisis le circuit du tournoi.'}

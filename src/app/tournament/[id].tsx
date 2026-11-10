@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
+import { useMyProfile } from '@/features/profile/api';
 import { useConversations } from '@/features/social/radio';
 import {
   useAwardWalkover,
@@ -24,8 +25,10 @@ import {
   useTournamentInvites,
 } from '@/features/tournaments/api';
 import {
+  conditionsLabel,
   eliminatedIn,
   isStillIn,
+  meetsConditions,
   matchLabel,
   minPilotsToStart,
   myCurrentMatch,
@@ -57,6 +60,7 @@ export default function TournamentScreen() {
   const decline = useDeclineTournamentInvite();
   const revoke = useRevokeTournamentInvite();
   const invites = useTournamentInvites(id);
+  const me = useMyProfile();
 
   const t = tournament.data;
   const registered = !!t && !!userId && t.entries.some((e) => e.pilot_id === userId);
@@ -71,6 +75,13 @@ export default function TournamentScreen() {
   const rounds = roundCount(t.size);
   const isOrganizer = t.organizer_id === userId;
   const full = t.entries.length >= t.size;
+  const waitingIndex = t.waitlist.findIndex((w) => w.pilot_id === userId);
+  const waiting = waitingIndex >= 0;
+  const conditions = conditionsLabel(t);
+  // Tant que mon ELO n'est pas chargé, on ne bloque pas : le serveur vérifie de toute façon.
+  const eligible = me.data ? meetsConditions(t, me.data.elo) : true;
+  // Tableau plein lancé à la main : on peut s'inscrire en remplaçant.
+  const canWait = full && !t.auto_start;
   const canStart = t.entries.length >= minPilotsToStart(t.size);
   const current = myCurrentMatch(t, userId);
   const organizer = t.entries.find((e) => e.pilot_id === t.organizer_id)?.pilot;
@@ -164,15 +175,26 @@ export default function TournamentScreen() {
               disabled={decline.isPending || join.isPending}
               onPress={() => decline.mutate(t.id)}
             />
-            <Button title="Accepter" style={styles.action} loading={join.isPending} disabled={full} onPress={() => join.mutate(t.id)} />
+            <Button
+              title={full && canWait ? 'Liste d’attente' : 'Accepter'}
+              style={styles.action}
+              loading={join.isPending}
+              disabled={(full && !canWait) || !eligible}
+              onPress={() => join.mutate(t.id)}
+            />
           </View>
-          {full ? <Text variant="caption">Le tableau est déjà complet.</Text> : null}
+          {full ? (
+            <Text variant="caption">
+              {canWait ? 'Le tableau est complet : tu peux t’inscrire en remplaçant.' : 'Le tableau est déjà complet.'}
+            </Text>
+          ) : null}
         </Card>
       ) : null}
 
       <Card style={styles.info}>
         {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : <Meta icon={icons.clock} text="Date à définir" />}
         <Meta icon={icons.bolt} text={`${sizeSummary(t.size)} · ${t.format === 'lap_time' ? 'duels au meilleur tour' : 'duels à la position'}`} />
+        <Meta icon={icons.medal} text={conditions ? `Réservé : ${conditions}` : 'Ouvert à tous les niveaux'} />
         {t.is_official ? (
           <Meta icon={icons.verified} text={`Tournoi officiel de ${t.track.name}${isOrganizer ? ' · tu l’organises' : ''}`} />
         ) : organizer ? (
@@ -230,11 +252,49 @@ export default function TournamentScreen() {
               {full ? 'Tableau complet' : `Encore ${t.size - t.entries.length} place${t.size - t.entries.length > 1 ? 's' : ''}`}
             </Text>
           </View>
-          {!registered && !full && !myInvite ? (
-            <Button title="M’inscrire" loading={join.isPending} onPress={() => join.mutate(t.id)} />
+          {waiting ? (
+            <Card style={[styles.notice, { borderColor: colors.orange }]}>
+              <Text style={{ color: colors.orange }}>
+                Tu es {waitingIndex === 0 ? 'premier' : `${waitingIndex + 1}e`} sur la liste d’attente. Si un pilote se
+                désiste, {waitingIndex === 0 ? 'tu prends sa place' : 'la liste avance'} et tu es prévenu.
+              </Text>
+            </Card>
+          ) : null}
+          {!registered && !waiting && !eligible ? (
+            <Card style={styles.notice}>
+              <Text style={{ color: colors.textMuted }}>
+                Ce tournoi est réservé : {conditions}. Avec {me.data?.elo} ELO, tu ne peux pas t’y inscrire
+                {isOrganizer ? ' : tu l’organises et l’arbitres' : ''}.
+              </Text>
+            </Card>
+          ) : null}
+          {!registered && !waiting && eligible && !myInvite && (!full || canWait) ? (
+            <Button
+              title={full ? 'Rejoindre la liste d’attente' : 'M’inscrire'}
+              variant={full ? 'secondary' : 'primary'}
+              loading={join.isPending}
+              onPress={() => join.mutate(t.id)}
+            />
+          ) : null}
+          {waiting ? (
+            <Button title="Quitter la liste d’attente" variant="secondary" loading={leave.isPending} onPress={() => leave.mutate(t.id)} />
           ) : null}
           {registered && (!isOrganizer || t.is_official) ? (
-            <Button title="Me désinscrire" variant="secondary" loading={leave.isPending} onPress={() => leave.mutate(t.id)} />
+            <Button
+              title="Me désinscrire"
+              variant="secondary"
+              loading={leave.isPending}
+              onPress={() =>
+                t.waitlist.length > 0
+                  ? confirmAction(
+                      'Te désinscrire ?',
+                      `${t.waitlist[0].pilot.username}, premier sur la liste d’attente, prendra ta place.`,
+                      'Me désinscrire',
+                      () => leave.mutate(t.id),
+                    )
+                  : leave.mutate(t.id)
+              }
+            />
           ) : null}
           {isOrganizer ? (
             <Button
@@ -254,8 +314,10 @@ export default function TournamentScreen() {
             />
           ) : null}
           <Text variant="caption">
-            Le tirage se fait tout seul quand les {t.size} places sont prises. Têtes de série par ELO : les deux meilleurs
-            ne peuvent se croiser qu’en finale.
+            {t.auto_start
+              ? `Le tirage se fait tout seul quand les ${t.size} places sont prises.`
+              : 'L’organisateur lance le tableau lui-même ; une fois plein, on s’inscrit en liste d’attente.'}{' '}
+            Têtes de série par ELO : les deux meilleurs ne peuvent se croiser qu’en finale.
           </Text>
         </>
       ) : null}
@@ -311,6 +373,27 @@ export default function TournamentScreen() {
           />
         ))}
       </View>
+
+      {t.waitlist.length > 0 && t.status === 'registration' ? (
+        <>
+          <Text variant="label">Liste d’attente · {t.waitlist.length}</Text>
+          <View style={styles.list}>
+            {t.waitlist.map((w, i) => (
+              <PilotRow
+                key={w.pilot_id}
+                pilotId={w.pilot_id}
+                username={w.pilot.username}
+                avatarUrl={w.pilot.avatar_url}
+                rank={w.pilot.rank}
+                elo={w.pilot.elo}
+                highlighted={w.pilot_id === userId}
+                subtitle={i === 0 ? '1er remplaçant' : `${i + 1}e remplaçant`}
+                leading={<Text style={styles.seed}>{i + 1}</Text>}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {pendingInvites.length > 0 && t.status === 'registration' ? (
         <>

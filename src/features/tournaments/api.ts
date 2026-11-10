@@ -10,9 +10,10 @@ import type { RaceFormat, Tournament, TournamentInvite, TournamentSize } from '@
 
 const TOURNAMENT_SELECT = `
   id, organizer_id, name, size, format, starts_at, message, status, champion_id, runner_up_id,
-  created_at, started_at, completed_at, banner_url, is_private, prize, is_official,
+  created_at, started_at, completed_at, banner_url, is_private, prize, is_official, auto_start, min_elo, max_elo,
   track:tracks (id, name, city, cover_url),
   entries:tournament_entries (pilot_id, seed, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
+  waitlist:tournament_waitlist (pilot_id, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
   matches:tournament_matches (
     id, round, slot, pilot_a, pilot_b, challenge_id, winner_id, outcome, decided_at,
     a_position, b_position, a_best_lap_ms, b_best_lap_ms
@@ -30,6 +31,7 @@ const sortEntries = (t: Tournament): Tournament => ({
   entries: [...t.entries].sort(
     (a, b) => (a.seed ?? 99) - (b.seed ?? 99) || a.joined_at.localeCompare(b.joined_at),
   ),
+  waitlist: [...(t.waitlist ?? [])].sort((a, b) => a.joined_at.localeCompare(b.joined_at)),
 });
 
 /** Tournois dont les inscriptions sont ouvertes, les plus récents d'abord. */
@@ -93,7 +95,14 @@ export function useMyTournaments() {
         .order('created_at', { ascending: false })
         .limit(30);
       if (organizedError) throw organizedError;
-      const ids = [...new Set([...mine.map((e) => e.tournament_id), ...organized.map((t) => t.id)])];
+      const { data: waiting, error: waitingError } = await supabase
+        .from('tournament_waitlist')
+        .select('tournament_id')
+        .eq('pilot_id', userId!);
+      if (waitingError) throw waitingError;
+      const ids = [
+        ...new Set([...mine, ...waiting].map((e) => e.tournament_id).concat(organized.map((t) => t.id))),
+      ];
       if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('tournaments')
@@ -238,6 +247,8 @@ export type TournamentEdit = {
   /** Modifiable tant que les inscriptions sont ouvertes. */
   isPrivate?: boolean;
   prize?: string | null;
+  /** Modifiable tant que les inscriptions sont ouvertes. */
+  autoStart?: boolean;
 };
 
 /** Modification par l'organisateur : seuls les champs fournis changent. */
@@ -251,6 +262,7 @@ export function useUpdateTournament() {
       const data: Record<string, string | boolean> = {};
       if (edit.isPrivate !== undefined) data.is_private = edit.isPrivate;
       if (edit.prize !== undefined) data.prize = edit.prize ?? '';
+      if (edit.autoStart !== undefined) data.auto_start = edit.autoStart;
       if (edit.name !== undefined) data.name = edit.name;
       if (edit.startsAt !== undefined) data.starts_at = edit.startsAt ?? '';
       if (edit.message !== undefined) data.message = edit.message ?? '';
@@ -292,6 +304,9 @@ export type NewTournament = {
   isOfficial: boolean;
   /** Tournoi officiel : l'organisateur roule-t-il aussi ? (toujours inscrit sinon) */
   participate: boolean;
+  autoStart: boolean;
+  minElo: number | null;
+  maxElo: number | null;
 };
 
 export function useCreateTournament() {
@@ -309,6 +324,9 @@ export function useCreateTournament() {
         p_prize: input.prize,
         p_is_official: input.isOfficial,
         p_participate: input.participate,
+        p_auto_start: input.autoStart,
+        p_min_elo: input.minElo,
+        p_max_elo: input.maxElo,
       }),
     onSuccess: invalidate,
   });

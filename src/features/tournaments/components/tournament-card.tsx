@@ -6,13 +6,14 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { OfficialTag } from '@/features/tournaments/components/official-tag';
 import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
-import { eliminatedIn, isStillIn, matchLabel, myCurrentMatch, roundCount, statusLabel } from '@/features/tournaments/bracket';
+import { conditionsLabel, eliminatedIn, isStillIn, matchLabel, myCurrentMatch, roundCount, statusLabel } from '@/features/tournaments/bracket';
 import { dateTimeFormat } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { Tournament } from '@/types/models';
 
 /** Où en est le pilote connecté dans ce tournoi (null s'il n'y est pas inscrit). */
 function myStatus(t: Tournament, myId: string): { text: string; urgent: boolean } | null {
+  if (t.waitlist.some((w) => w.pilot_id === myId)) return { text: 'Liste d’attente', urgent: false };
   if (!t.entries.some((e) => e.pilot_id === myId)) return null;
   if (t.status === 'registration') return { text: 'Inscrit', urgent: false };
   if (t.status === 'completed') {
@@ -57,6 +58,7 @@ export function TournamentCard({ tournament: t, myId, km, width }: Props) {
               <Icon name={icons.group} size={16} color={colors.textMuted} />
               <Text variant="caption">
                 {t.entries.length}/{t.size}
+                {t.waitlist.length > 0 ? ` +${t.waitlist.length}` : ''}
               </Text>
             </View>
           </View>
@@ -73,6 +75,7 @@ export function TournamentCard({ tournament: t, myId, km, width }: Props) {
             {km != null ? ` · à ${km < 10 ? km.toFixed(1).replace('.', ',') : Math.round(km)} km` : ''}
             {t.starts_at ? ` · ${dateTimeFormat.format(new Date(t.starts_at))}` : ''}
             {t.format === 'lap_time' ? ' · meilleur tour' : ' · position'}
+            {conditionsLabel(t) ? ` · ${conditionsLabel(t)}` : ''}
           </Text>
           {t.prize && !champion ? (
             <View style={styles.prize}>
