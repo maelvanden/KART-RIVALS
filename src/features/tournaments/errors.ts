@@ -1,7 +1,8 @@
 /** Messages des fonctions SQL des tournois (en anglais côté base) traduits pour le pilote. */
 const messages: Record<string, string> = {
   'Account restricted': 'Ton compte est restreint : impossible de participer aux tournois pour l’instant.',
-  'A tournament has 8 or 16 pilots': 'Un tournoi se joue à 8 ou 16 pilotes.',
+  'A tournament has': 'Un tournoi se joue à 4, 8, 16 ou 32 pilotes.',
+  'Only the organizer can edit the tournament': 'Seul l’organisateur peut modifier le tournoi.',
   'Tournament name must be 3 to 60 characters': 'Le nom du tournoi doit faire entre 3 et 60 caractères.',
   'Too many open tournaments': 'Tu organises déjà 3 tournois en cours.',
   'Tournament not found': 'Tournoi introuvable.',

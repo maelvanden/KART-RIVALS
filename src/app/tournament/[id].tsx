@@ -1,14 +1,15 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, Share, StyleSheet, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Icon, icons } from '@/components/ui/icon';
+import { Icon, icons, type IconName } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
+import { useConversations } from '@/features/social/radio';
 import {
   useAwardWalkover,
   useCancelTournament,
@@ -17,20 +18,26 @@ import {
   useLeaveTournament,
   useStartTournament,
   useTournament,
+  useTournamentConversation,
 } from '@/features/tournaments/api';
 import {
   eliminatedIn,
   isStillIn,
+  matchLabel,
   minPilotsToStart,
   myCurrentMatch,
+  progress,
   roundCount,
-  matchLabel,
+  roundLabel,
+  sizeSummary,
   statusLabel,
 } from '@/features/tournaments/bracket';
 import { Bracket } from '@/features/tournaments/components/bracket';
+import { Podium } from '@/features/tournaments/components/podium';
+import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { confirmAction } from '@/lib/confirm';
 import { dateTimeFormat } from '@/lib/format';
-import { colors, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 import type { Tournament, TournamentMatch } from '@/types/models';
 
 export default function TournamentScreen() {
@@ -45,54 +52,95 @@ export default function TournamentScreen() {
   const walkover = useAwardWalkover();
 
   const t = tournament.data;
+  const registered = !!t && !!userId && t.entries.some((e) => e.pilot_id === userId);
+  const chat = useTournamentConversation(t?.id, registered);
+  const unread = useConversations().data?.find((c) => c.id === chat.data)?.unread ?? 0;
+
   if (tournament.isPending) return <Screen safeTop={false}><Loading /></Screen>;
   if (tournament.error) return <Screen safeTop={false}><ErrorState error={tournament.error} /></Screen>;
   if (!t || !userId) return <Screen safeTop={false}><EmptyState title="Tournoi introuvable" /></Screen>;
 
   const rounds = roundCount(t.size);
   const isOrganizer = t.organizer_id === userId;
-  const registered = t.entries.some((e) => e.pilot_id === userId);
   const full = t.entries.length >= t.size;
   const canStart = t.entries.length >= minPilotsToStart(t.size);
   const current = myCurrentMatch(t, userId);
   const organizer = t.entries.find((e) => e.pilot_id === t.organizer_id)?.pilot;
-  const champion = t.entries.find((e) => e.pilot_id === t.champion_id)?.pilot;
   const name = (pilotId: string | null) => t.entries.find((e) => e.pilot_id === pilotId)?.pilot.username ?? 'Pilote';
   const actionError = [join, leave, start, cancel, forfeit, walkover].find((m) => m.error)?.error as Error | undefined;
+  const editable = isOrganizer && (t.status === 'registration' || t.status === 'running');
+  const duels = progress(t);
   // Duels que l'organisateur peut arbitrer (il ne les joue pas).
   const refereeable =
     isOrganizer && t.status === 'running'
       ? t.matches.filter((m) => !m.decided_at && m.challenge_id && m.pilot_a !== userId && m.pilot_b !== userId)
       : [];
 
+  const share = () =>
+    Share.share({
+      message: `🏆 ${t.name} : tournoi à élimination directe, ${t.size} pilotes à ${t.track.name} (${t.track.city}), sur Kart Rivals.${
+        t.status === 'registration' ? ' Inscris-toi :' : ' Suis le tableau :'
+      } kartrivals://tournament/${t.id}`,
+    });
+
   return (
     <Screen safeTop={false} refreshing={tournament.isRefetching} onRefresh={tournament.refetch}>
-      <Stack.Screen options={{ title: t.name }} />
+      <Stack.Screen options={{ title: 'Tournoi' }} />
 
-      <Card style={styles.header}>
-        <Text variant="label" style={{ color: t.status === 'registration' ? colors.neon : colors.orange }}>
-          {statusLabel[t.status]}
-        </Text>
-        <Text variant="title">{t.name}</Text>
-        <View style={styles.meta}>
-          <Meta icon={icons.pin} text={`${t.track.name} · ${t.track.city}`} />
-          <Meta icon={icons.group} text={`${t.entries.length}/${t.size} pilotes`} />
-          {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : null}
-          <Meta icon={icons.bolt} text={t.format === 'lap_time' ? 'Duels au meilleur tour' : 'Duels à la position'} />
-          {organizer ? <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} /> : null}
+      <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={200}>
+        <View style={[styles.status, t.status === 'registration' ? styles.statusOpen : t.status === 'running' ? styles.statusLive : null]}>
+          <Text style={[styles.statusText, t.status === 'registration' && { color: colors.onNeon }]}>{statusLabel[t.status]}</Text>
         </View>
+        <Text variant="title" numberOfLines={2}>
+          {t.name}
+        </Text>
+        <Text style={styles.bannerLine} numberOfLines={1}>
+          {t.track.name} · {t.track.city}
+        </Text>
+      </TournamentBanner>
+
+      <View style={styles.facts}>
+        <Fact icon={icons.group} value={`${t.entries.length}/${t.size}`} label="pilotes" />
+        <Fact icon={icons.trophy} value={String(rounds)} label={rounds > 1 ? 'tours' : 'tour'} />
+        <Fact icon={t.format === 'lap_time' ? icons.timer : icons.challenge} value={t.format === 'lap_time' ? 'Chrono' : 'Position'} label="duels" />
+      </View>
+
+      <View style={styles.quick}>
+        <Quick
+          icon={icons.radio}
+          label="Discussion"
+          badge={unread}
+          disabled={!chat.data}
+          onPress={() => router.push({ pathname: '/radio/[id]', params: { id: chat.data!, title: t.name } })}
+        />
+        <Quick icon={icons.share} label="Partager" onPress={share} />
+        <Quick icon={icons.pin} label="Circuit" onPress={() => router.push({ pathname: '/track/[id]', params: { id: t.track.id } })} />
+        {editable ? (
+          <Quick icon={icons.edit} label="Modifier" onPress={() => router.push({ pathname: '/tournament/edit', params: { id: t.id } })} />
+        ) : null}
+      </View>
+      {!registered ? (
+        <Text variant="caption">La discussion du tournoi est réservée aux inscrits.</Text>
+      ) : null}
+
+      <Card style={styles.info}>
+        {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : <Meta icon={icons.clock} text="Date à définir" />}
+        <Meta icon={icons.bolt} text={`${sizeSummary(t.size)} · ${t.format === 'lap_time' ? 'duels au meilleur tour' : 'duels à la position'}`} />
+        {organizer ? <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} /> : null}
         {t.message ? <Text style={styles.message}>« {t.message} »</Text> : null}
       </Card>
 
-      {t.status === 'completed' && champion ? (
-        <Card style={styles.championCard}>
-          <Icon name={icons.trophy} size={40} color="#FFC83D" />
-          <Text variant="label">Vainqueur</Text>
-          <Text variant="title" style={styles.championName}>
-            {champion.username}
+      {t.status === 'completed' ? <Podium tournament={t} /> : null}
+
+      {t.status === 'running' && duels.total > 0 ? (
+        <View style={styles.progress}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${(duels.played / duels.total) * 100}%` }]} />
+          </View>
+          <Text variant="caption">
+            {duels.played}/{duels.total} duels joués
           </Text>
-          {t.runner_up_id ? <Text variant="caption">Finaliste : {name(t.runner_up_id)}</Text> : null}
-        </Card>
+        </View>
       ) : null}
 
       {t.status === 'running' ? <MyRun tournament={t} myId={userId} current={current} /> : null}
@@ -123,6 +171,14 @@ export default function TournamentScreen() {
 
       {t.status === 'registration' ? (
         <>
+          <View style={styles.progress}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${(t.entries.length / t.size) * 100}%` }]} />
+            </View>
+            <Text variant="caption">
+              {full ? 'Tableau complet' : `Encore ${t.size - t.entries.length} place${t.size - t.entries.length > 1 ? 's' : ''}`}
+            </Text>
+          </View>
           {!registered && !full ? (
             <Button title="M’inscrire" loading={join.isPending} onPress={() => join.mutate(t.id)} />
           ) : null}
@@ -188,7 +244,7 @@ export default function TournamentScreen() {
         </>
       ) : null}
 
-      <Text variant="label">{t.status === 'registration' ? 'Inscrits' : 'Têtes de série'}</Text>
+      <Text variant="label">{t.status === 'registration' ? `Inscrits · ${t.entries.length}` : 'Têtes de série'}</Text>
       <View style={styles.list}>
         {t.entries.map((e) => (
           <PilotRow
@@ -199,7 +255,7 @@ export default function TournamentScreen() {
             rank={e.pilot.rank}
             elo={e.pilot.elo}
             highlighted={e.pilot_id === userId}
-            subtitle={`${e.pilot.elo} ELO${e.pilot_id === t.organizer_id ? ' · organisateur' : ''}`}
+            subtitle={entryStatus(t, e.pilot_id)}
             leading={e.seed ? <Text style={styles.seed}>{e.seed}</Text> : undefined}
           />
         ))}
@@ -219,6 +275,17 @@ export default function TournamentScreen() {
       ) : null}
     </Screen>
   );
+}
+
+/** Sous-titre d'un inscrit : où il en est dans le tableau. */
+function entryStatus(t: Tournament, pilotId: string): string {
+  const organizer = pilotId === t.organizer_id ? ' · organisateur' : '';
+  if (t.status === 'registration' || t.status === 'cancelled') return `Inscrit${organizer}`;
+  if (t.champion_id === pilotId) return `Vainqueur${organizer}`;
+  if (t.runner_up_id === pilotId) return `Finaliste${organizer}`;
+  const out = eliminatedIn(t, pilotId);
+  if (out) return `Éliminé · ${roundLabel(out.round, roundCount(t.size), true).toLowerCase()}${organizer}`;
+  return `En lice${organizer}`;
 }
 
 /** Situation du pilote connecté dans un tableau en cours. */
@@ -285,22 +352,117 @@ function Walkover({
   );
 }
 
-function Meta({ icon, text }: { icon: (typeof icons)[keyof typeof icons]; text: string }) {
+function Fact({ icon, value, label }: { icon: IconName; value: string; label: string }) {
+  return (
+    <View style={styles.fact}>
+      <Icon name={icon} size={18} color={colors.neon} />
+      <Text style={styles.factValue}>{value}</Text>
+      <Text variant="caption">{label}</Text>
+    </View>
+  );
+}
+
+function Quick({
+  icon,
+  label,
+  badge = 0,
+  disabled,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  badge?: number;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={badge > 0 ? `${label}, ${badge} non lus` : label}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.quickItem, disabled && styles.disabled, pressed && { opacity: 0.8 }]}>
+      <View>
+        <Icon name={icon} size={22} color={colors.text} />
+        {badge > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text variant="caption" numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Meta({ icon, text }: { icon: IconName; text: string }) {
   return (
     <View style={styles.metaRow}>
       <Icon name={icon} size={16} color={colors.textMuted} />
-      <Text variant="caption">{text}</Text>
+      <Text variant="caption" style={styles.metaText}>
+        {text}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.sm },
-  meta: { gap: spacing.xs },
+  status: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surfaceAlt,
+  },
+  statusOpen: { backgroundColor: colors.neon },
+  statusLive: { backgroundColor: colors.orange },
+  statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  bannerLine: { color: colors.text, opacity: 0.85, fontWeight: '600' },
+  facts: { flexDirection: 'row', gap: spacing.sm },
+  fact: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  factValue: { fontSize: 18, fontWeight: '900' },
+  quick: { flexDirection: 'row', gap: spacing.sm },
+  quickItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
+  },
+  disabled: { opacity: 0.4 },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -12,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.orange,
+  },
+  badgeText: { fontSize: 11, fontWeight: '900', color: colors.onNeon },
+  info: { gap: spacing.sm },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  metaText: { flex: 1 },
   message: { fontStyle: 'italic', color: colors.textMuted },
-  championCard: { alignItems: 'center', gap: spacing.xs, borderColor: colors.neon, paddingVertical: spacing.xl },
-  championName: { color: colors.neon },
+  progress: { gap: 6 },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.neon },
   notice: { paddingVertical: spacing.md },
   actions: { flexDirection: 'row', gap: spacing.md },
   action: { flex: 1 },

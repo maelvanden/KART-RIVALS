@@ -1,17 +1,21 @@
 import type { Tournament, TournamentMatch, TournamentSize, TournamentStatus } from '@/types/models';
 
-/** Nombre de tours : 8 pilotes → 3 (quarts, demies, finale), 16 → 4. */
-export const roundCount = (size: TournamentSize) => (size === 16 ? 4 : 3);
+export const TOURNAMENT_SIZES: TournamentSize[] = [4, 8, 16, 32];
 
-/** Minimum de pilotes pour lancer avant que le tableau soit complet (sinon un tableau de 8 suffit). */
-export const minPilotsToStart = (size: TournamentSize) => (size === 16 ? 9 : 4);
+/** Nombre de tours : 4 pilotes → 2 (demies, finale), 8 → 3, 16 → 4, 32 → 5 (des seizièmes à la finale). */
+export const roundCount = (size: TournamentSize) => Math.log2(size);
 
+/** Minimum de pilotes pour lancer avant que le tableau soit complet (sinon le tableau du dessous suffit). */
+export const minPilotsToStart = (size: TournamentSize) => ({ 4: 3, 8: 4, 16: 9, 32: 17 })[size];
+
+/** Nom d'un tour (« Quarts de finale », ou « Quarts » en version courte pour les colonnes du tableau). */
 export function roundLabel(round: number, rounds: number, short = false): string {
   const fromEnd = rounds - round;
   if (fromEnd === 0) return 'Finale';
   if (fromEnd === 1) return short ? 'Demies' : 'Demi-finales';
   if (fromEnd === 2) return short ? 'Quarts' : 'Quarts de finale';
-  return short ? '8es' : 'Huitièmes de finale';
+  if (fromEnd === 3) return short ? '8es' : 'Huitièmes de finale';
+  return short ? '16es' : 'Seizièmes de finale';
 }
 
 /** Nom d'un duel de ce tour, au singulier (« Demi-finale à courir »). */
@@ -20,8 +24,13 @@ export function matchLabel(round: number, rounds: number): string {
   if (fromEnd === 0) return 'Finale';
   if (fromEnd === 1) return 'Demi-finale';
   if (fromEnd === 2) return 'Quart de finale';
-  return 'Huitième de finale';
+  if (fromEnd === 3) return 'Huitième de finale';
+  return 'Seizième de finale';
 }
+
+/** Ce que contient un tableau de cette taille (« 16es → finale »). */
+export const sizeSummary = (size: TournamentSize) =>
+  ({ 4: 'Demies et finale', 8: 'Des quarts à la finale', 16: 'Des 8es à la finale', 32: 'Des 16es à la finale' })[size];
 
 export const statusLabel: Record<TournamentStatus, string> = {
   registration: 'Inscriptions ouvertes',
@@ -36,6 +45,18 @@ export function bracketRounds(t: Tournament): TournamentMatch[][] {
   return Array.from({ length: rounds }, (_, i) =>
     t.matches.filter((m) => m.round === i + 1).sort((a, b) => a.slot - b.slot),
   );
+}
+
+/** Le tour en train de se jouer : le premier qui a encore une case non tranchée (la finale une fois terminé). */
+export function currentRound(t: Tournament): number {
+  const open = t.matches.filter((m) => !m.decided_at).map((m) => m.round);
+  return open.length > 0 ? Math.min(...open) : roundCount(t.size);
+}
+
+/** Duels joués (hors qualifiés d'office) et duels au total, pour la barre d'avancement. */
+export function progress(t: Tournament): { played: number; total: number } {
+  const real = t.matches.filter((m) => m.outcome !== 'bye');
+  return { played: real.filter((m) => m.decided_at).length, total: real.length };
 }
 
 /** Le duel en cours du pilote (case avec ses deux pilotes, non tranchée), s'il en a un. */
@@ -62,4 +83,13 @@ export function eliminatedIn(t: Tournament, pilotId: string): TournamentMatch | 
       (m) => m.decided_at && m.winner_id !== pilotId && (m.pilot_a === pilotId || m.pilot_b === pilotId),
     ) ?? null
   );
+}
+
+/** Les deux demi-finalistes battus (3es ex æquo sur le podium). */
+export function semiFinalLosers(t: Tournament): string[] {
+  const semis = roundCount(t.size) - 1;
+  return t.matches
+    .filter((m) => m.round === semis && m.decided_at && m.winner_id)
+    .map((m) => (m.winner_id === m.pilot_a ? m.pilot_b : m.pilot_a))
+    .filter((id): id is string => !!id);
 }

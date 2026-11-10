@@ -296,7 +296,8 @@ export type TeamInvite = {
 export type Conversation = {
   id: string;
   /** support : conversation du pilote avec l'équipe Kart Rivals. */
-  kind: 'direct' | 'team' | 'support';
+  /** tournament : discussion des inscrits d'un tournoi. */
+  kind: 'direct' | 'team' | 'support' | 'tournament';
   team_id: string | null;
   title: string;
   tag: string | null;
@@ -363,7 +364,7 @@ export type TeamApplication = {
 };
 
 export type TournamentStatus = 'registration' | 'running' | 'completed' | 'cancelled';
-export type TournamentSize = 8 | 16;
+export type TournamentSize = 4 | 8 | 16 | 32;
 
 export type TournamentEntry = {
   pilot_id: string;
@@ -384,6 +385,11 @@ export type TournamentMatch = {
   /** race : duel validé ; forfeit : abandon ou forfait ; bye : qualifié d'office. */
   outcome: 'race' | 'forfeit' | 'bye' | null;
   decided_at: string | null;
+  /** Score du duel validé, recopié sur le tableau (selon le format du tournoi). */
+  a_position: number | null;
+  b_position: number | null;
+  a_best_lap_ms: number | null;
+  b_best_lap_ms: number | null;
 };
 
 export type Tournament = {
@@ -400,7 +406,9 @@ export type Tournament = {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
-  track: Track;
+  /** Bannière choisie par l'organisateur (sinon la photo du circuit, sinon un fond par défaut). */
+  banner_url: string | null;
+  track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
   matches: TournamentMatch[];
 };
