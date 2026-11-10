@@ -9,10 +9,16 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { useCanManageTrack } from '@/features/admin/api';
 import { useMyProfile } from '@/features/profile/api';
 import { useCreateTournament, useUpdateTournament } from '@/features/tournaments/api';
 import { minPilotsToStart, sizeSummary, TOURNAMENT_SIZES } from '@/features/tournaments/bracket';
+import type { EloRange } from '@/features/tournaments/bracket';
 import { BannerField } from '@/features/tournaments/components/banner-field';
+import { ConditionsField } from '@/features/tournaments/components/conditions-field';
+import { StartModeField } from '@/features/tournaments/components/start-mode-field';
+import { WhenField } from '@/features/tournaments/components/when-field';
+import { PrivacyField } from '@/features/tournaments/components/privacy-field';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
 import { nextDays, toScheduledAt } from '@/lib/schedule';
@@ -38,15 +44,32 @@ export default function NewTournamentScreen() {
   const [hour, setHour] = useState(14);
   const [message, setMessage] = useState('');
   const [banner, setBanner] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [prize, setPrize] = useState('');
+  const [autoStart, setAutoStart] = useState(true);
+  const [onSite, setOnSite] = useState(false);
+  const [thirdPlace, setThirdPlace] = useState(true);
+  const [roundDays, setRoundDays] = useState<number | null>(null);
+  const [closeDay, setCloseDay] = useState<number | null>(null);
+  const [closeHour, setCloseHour] = useState(18);
+  const [conditions, setConditions] = useState<{ range: EloRange; valid: boolean }>({
+    range: { minElo: null, maxElo: null },
+    valid: true,
+  });
+  const [official, setOfficial] = useState(true);
+  const [participate, setParticipate] = useState(false);
   const [bannerFailed, setBannerFailed] = useState<string | null>(null);
 
   const chosenTrack = trackId === undefined ? (profile.data?.home_track_id ?? null) : trackId;
   const track = tracks.data?.find((t) => t.id === chosenTrack) ?? null;
+  // Admin de ce karting : le tournoi peut être officiel (choix proposé, coché par défaut).
+  const canBeOfficial = useCanManageTrack(chosenTrack ?? undefined);
+  const isOfficial = canBeOfficial && official;
   const validName = name.trim().length >= 3;
   const pending = create.isPending || update.isPending;
 
   async function submit() {
-    if (!chosenTrack || !validName) return;
+    if (!chosenTrack || !validName || !conditions.valid) return;
     const id = await create.mutateAsync({
       trackId: chosenTrack,
       name: name.trim(),
@@ -54,6 +77,17 @@ export default function NewTournamentScreen() {
       format,
       startsAt: toScheduledAt(day, hour),
       message: message.trim() || null,
+      isPrivate: isPrivate && !isOfficial,
+      prize: prize.trim() || null,
+      isOfficial,
+      participate: isOfficial ? participate : true,
+      autoStart,
+      minElo: conditions.range.minElo,
+      maxElo: conditions.range.maxElo,
+      thirdPlace,
+      roundDays: onSite ? null : roundDays,
+      registrationClosesAt: toScheduledAt(closeDay, closeHour),
+      onSite,
     });
     if (banner) {
       try {
@@ -65,6 +99,8 @@ export default function NewTournamentScreen() {
       }
     }
     router.replace({ pathname: '/tournament/[id]', params: { id } });
+    // Tournoi privé : personne ne le voit tant que personne n'est invité.
+    if (isPrivate && !isOfficial) router.push({ pathname: '/tournament/invite', params: { id } });
   }
 
   if (bannerFailed) {
@@ -108,10 +144,130 @@ export default function NewTournamentScreen() {
           })}
         </View>
         <Text variant="caption">
-          {sizeSummary(size)}. Le tirage se fait tout seul quand le tableau est complet ; tu peux aussi le lancer dès{' '}
-          {minPilotsToStart(size)} inscrits (les meilleurs ELO sont alors qualifiés d’office au premier tour).
+          {sizeSummary(size)}. Tu peux lancer le tableau dès {minPilotsToStart(size)} inscrits : les meilleurs ELO sont alors
+          qualifiés d’office au premier tour.
         </Text>
       </Section>
+
+      <Section label="Déroulement">
+        <Segmented
+          options={[
+            { value: 'remote', label: 'À distance' },
+            { value: 'on_site', label: 'Sur place' },
+          ]}
+          value={onSite ? 'on_site' : 'remote'}
+          onChange={(v) => setOnSite(v === 'on_site')}
+        />
+        <Text variant="caption">
+          {onSite
+            ? 'Tout le monde est au karting : tu saisis toi-même le résultat de chaque duel et le tableau avance en direct. Ces duels comptent pour l’ELO seulement dans un tournoi officiel.'
+            : 'Chaque duel se joue quand les deux pilotes le peuvent : ils saisissent et valident le résultat comme un défi, ELO compris.'}
+        </Text>
+      </Section>
+
+      {onSite ? null : (
+        <Section label="Délai pour jouer chaque tour">
+          <Chips
+            options={[
+              { value: null, label: 'Aucun' },
+              { value: 2, label: '2 jours' },
+              { value: 3, label: '3 jours' },
+              { value: 7, label: '1 semaine' },
+              { value: 14, label: '2 semaines' },
+            ]}
+            value={roundDays}
+            onChange={setRoundDays}
+          />
+          <Text variant="caption">
+            {roundDays
+              ? 'Les deux pilotes sont relancés la veille. Passé le délai, tu es prévenu et tu peux prononcer un forfait.'
+              : 'Sans délai, un pilote qui ne joue pas peut bloquer le tableau.'}
+          </Text>
+        </Section>
+      )}
+
+      <Section label="Petite finale">
+        <Segmented
+          options={[
+            { value: 'yes', label: 'Oui' },
+            { value: 'no', label: 'Non' },
+          ]}
+          value={thirdPlace ? 'yes' : 'no'}
+          onChange={(v) => setThirdPlace(v === 'yes')}
+        />
+        <Text variant="caption">
+          {thirdPlace
+            ? 'Les deux battus des demi-finales se disputent la 3e place : médaille de bronze et 50 points.'
+            : 'Pas de duel pour la 3e place : les deux demi-finalistes battus sont 3es ex æquo.'}
+        </Text>
+      </Section>
+
+      <Section label="Lancement">
+        <StartModeField autoStart={autoStart} onChange={setAutoStart} />
+      </Section>
+
+      <Section label="Clôture des inscriptions">
+        <WhenField
+          day={closeDay}
+          hour={closeHour}
+          onChange={(d, h) => {
+            setCloseDay(d);
+            setCloseHour(h);
+          }}
+          noneLabel="Aucune"
+        />
+        <Text variant="caption">
+          {closeDay !== null
+            ? `À cette heure, le tableau est tiré tout seul s’il y a au moins ${minPilotsToStart(size)} inscrits. Les inscrits sont prévenus la veille.`
+            : 'Sans date de clôture, le tableau part quand il est plein ou quand tu le lances.'}
+        </Text>
+      </Section>
+
+      <Section label="Qui peut s’inscrire">
+        <ConditionsField myElo={profile.data?.elo} onChange={(range, valid) => setConditions({ range, valid })} />
+      </Section>
+
+      {canBeOfficial ? (
+        <Section label="Tournoi du karting">
+          <Segmented
+            options={[
+              { value: 'official', label: 'Officiel' },
+              { value: 'personal', label: 'Personnel' },
+            ]}
+            value={official ? 'official' : 'personal'}
+            onChange={(v) => setOfficial(v === 'official')}
+          />
+          <Text variant="caption">
+            {official
+              ? `Organisé au nom de ${track?.name ?? 'ton karting'} : badge « Officiel », mis en avant dans les listes et annoncé aux pilotes du circuit qui acceptent les notifications.`
+              : 'Un tournoi entre pilotes comme un autre, sans badge ni mise en avant.'}
+          </Text>
+          {official ? (
+            <Segmented
+              options={[
+                { value: 'referee', label: 'J’arbitre' },
+                { value: 'drive', label: 'Je roule aussi' },
+              ]}
+              value={participate ? 'drive' : 'referee'}
+              onChange={(v) => setParticipate(v === 'drive')}
+            />
+          ) : null}
+        </Section>
+      ) : null}
+
+      {isOfficial ? null : (
+        <Section label="Accès">
+          <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
+        </Section>
+      )}
+
+      <Input
+        label="Lot du vainqueur (optionnel)"
+        value={prize}
+        onChangeText={setPrize}
+        maxLength={120}
+        placeholder="Une session offerte, un casque…"
+      />
 
       <Section label="Classement des duels">
         <Segmented
@@ -152,7 +308,7 @@ export default function NewTournamentScreen() {
       </Text>
 
       {create.error ? <Text style={{ color: colors.danger }}>{(create.error as Error).message}</Text> : null}
-      <Button title="Ouvrir les inscriptions" onPress={submit} loading={pending} disabled={!validName || !chosenTrack} />
+      <Button title="Ouvrir les inscriptions" onPress={submit} loading={pending} disabled={!validName || !chosenTrack || !conditions.valid} />
       {!chosenTrack || !validName ? (
         <Text variant="caption" style={styles.hint}>
           {!validName ? 'Donne un nom au tournoi (3 caractères minimum).' : 'Choisis le circuit du tournoi.'}

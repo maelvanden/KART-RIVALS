@@ -24,8 +24,9 @@ import { ResultSummary } from '@/features/challenges/components/result-summary';
 import { challengeStep } from '@/features/challenges/state';
 import { useAskReviewAfterWin } from '@/features/review/ask-review';
 import { useForfeitTournamentMatch, useTournamentMatchForChallenge } from '@/features/tournaments/api';
-import { matchLabel, roundCount } from '@/features/tournaments/bracket';
+import { isPast, matchLabel, roundCount } from '@/features/tournaments/bracket';
 import { confirmAction } from '@/lib/confirm';
+import { dateTimeFormat } from '@/lib/format';
 import { colors, spacing } from '@/theme';
 
 export default function ChallengeScreen() {
@@ -65,10 +66,23 @@ export default function ChallengeScreen() {
 
       {tm ? (
         <Button
-          title={`${matchLabel(tm.round, roundCount(tm.tournament.size))} · voir le tableau`}
+          title={`${matchLabel(tm.round, roundCount(tm.tournament.size), tm.slot)} · voir le tableau`}
           variant="ghost"
           onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: tm.tournament.id } })}
         />
+      ) : null}
+      {tm && !tm.decided_at && tm.deadline_at ? (
+        <Notice
+          tone={isPast(tm.deadline_at) ? 'warning' : 'info'}
+          text={
+            isPast(tm.deadline_at)
+              ? `Délai dépassé depuis le ${dateTimeFormat.format(new Date(tm.deadline_at))} : l’organisateur peut prononcer un forfait.`
+              : `Duel à jouer avant le ${dateTimeFormat.format(new Date(tm.deadline_at))}.`
+          }
+        />
+      ) : null}
+      {tm && !tm.decided_at && tm.tournament.on_site ? (
+        <Notice text="Tournoi sur place : l’organisateur saisit le résultat de ce duel depuis la page du tournoi." />
       ) : null}
 
       {step === 'awaiting_my_answer' ? (

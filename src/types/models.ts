@@ -390,6 +390,8 @@ export type TournamentMatch = {
   b_position: number | null;
   a_best_lap_ms: number | null;
   b_best_lap_ms: number | null;
+  /** Échéance du duel (délai par tour), null sans délai. */
+  deadline_at: string | null;
 };
 
 export type Tournament = {
@@ -408,7 +410,40 @@ export type Tournament = {
   completed_at: string | null;
   /** Bannière choisie par l'organisateur (sinon la photo du circuit, sinon un fond par défaut). */
   banner_url: string | null;
+  /** Privé : visible et ouvert aux seuls invités. */
+  is_private: boolean;
+  /** Lot affiché pour le vainqueur. */
+  prize: string | null;
+  /** Organisé par le karting lui-même (admin de la fiche circuit) : mis en avant, toujours public. */
+  is_official: boolean;
+  /** true : le tableau se lance tout seul quand il est plein. false : l'organisateur le lance, et un tableau plein
+   *  accepte des remplaçants. */
+  auto_start: boolean;
+  /** Conditions d'entrée : fourchette d'ELO (null = pas de borne). */
+  min_elo: number | null;
+  max_elo: number | null;
+  /** Petite finale : duel pour la 3e place (case « dernier tour, slot 1 » du tableau). */
+  third_place: boolean;
+  third_place_id: string | null;
+  /** Délai pour jouer chaque duel, en jours (null = pas de délai). */
+  round_days: number | null;
+  /** Clôture des inscriptions : le tableau est tiré automatiquement à cette heure. */
+  registration_closes_at: string | null;
+  /** Sur place : l'organisateur saisit lui-même les résultats (ELO compté seulement si officiel). */
+  on_site: boolean;
   track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
+  /** Remplaçants, dans l'ordre d'arrivée. */
+  waitlist: { pilot_id: string; joined_at: string; pilot: PilotSummary }[];
   matches: TournamentMatch[];
+};
+
+/** Invitation à un tournoi, en attente ou refusée. */
+export type TournamentInvite = {
+  pilot_id: string;
+  invited_by: string;
+  status: 'pending' | 'declined';
+  created_at: string;
+  pilot: PilotSummary;
+  inviter: { username: string } | null;
 };

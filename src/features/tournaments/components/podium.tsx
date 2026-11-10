@@ -5,7 +5,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { semiFinalLosers } from '@/features/tournaments/bracket';
+import { thirdPlaces } from '@/features/tournaments/bracket';
 import { colors, radius, spacing } from '@/theme';
 import type { PilotSummary, Tournament } from '@/types/models';
 
@@ -13,13 +13,16 @@ const GOLD = '#FFC83D';
 const SILVER = '#C0C7D1';
 const BRONZE = '#CD7F32';
 
-/** Podium d'un tournoi terminé : vainqueur au centre, finaliste, et les deux demi-finalistes en bronze. */
+/**
+ * Podium : vainqueur au centre, finaliste, et en bronze le vainqueur de la petite finale (sinon les deux
+ * demi-finalistes battus, ex æquo).
+ */
 export function Podium({ tournament: t }: { tournament: Tournament }) {
   const pilot = (id: string | null) => t.entries.find((e) => e.pilot_id === id)?.pilot;
   const champion = pilot(t.champion_id);
   if (!champion) return null;
   const runnerUp = pilot(t.runner_up_id);
-  const thirds = semiFinalLosers(t).map(pilot).filter((p): p is PilotSummary => !!p);
+  const thirds = thirdPlaces(t).map(pilot).filter((p): p is PilotSummary => !!p);
 
   return (
     <Card style={styles.card}>
@@ -29,8 +32,13 @@ export function Podium({ tournament: t }: { tournament: Tournament }) {
       <View style={styles.steps}>
         <Step pilot={runnerUp} place="2" color={SILVER} height={64} points={100} />
         <Step pilot={champion} place="1" color={GOLD} height={92} points={300} champion />
-        <Step pilot={thirds[0]} place="3" color={BRONZE} height={44} />
+        <Step pilot={thirds[0]} place="3" color={BRONZE} height={44} points={t.third_place ? 50 : undefined} />
       </View>
+      {t.third_place && !t.third_place_id && t.status === 'running' ? (
+        <Text variant="caption" style={styles.title}>
+          La petite finale reste à jouer pour la 3e place.
+        </Text>
+      ) : null}
       {thirds[1] ? (
         <Text variant="caption" style={styles.title}>
           3e ex æquo : {thirds[1].username}

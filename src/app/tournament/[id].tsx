@@ -9,20 +9,27 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
+import { useMyProfile } from '@/features/profile/api';
 import { useConversations } from '@/features/social/radio';
 import {
   useAwardWalkover,
   useCancelTournament,
+  useDeclineTournamentInvite,
   useForfeitTournamentMatch,
   useJoinTournament,
   useLeaveTournament,
+  useRevokeTournamentInvite,
   useStartTournament,
   useTournament,
   useTournamentConversation,
+  useTournamentInvites,
 } from '@/features/tournaments/api';
 import {
+  conditionsLabel,
   eliminatedIn,
+  isOverdue,
   isStillIn,
+  meetsConditions,
   matchLabel,
   minPilotsToStart,
   myCurrentMatch,
@@ -33,6 +40,8 @@ import {
   statusLabel,
 } from '@/features/tournaments/bracket';
 import { Bracket } from '@/features/tournaments/components/bracket';
+import { OfficialTag } from '@/features/tournaments/components/official-tag';
+import { OnSiteResults } from '@/features/tournaments/components/on-site-results';
 import { Podium } from '@/features/tournaments/components/podium';
 import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { confirmAction } from '@/lib/confirm';
@@ -50,10 +59,15 @@ export default function TournamentScreen() {
   const cancel = useCancelTournament();
   const forfeit = useForfeitTournamentMatch();
   const walkover = useAwardWalkover();
+  const decline = useDeclineTournamentInvite();
+  const revoke = useRevokeTournamentInvite();
+  const invites = useTournamentInvites(id);
+  const me = useMyProfile();
 
   const t = tournament.data;
   const registered = !!t && !!userId && t.entries.some((e) => e.pilot_id === userId);
-  const chat = useTournamentConversation(t?.id, registered);
+  // L'organisateur d'un tournoi officiel suit la discussion sans forcément être inscrit.
+  const chat = useTournamentConversation(t?.id, registered || (!!t && t.organizer_id === userId));
   const unread = useConversations().data?.find((c) => c.id === chat.data)?.unread ?? 0;
 
   if (tournament.isPending) return <Screen safeTop={false}><Loading /></Screen>;
@@ -63,23 +77,38 @@ export default function TournamentScreen() {
   const rounds = roundCount(t.size);
   const isOrganizer = t.organizer_id === userId;
   const full = t.entries.length >= t.size;
+  const waitingIndex = t.waitlist.findIndex((w) => w.pilot_id === userId);
+  const waiting = waitingIndex >= 0;
+  const conditions = conditionsLabel(t);
+  // Tant que mon ELO n'est pas chargé, on ne bloque pas : le serveur vérifie de toute façon.
+  const eligible = me.data ? meetsConditions(t, me.data.elo) : true;
+  // Tableau plein lancé à la main : on peut s'inscrire en remplaçant.
+  const canWait = full && !t.auto_start;
   const canStart = t.entries.length >= minPilotsToStart(t.size);
   const current = myCurrentMatch(t, userId);
   const organizer = t.entries.find((e) => e.pilot_id === t.organizer_id)?.pilot;
   const name = (pilotId: string | null) => t.entries.find((e) => e.pilot_id === pilotId)?.pilot.username ?? 'Pilote';
-  const actionError = [join, leave, start, cancel, forfeit, walkover].find((m) => m.error)?.error as Error | undefined;
+  const actionError = [join, leave, start, cancel, forfeit, walkover, decline, revoke].find((m) => m.error)?.error as Error | undefined;
   const editable = isOrganizer && (t.status === 'registration' || t.status === 'running');
   const duels = progress(t);
+  const myInvite = (invites.data ?? []).find((i) => i.pilot_id === userId && i.status === 'pending');
+  // Invitations en attente que je peux retirer (toutes pour l'organisateur, sinon les miennes).
+  const pendingInvites = (invites.data ?? []).filter((i) => i.status === 'pending' && i.pilot_id !== userId);
+  // Public : tout inscrit invite. Privé : l'organisateur seulement.
+  const canInvite = t.status === 'registration' && (isOrganizer || (registered && !t.is_private));
   // Duels que l'organisateur peut arbitrer (il ne les joue pas).
   const refereeable =
     isOrganizer && t.status === 'running'
-      ? t.matches.filter((m) => !m.decided_at && m.challenge_id && m.pilot_a !== userId && m.pilot_b !== userId)
+      ? t.matches
+          .filter((m) => !m.decided_at && m.challenge_id && m.pilot_a !== userId && m.pilot_b !== userId)
+          // Les duels en retard d'abord.
+          .sort((a, b) => Number(isOverdue(b)) - Number(isOverdue(a)) || a.round - b.round || a.slot - b.slot)
       : [];
 
   const share = () =>
     Share.share({
       message: `🏆 ${t.name} : tournoi à élimination directe, ${t.size} pilotes à ${t.track.name} (${t.track.city}), sur Kart Rivals.${
-        t.status === 'registration' ? ' Inscris-toi :' : ' Suis le tableau :'
+        t.is_private ? ' Sur invitation :' : t.status === 'registration' ? ' Inscris-toi :' : ' Suis le tableau :'
       } kartrivals://tournament/${t.id}`,
     });
 
@@ -88,6 +117,7 @@ export default function TournamentScreen() {
       <Stack.Screen options={{ title: 'Tournoi' }} />
 
       <TournamentBanner bannerUrl={t.banner_url} coverUrl={t.track.cover_url} height={200}>
+        {t.is_official ? <OfficialTag /> : null}
         <View style={[styles.status, t.status === 'registration' ? styles.statusOpen : t.status === 'running' ? styles.statusLive : null]}>
           <Text style={[styles.statusText, t.status === 'registration' && { color: colors.onNeon }]}>{statusLabel[t.status]}</Text>
         </View>
@@ -96,6 +126,7 @@ export default function TournamentScreen() {
         </Text>
         <Text style={styles.bannerLine} numberOfLines={1}>
           {t.track.name} · {t.track.city}
+          {t.is_private ? ' · 🔒 privé' : ''}
         </Text>
       </TournamentBanner>
 
@@ -108,29 +139,85 @@ export default function TournamentScreen() {
       <View style={styles.quick}>
         <Quick
           icon={icons.radio}
-          label="Discussion"
+          label="Chat"
           badge={unread}
           disabled={!chat.data}
           onPress={() => router.push({ pathname: '/radio/[id]', params: { id: chat.data!, title: t.name } })}
         />
+        {canInvite ? (
+          <Quick icon={icons.recruit} label="Inviter" onPress={() => router.push({ pathname: '/tournament/invite', params: { id: t.id } })} />
+        ) : null}
         <Quick icon={icons.share} label="Partager" onPress={share} />
         <Quick icon={icons.pin} label="Circuit" onPress={() => router.push({ pathname: '/track/[id]', params: { id: t.track.id } })} />
         {editable ? (
           <Quick icon={icons.edit} label="Modifier" onPress={() => router.push({ pathname: '/tournament/edit', params: { id: t.id } })} />
         ) : null}
       </View>
-      {!registered ? (
+      {!registered && !isOrganizer ? (
         <Text variant="caption">La discussion du tournoi est réservée aux inscrits.</Text>
+      ) : null}
+
+      {t.prize ? (
+        <Card style={styles.prize}>
+          <Icon name={icons.gift} size={26} color={colors.neon} />
+          <View style={styles.prizeBody}>
+            <Text variant="label">À gagner</Text>
+            <Text style={styles.prizeText}>{t.prize}</Text>
+          </View>
+        </Card>
+      ) : null}
+
+      {myInvite && t.status === 'registration' ? (
+        <Card style={styles.invite}>
+          <Text style={styles.inviteText}>
+            {myInvite.inviter?.username ?? 'Un pilote'} t’invite à ce tournoi{t.is_private ? ' privé' : ''}.
+          </Text>
+          <View style={styles.actions}>
+            <Button
+              title="Refuser"
+              variant="secondary"
+              style={styles.action}
+              disabled={decline.isPending || join.isPending}
+              onPress={() => decline.mutate(t.id)}
+            />
+            <Button
+              title={full && canWait ? 'Liste d’attente' : 'Accepter'}
+              style={styles.action}
+              loading={join.isPending}
+              disabled={(full && !canWait) || !eligible}
+              onPress={() => join.mutate(t.id)}
+            />
+          </View>
+          {full ? (
+            <Text variant="caption">
+              {canWait ? 'Le tableau est complet : tu peux t’inscrire en remplaçant.' : 'Le tableau est déjà complet.'}
+            </Text>
+          ) : null}
+        </Card>
       ) : null}
 
       <Card style={styles.info}>
         {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : <Meta icon={icons.clock} text="Date à définir" />}
         <Meta icon={icons.bolt} text={`${sizeSummary(t.size)} · ${t.format === 'lap_time' ? 'duels au meilleur tour' : 'duels à la position'}`} />
-        {organizer ? <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} /> : null}
+        <Meta icon={icons.medal} text={conditions ? `Réservé : ${conditions}` : 'Ouvert à tous les niveaux'} />
+        {t.on_site ? (
+          <Meta icon={icons.pin} text={`Sur place : l’organisateur saisit les résultats${t.is_official ? '' : ' (hors ELO)'}`} />
+        ) : t.round_days ? (
+          <Meta icon={icons.timer} text={`${t.round_days} jour${t.round_days > 1 ? 's' : ''} pour jouer chaque duel`} />
+        ) : null}
+        {t.third_place ? <Meta icon={icons.trophy} text="Petite finale pour la 3e place" /> : null}
+        {t.status === 'registration' && t.registration_closes_at ? (
+          <Meta icon={icons.lock} text={`Clôture des inscriptions : ${dateTimeFormat.format(new Date(t.registration_closes_at))}`} />
+        ) : null}
+        {t.is_official ? (
+          <Meta icon={icons.verified} text={`Tournoi officiel de ${t.track.name}${isOrganizer ? ' · tu l’organises' : ''}`} />
+        ) : organizer ? (
+          <Meta icon={icons.helmet} text={`Organisé par ${isOrganizer ? 'toi' : organizer.username}`} />
+        ) : null}
         {t.message ? <Text style={styles.message}>« {t.message} »</Text> : null}
       </Card>
 
-      {t.status === 'completed' ? <Podium tournament={t} /> : null}
+      {t.champion_id ? <Podium tournament={t} /> : null}
 
       {t.status === 'running' && duels.total > 0 ? (
         <View style={styles.progress}>
@@ -179,11 +266,49 @@ export default function TournamentScreen() {
               {full ? 'Tableau complet' : `Encore ${t.size - t.entries.length} place${t.size - t.entries.length > 1 ? 's' : ''}`}
             </Text>
           </View>
-          {!registered && !full ? (
-            <Button title="M’inscrire" loading={join.isPending} onPress={() => join.mutate(t.id)} />
+          {waiting ? (
+            <Card style={[styles.notice, { borderColor: colors.orange }]}>
+              <Text style={{ color: colors.orange }}>
+                Tu es {waitingIndex === 0 ? 'premier' : `${waitingIndex + 1}e`} sur la liste d’attente. Si un pilote se
+                désiste, {waitingIndex === 0 ? 'tu prends sa place' : 'la liste avance'} et tu es prévenu.
+              </Text>
+            </Card>
           ) : null}
-          {registered && !isOrganizer ? (
-            <Button title="Me désinscrire" variant="secondary" loading={leave.isPending} onPress={() => leave.mutate(t.id)} />
+          {!registered && !waiting && !eligible ? (
+            <Card style={styles.notice}>
+              <Text style={{ color: colors.textMuted }}>
+                Ce tournoi est réservé : {conditions}. Avec {me.data?.elo} ELO, tu ne peux pas t’y inscrire
+                {isOrganizer ? ' : tu l’organises et l’arbitres' : ''}.
+              </Text>
+            </Card>
+          ) : null}
+          {!registered && !waiting && eligible && !myInvite && (!full || canWait) ? (
+            <Button
+              title={full ? 'Rejoindre la liste d’attente' : 'M’inscrire'}
+              variant={full ? 'secondary' : 'primary'}
+              loading={join.isPending}
+              onPress={() => join.mutate(t.id)}
+            />
+          ) : null}
+          {waiting ? (
+            <Button title="Quitter la liste d’attente" variant="secondary" loading={leave.isPending} onPress={() => leave.mutate(t.id)} />
+          ) : null}
+          {registered && (!isOrganizer || t.is_official) ? (
+            <Button
+              title="Me désinscrire"
+              variant="secondary"
+              loading={leave.isPending}
+              onPress={() =>
+                t.waitlist.length > 0
+                  ? confirmAction(
+                      'Te désinscrire ?',
+                      `${t.waitlist[0].pilot.username}, premier sur la liste d’attente, prendra ta place.`,
+                      'Me désinscrire',
+                      () => leave.mutate(t.id),
+                    )
+                  : leave.mutate(t.id)
+              }
+            />
           ) : null}
           {isOrganizer ? (
             <Button
@@ -203,8 +328,10 @@ export default function TournamentScreen() {
             />
           ) : null}
           <Text variant="caption">
-            Le tirage se fait tout seul quand les {t.size} places sont prises. Têtes de série par ELO : les deux meilleurs
-            ne peuvent se croiser qu’en finale.
+            {t.auto_start
+              ? `Le tirage se fait tout seul quand les ${t.size} places sont prises.`
+              : 'L’organisateur lance le tableau lui-même ; une fois plein, on s’inscrit en liste d’attente.'}{' '}
+            Têtes de série par ELO : les deux meilleurs ne peuvent se croiser qu’en finale.
           </Text>
         </>
       ) : null}
@@ -217,6 +344,8 @@ export default function TournamentScreen() {
           <Bracket tournament={t} myId={userId} />
         </>
       ) : null}
+
+      {isOrganizer && t.on_site && t.status === 'running' ? <OnSiteResults tournament={t} myId={userId} /> : null}
 
       {refereeable.length > 0 ? (
         <>
@@ -261,6 +390,56 @@ export default function TournamentScreen() {
         ))}
       </View>
 
+      {t.waitlist.length > 0 && t.status === 'registration' ? (
+        <>
+          <Text variant="label">Liste d’attente · {t.waitlist.length}</Text>
+          <View style={styles.list}>
+            {t.waitlist.map((w, i) => (
+              <PilotRow
+                key={w.pilot_id}
+                pilotId={w.pilot_id}
+                username={w.pilot.username}
+                avatarUrl={w.pilot.avatar_url}
+                rank={w.pilot.rank}
+                elo={w.pilot.elo}
+                highlighted={w.pilot_id === userId}
+                subtitle={i === 0 ? '1er remplaçant' : `${i + 1}e remplaçant`}
+                leading={<Text style={styles.seed}>{i + 1}</Text>}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {pendingInvites.length > 0 && t.status === 'registration' ? (
+        <>
+          <Text variant="label">Invitations en attente · {pendingInvites.length}</Text>
+          <View style={styles.list}>
+            {pendingInvites.map((i) => (
+              <PilotRow
+                key={i.pilot_id}
+                pilotId={i.pilot_id}
+                username={i.pilot.username}
+                avatarUrl={i.pilot.avatar_url}
+                rank={i.pilot.rank}
+                elo={i.pilot.elo}
+                subtitle={i.invited_by === userId ? 'Invité par toi' : `Invité par ${i.inviter?.username ?? 'un pilote'}`}
+                trailing={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Retirer l’invitation de ${i.pilot.username}`}
+                    hitSlop={10}
+                    disabled={revoke.isPending}
+                    onPress={() => revoke.mutate({ tournamentId: t.id, pilotId: i.pilot_id })}>
+                    <Icon name={icons.close} size={18} color={colors.textMuted} />
+                  </Pressable>
+                }
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
       {isOrganizer && t.status === 'registration' ? (
         <Button
           title="Annuler le tournoi"
@@ -283,6 +462,7 @@ function entryStatus(t: Tournament, pilotId: string): string {
   if (t.status === 'registration' || t.status === 'cancelled') return `Inscrit${organizer}`;
   if (t.champion_id === pilotId) return `Vainqueur${organizer}`;
   if (t.runner_up_id === pilotId) return `Finaliste${organizer}`;
+  if (t.third_place_id === pilotId) return `3e place${organizer}`;
   const out = eliminatedIn(t, pilotId);
   if (out) return `Éliminé · ${roundLabel(out.round, roundCount(t.size), true).toLowerCase()}${organizer}`;
   return `En lice${organizer}`;
@@ -295,9 +475,14 @@ function MyRun({ tournament: t, myId, current }: { tournament: Tournament; myId:
   let text: string;
   let tone: string = colors.textMuted;
   if (current) {
-    text = `${matchLabel(current.round, rounds)} : tu affrontes ${
+    text = `${matchLabel(current.round, rounds, current.slot)} : tu affrontes ${
       t.entries.find((e) => e.pilot_id === (current.pilot_a === myId ? current.pilot_b : current.pilot_a))?.pilot.username ?? 'ton adversaire'
-    }. Courez, saisissez le résultat et validez-le comme un défi.`;
+    }. ${
+      t.on_site
+        ? 'L’organisateur saisit le résultat à l’arrivée.'
+        : 'Courez, saisissez le résultat et validez-le comme un défi.'
+    }${current.deadline_at ? ` À jouer avant le ${dateTimeFormat.format(new Date(current.deadline_at))}.` : ''}`;
+    if (isOverdue(current)) text += ' Le délai est dépassé : l’organisateur peut prononcer un forfait.';
     tone = colors.orange;
   } else if (isStillIn(t, myId)) {
     text = 'Qualifié ! Ton prochain adversaire sera connu à la fin du duel en cours.';
@@ -330,8 +515,14 @@ function Walkover({
   return (
     <Card style={styles.walkover}>
       <Text variant="caption">
-        {matchLabel(match.round, rounds)} · {name(match.pilot_a)} contre {name(match.pilot_b)}
+        {matchLabel(match.round, rounds, match.slot)} · {name(match.pilot_a)} contre {name(match.pilot_b)}
       </Text>
+      {match.deadline_at ? (
+        <Text variant="caption" style={isOverdue(match) ? { color: colors.orange, fontWeight: '800' } : undefined}>
+          {isOverdue(match) ? 'Délai dépassé depuis le ' : 'À jouer avant le '}
+          {dateTimeFormat.format(new Date(match.deadline_at))}
+        </Text>
+      ) : null}
       <View style={styles.actions}>
         <Button
           title={`Qualifier ${name(match.pilot_a)}`}
@@ -457,6 +648,11 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, fontWeight: '900', color: colors.onNeon },
   info: { gap: spacing.sm },
+  prize: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderColor: colors.neon },
+  prizeBody: { flex: 1, gap: 2 },
+  prizeText: { fontSize: 17, fontWeight: '800', color: colors.neon },
+  invite: { gap: spacing.md, borderColor: colors.neon },
+  inviteText: { fontWeight: '700' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   metaText: { flex: 1 },
   message: { fontStyle: 'italic', color: colors.textMuted },

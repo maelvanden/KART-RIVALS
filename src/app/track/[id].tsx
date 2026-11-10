@@ -15,6 +15,7 @@ import { TrackManageLink } from '@/features/admin/components/track-manage-link';
 import { TrackReviews } from '@/features/tracks/components/track-reviews';
 import { WeatherCard } from '@/features/tracks/components/weather-card';
 import { TrackSessions } from '@/features/sessions/components/track-sessions';
+import { TrackTournaments } from '@/features/tournaments/components/track-tournaments';
 import { TrackHero } from '@/features/tracks/components/track-hero';
 import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
@@ -101,6 +102,7 @@ export default function TrackScreen() {
             />
           </View>
 
+          <TrackTournaments trackId={t.id} />
           <TrackSessions trackId={t.id} />
           <TrackEvents trackId={t.id} />
           <TrackLayoutCard track={t} />

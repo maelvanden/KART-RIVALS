@@ -10,6 +10,10 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useTournament, useUpdateTournament, type TournamentEdit } from '@/features/tournaments/api';
 import { BannerField } from '@/features/tournaments/components/banner-field';
+import { PrivacyField } from '@/features/tournaments/components/privacy-field';
+import { StartModeField } from '@/features/tournaments/components/start-mode-field';
+import { WhenField } from '@/features/tournaments/components/when-field';
+import { Segmented } from '@/components/ui/segmented';
 import { dateTimeFormat } from '@/lib/format';
 import { nextDays, toScheduledAt } from '@/lib/schedule';
 import { colors, spacing } from '@/theme';
@@ -39,12 +43,25 @@ function Form({ tournament: t }: { tournament: Tournament }) {
   // undefined = bannière inchangée ; null = retirée ; sinon l'URI locale de la nouvelle image.
   const [banner, setBanner] = useState<string | null | undefined>(undefined);
 
+  const [isPrivate, setIsPrivate] = useState(t.is_private);
+  const [prize, setPrize] = useState(t.prize ?? '');
+  const [autoStart, setAutoStart] = useState(t.auto_start);
+  const [onSite, setOnSite] = useState(t.on_site);
+  // undefined = clôture inchangée ; null = retirée.
+  const [closeDay, setCloseDay] = useState<number | null | undefined>(undefined);
+  const [closeHour, setCloseHour] = useState(18);
+
   const validName = name.trim().length >= 3;
 
   async function save() {
     const edit: TournamentEdit = { id: t.id, name: name.trim(), message: message.trim() || null };
     if (day !== undefined) edit.startsAt = toScheduledAt(day, hour);
     if (banner !== undefined) edit.bannerUri = banner;
+    if (isPrivate !== t.is_private) edit.isPrivate = isPrivate;
+    if (prize.trim() !== (t.prize ?? '')) edit.prize = prize.trim() || null;
+    if (autoStart !== t.auto_start) edit.autoStart = autoStart;
+    if (onSite !== t.on_site) edit.onSite = onSite;
+    if (closeDay !== undefined) edit.registrationClosesAt = toScheduledAt(closeDay, closeHour);
     await update.mutateAsync(edit);
     router.back();
   }
@@ -57,6 +74,68 @@ function Form({ tournament: t }: { tournament: Tournament }) {
       </View>
 
       <Input label="Nom du tournoi" value={name} onChangeText={setName} maxLength={60} />
+
+      <Input label="Lot du vainqueur" value={prize} onChangeText={setPrize} maxLength={120} placeholder="Une session offerte, un casque…" />
+
+      {t.status === 'registration' && !t.is_official ? (
+        <View style={styles.section}>
+          <Text variant="label">Accès</Text>
+          <PrivacyField isPrivate={isPrivate} onChange={setIsPrivate} />
+        </View>
+      ) : null}
+
+      {t.status === 'registration' ? (
+        <View style={styles.section}>
+          <Text variant="label">Lancement</Text>
+          <StartModeField autoStart={autoStart} onChange={setAutoStart} />
+          {autoStart && !t.auto_start && t.entries.length >= t.size ? (
+            <Text style={{ color: colors.orange }}>Le tableau est déjà plein : il sera lancé dès l’enregistrement.</Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <Text variant="label">Déroulement</Text>
+        <Segmented
+          options={[
+            { value: 'remote', label: 'À distance' },
+            { value: 'on_site', label: 'Sur place' },
+          ]}
+          value={onSite ? 'on_site' : 'remote'}
+          onChange={(v) => setOnSite(v === 'on_site')}
+        />
+        <Text variant="caption">
+          {onSite
+            ? 'Tu saisis toi-même le résultat de chaque duel (ELO compté seulement en tournoi officiel).'
+            : 'Les deux pilotes saisissent et valident chaque duel comme un défi.'}
+        </Text>
+      </View>
+
+      {t.status === 'registration' ? (
+        <View style={styles.section}>
+          <Text variant="label">Clôture des inscriptions</Text>
+          {closeDay === undefined ? (
+            <>
+              <Text variant="caption">
+                {t.registration_closes_at
+                  ? `Actuelle : ${dateTimeFormat.format(new Date(t.registration_closes_at))}`
+                  : 'Aucune clôture pour l’instant.'}
+              </Text>
+              <Button title="Changer la clôture" variant="secondary" onPress={() => setCloseDay(null)} />
+            </>
+          ) : (
+            <WhenField
+              day={closeDay}
+              hour={closeHour}
+              onChange={(d, h) => {
+                setCloseDay(d);
+                setCloseHour(h);
+              }}
+              noneLabel="Aucune"
+            />
+          )}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text variant="label">Date</Text>
@@ -83,7 +162,7 @@ function Form({ tournament: t }: { tournament: Tournament }) {
         multiline
       />
 
-      <Text variant="caption">Le circuit, la taille du tableau et le format des duels ne se modifient plus après la création.</Text>
+      <Text variant="caption">Le circuit, la taille du tableau, le format des duels, la petite finale, le délai par tour et les conditions d’entrée ne se modifient plus après la création.</Text>
 
       {update.error ? <Text style={{ color: colors.danger }}>{(update.error as Error).message}</Text> : null}
       <Button title="Enregistrer" onPress={save} loading={update.isPending} disabled={!validName} />

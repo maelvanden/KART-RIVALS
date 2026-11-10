@@ -6,20 +6,25 @@ import { useAuth } from '@/features/auth/auth-provider';
 import { tournamentError } from '@/features/tournaments/errors';
 import { isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
-import type { RaceFormat, Tournament, TournamentSize } from '@/types/models';
+import type { RaceFormat, Tournament, TournamentInvite, TournamentSize } from '@/types/models';
 
 const TOURNAMENT_SELECT = `
   id, organizer_id, name, size, format, starts_at, message, status, champion_id, runner_up_id,
-  created_at, started_at, completed_at, banner_url,
+  created_at, started_at, completed_at, banner_url, is_private, prize, is_official, auto_start, min_elo, max_elo,
+  third_place, third_place_id, round_days, registration_closes_at, on_site,
   track:tracks (id, name, city, cover_url),
   entries:tournament_entries (pilot_id, seed, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
+  waitlist:tournament_waitlist (pilot_id, joined_at, pilot:profiles (id, username, avatar_url, elo, rank)),
   matches:tournament_matches (
     id, round, slot, pilot_a, pilot_b, challenge_id, winner_id, outcome, decided_at,
-    a_position, b_position, a_best_lap_ms, b_best_lap_ms
+    a_position, b_position, a_best_lap_ms, b_best_lap_ms, deadline_at
   )
 `;
 
 const DEMO_ERROR = 'Mode démo : les tournois sont disponibles avec un vrai compte.';
+
+/** Les tournois officiels d'abord, puis l'ordre reçu. */
+const officialFirst = (list: Tournament[]) => [...list].sort((a, b) => Number(b.is_official) - Number(a.is_official));
 
 /** Inscrits rangés par tête de série (puis ordre d'inscription tant que le tableau n'est pas tiré). */
 const sortEntries = (t: Tournament): Tournament => ({
@@ -27,6 +32,7 @@ const sortEntries = (t: Tournament): Tournament => ({
   entries: [...t.entries].sort(
     (a, b) => (a.seed ?? 99) - (b.seed ?? 99) || a.joined_at.localeCompare(b.joined_at),
   ),
+  waitlist: [...(t.waitlist ?? [])].sort((a, b) => a.joined_at.localeCompare(b.joined_at)),
 });
 
 /** Tournois dont les inscriptions sont ouvertes, les plus récents d'abord. */
@@ -40,14 +46,34 @@ export function useOpenTournaments() {
         .select(TOURNAMENT_SELECT)
         .eq('status', 'registration')
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(60);
       if (error) throw error;
-      return (data as unknown as Tournament[]).map(sortEntries);
+      return officialFirst((data as unknown as Tournament[]).map(sortEntries));
     },
   });
 }
 
-/** Tournois où le pilote connecté est inscrit (hors annulés). */
+/** Fiche circuit : tournois à venir ou en cours sur ce circuit (les privés seulement pour qui y a accès). */
+export function useTrackTournaments(trackId: string | undefined) {
+  return useQuery({
+    queryKey: ['tournaments', 'track', trackId],
+    enabled: !!trackId,
+    queryFn: async (): Promise<Tournament[]> => {
+      if (isDemoMode) return [];
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select(TOURNAMENT_SELECT)
+        .eq('track_id', trackId!)
+        .in('status', ['registration', 'running'])
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return officialFirst((data as unknown as Tournament[]).map(sortEntries));
+    },
+  });
+}
+
+/** Tournois où le pilote connecté est inscrit, ou qu'il organise (hors annulés). */
 export function useMyTournaments() {
   const { userId } = useAuth();
   return useQuery({
@@ -62,11 +88,27 @@ export function useMyTournaments() {
         .order('joined_at', { ascending: false })
         .limit(30);
       if (idsError) throw idsError;
-      if (mine.length === 0) return [];
+      // Un karting organise son tournoi officiel sans forcément y rouler.
+      const { data: organized, error: organizedError } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('organizer_id', userId!)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (organizedError) throw organizedError;
+      const { data: waiting, error: waitingError } = await supabase
+        .from('tournament_waitlist')
+        .select('tournament_id')
+        .eq('pilot_id', userId!);
+      if (waitingError) throw waitingError;
+      const ids = [
+        ...new Set([...mine, ...waiting].map((e) => e.tournament_id).concat(organized.map((t) => t.id))),
+      ];
+      if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('tournaments')
         .select(TOURNAMENT_SELECT)
-        .in('id', mine.map((e) => e.tournament_id))
+        .in('id', ids)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -98,15 +140,17 @@ export function useTournamentMatchForChallenge(challengeId: string | undefined, 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tournament_matches')
-        .select('id, round, decided_at, tournament:tournaments (id, name, size, status)')
+        .select('id, round, slot, decided_at, deadline_at, tournament:tournaments (id, name, size, status, on_site)')
         .eq('challenge_id', challengeId!)
         .maybeSingle();
       if (error) throw error;
       return data as unknown as {
         id: string;
         round: number;
+        slot: number;
         decided_at: string | null;
-        tournament: { id: string; name: string; size: TournamentSize; status: Tournament['status'] };
+        deadline_at: string | null;
+        tournament: { id: string; name: string; size: TournamentSize; status: Tournament['status']; on_site: boolean };
       } | null;
     },
   });
@@ -118,10 +162,10 @@ export type Trophy = {
   size: TournamentSize;
   completed_at: string;
   track: { id: string; name: string; city: string };
-  place: 'champion' | 'finalist';
+  place: 'champion' | 'finalist' | 'third';
 };
 
-/** Vitrine : tournois remportés et finales perdues du pilote. */
+/** Vitrine : tournois remportés, finales perdues et 3es places (petite finale) du pilote. */
 export function usePilotTrophies(pilotId: string | undefined) {
   return useQuery({
     queryKey: ['tournaments', 'trophies', pilotId],
@@ -130,14 +174,17 @@ export function usePilotTrophies(pilotId: string | undefined) {
       if (isDemoMode) return [];
       const { data, error } = await supabase
         .from('tournaments')
-        .select('id, name, size, completed_at, champion_id, track:tracks (id, name, city)')
+        .select('id, name, size, completed_at, champion_id, runner_up_id, track:tracks (id, name, city)')
         .eq('status', 'completed')
-        .or(`champion_id.eq.${pilotId},runner_up_id.eq.${pilotId}`)
+        .or(`champion_id.eq.${pilotId},runner_up_id.eq.${pilotId},third_place_id.eq.${pilotId}`)
         .order('completed_at', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data as unknown as (Omit<Trophy, 'place'> & { champion_id: string | null })[]).map(
-        ({ champion_id, ...t }) => ({ ...t, place: champion_id === pilotId ? 'champion' : 'finalist' }),
+      return (data as unknown as (Omit<Trophy, 'place'> & { champion_id: string | null; runner_up_id: string | null })[]).map(
+        ({ champion_id, runner_up_id, ...t }) => ({
+          ...t,
+          place: champion_id === pilotId ? 'champion' : runner_up_id === pilotId ? 'finalist' : 'third',
+        }),
       );
     },
   });
@@ -203,6 +250,14 @@ export type TournamentEdit = {
   message?: string | null;
   /** URI locale d'une nouvelle bannière, ou null pour la retirer ; absent = inchangée. */
   bannerUri?: string | null;
+  /** Modifiable tant que les inscriptions sont ouvertes. */
+  isPrivate?: boolean;
+  prize?: string | null;
+  /** Modifiable tant que les inscriptions sont ouvertes. */
+  autoStart?: boolean;
+  onSite?: boolean;
+  /** Date ISO, ou null pour retirer la clôture ; modifiable tant que les inscriptions sont ouvertes. */
+  registrationClosesAt?: string | null;
 };
 
 /** Modification par l'organisateur : seuls les champs fournis changent. */
@@ -213,7 +268,12 @@ export function useUpdateTournament() {
   return useMutation({
     mutationFn: async (edit: TournamentEdit) => {
       if (isDemoMode) throw new Error(DEMO_ERROR);
-      const data: Record<string, string> = {};
+      const data: Record<string, string | boolean> = {};
+      if (edit.isPrivate !== undefined) data.is_private = edit.isPrivate;
+      if (edit.prize !== undefined) data.prize = edit.prize ?? '';
+      if (edit.autoStart !== undefined) data.auto_start = edit.autoStart;
+      if (edit.onSite !== undefined) data.on_site = edit.onSite;
+      if (edit.registrationClosesAt !== undefined) data.registration_closes_at = edit.registrationClosesAt ?? '';
       if (edit.name !== undefined) data.name = edit.name;
       if (edit.startsAt !== undefined) data.starts_at = edit.startsAt ?? '';
       if (edit.message !== undefined) data.message = edit.message ?? '';
@@ -249,6 +309,20 @@ export type NewTournament = {
   format: RaceFormat;
   startsAt: string | null;
   message: string | null;
+  isPrivate: boolean;
+  prize: string | null;
+  /** Tournoi officiel du karting (réservé aux admins de la fiche circuit). */
+  isOfficial: boolean;
+  /** Tournoi officiel : l'organisateur roule-t-il aussi ? (toujours inscrit sinon) */
+  participate: boolean;
+  autoStart: boolean;
+  minElo: number | null;
+  maxElo: number | null;
+  thirdPlace: boolean;
+  /** Délai par tour en jours, null sans délai. */
+  roundDays: number | null;
+  registrationClosesAt: string | null;
+  onSite: boolean;
 };
 
 export function useCreateTournament() {
@@ -262,6 +336,19 @@ export function useCreateTournament() {
         p_format: input.format,
         p_starts_at: input.startsAt,
         p_message: input.message,
+        p_is_private: input.isPrivate,
+        p_prize: input.prize,
+        p_is_official: input.isOfficial,
+        p_participate: input.participate,
+        p_auto_start: input.autoStart,
+        p_min_elo: input.minElo,
+        p_max_elo: input.maxElo,
+        p_options: {
+          third_place: input.thirdPlace,
+          round_days: input.roundDays,
+          registration_closes_at: input.registrationClosesAt,
+          on_site: input.onSite,
+        },
       }),
     onSuccess: invalidate,
   });
@@ -300,5 +387,114 @@ export function useAwardWalkover() {
       await rpc('award_tournament_walkover', { p_match_id: matchId, p_winner_id: winnerId });
     },
     onSuccess: invalidate,
+  });
+}
+
+// ---------- Invitations ----------
+
+/** Tournois où je suis invité et n'ai pas encore répondu, avec le pilote qui m'invite. */
+export function useMyTournamentInvites() {
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: ['tournaments', 'my-invites', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<(Tournament & { invited_by_name: string | null })[]> => {
+      if (isDemoMode) return [];
+      const { data: invites, error: invitesError } = await supabase
+        .from('tournament_invites')
+        .select('tournament_id, inviter:profiles!tournament_invites_invited_by_fkey (username)')
+        .eq('pilot_id', userId!)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (invitesError) throw invitesError;
+      if (invites.length === 0) return [];
+      const inviter = new Map(
+        (invites as unknown as { tournament_id: string; inviter: { username: string } | null }[]).map((i) => [
+          i.tournament_id,
+          i.inviter?.username ?? null,
+        ]),
+      );
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select(TOURNAMENT_SELECT)
+        .in('id', [...inviter.keys()])
+        .eq('status', 'registration');
+      if (error) throw error;
+      return (data as unknown as Tournament[]).map((t) => ({ ...sortEntries(t), invited_by_name: inviter.get(t.id) ?? null }));
+    },
+  });
+}
+
+/** Invitations d'un tournoi visibles par moi : la mienne, celles que j'ai envoyées, toutes si je l'organise. */
+export function useTournamentInvites(tournamentId: string | undefined) {
+  return useQuery({
+    queryKey: ['tournaments', 'invites', tournamentId],
+    enabled: !!tournamentId && !isDemoMode,
+    queryFn: async (): Promise<TournamentInvite[]> => {
+      const { data, error } = await supabase
+        .from('tournament_invites')
+        .select(
+          `pilot_id, invited_by, status, created_at,
+           pilot:profiles!tournament_invites_pilot_id_fkey (id, username, avatar_url, elo, rank),
+           inviter:profiles!tournament_invites_invited_by_fkey (username)`,
+        )
+        .eq('tournament_id', tournamentId!)
+        .order('created_at');
+      if (error) throw error;
+      return data as unknown as TournamentInvite[];
+    },
+  });
+}
+
+/** Invite des pilotes ; renvoie le nombre d'invitations réellement envoyées (ni inscrits, ni déjà invités). */
+export function useInviteToTournament() {
+  const invalidate = useInvalidateTournaments();
+  return useMutation({
+    mutationFn: async ({ tournamentId, pilotIds }: { tournamentId: string; pilotIds: string[] }): Promise<number> =>
+      rpc('invite_to_tournament', { p_tournament_id: tournamentId, p_pilot_ids: pilotIds }),
+    onSuccess: invalidate,
+  });
+}
+
+export const useDeclineTournamentInvite = () => useTournamentAction('decline_tournament_invite');
+
+export function useRevokeTournamentInvite() {
+  const invalidate = useInvalidateTournaments();
+  return useMutation({
+    mutationFn: async ({ tournamentId, pilotId }: { tournamentId: string; pilotId: string }) => {
+      await rpc('revoke_tournament_invite', { p_tournament_id: tournamentId, p_pilot_id: pilotId });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ---------- Tournoi sur place ----------
+
+export type OnSiteResult =
+  | { format: 'position'; winner: 'a' | 'b' }
+  | { format: 'lap_time'; aLapMs: number; bLapMs: number };
+
+/** L'organisateur saisit le résultat d'un duel : le tableau avance aussitôt. */
+export function useRecordTournamentResult() {
+  const invalidate = useInvalidateTournaments();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ matchId, result }: { matchId: string; result: OnSiteResult }) => {
+      await rpc('record_tournament_result', {
+        p_match_id: matchId,
+        p_a_position: result.format === 'position' ? (result.winner === 'a' ? 1 : 2) : null,
+        p_b_position: result.format === 'position' ? (result.winner === 'b' ? 1 : 2) : null,
+        p_a_best_lap_ms: result.format === 'lap_time' ? result.aLapMs : null,
+        p_b_best_lap_ms: result.format === 'lap_time' ? result.bLapMs : null,
+      });
+    },
+    // Tournoi officiel : l'ELO des deux pilotes a bougé.
+    onSuccess: () =>
+      Promise.all([
+        invalidate(),
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['elo-history'] }),
+      ]),
   });
 }

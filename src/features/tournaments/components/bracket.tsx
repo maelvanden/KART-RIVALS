@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Chips } from '@/components/ui/chips';
 import { Icon, icons } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { bracketRounds, currentRound, roundCount, roundLabel } from '@/features/tournaments/bracket';
+import { bracketRounds, currentRound, roundCount, roundLabel, thirdPlaceMatch } from '@/features/tournaments/bracket';
 import { formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 import type { PilotSummary, Tournament, TournamentMatch } from '@/types/models';
@@ -28,6 +28,7 @@ export function Bracket({ tournament, myId }: { tournament: Tournament; myId: st
   const [from, setFrom] = useState(() => Math.min(currentRound(tournament), Math.max(1, total - 1)));
   const pilots = new Map(tournament.entries.map((e) => [e.pilot_id, { ...e.pilot, seed: e.seed }]));
   const visible = rounds.slice(from - 1);
+  const third = thirdPlaceMatch(tournament);
   // Hauteur fixée par le premier tour affiché : chaque tour suivant se centre entre ses deux duels d'origine.
   const height = (visible[0]?.length ?? 1) * (BOX_HEIGHT + BOX_GAP);
 
@@ -63,6 +64,15 @@ export function Bracket({ tournament, myId }: { tournament: Tournament; myId: st
                     </View>
                   ))}
                 </View>
+                {/* Petite finale : sous la finale, hors de l'arbre. */}
+                {round === total && third ? (
+                  <View style={styles.third}>
+                    <Text variant="label" style={[styles.roundTitle, styles.thirdTitle]}>
+                      Petite finale
+                    </Text>
+                    <MatchBox match={third} pilots={pilots} myId={myId} isFinal={false} lapTime={tournament.format === 'lap_time'} bronze />
+                  </View>
+                ) : null}
               </View>
               {round < total ? <Links count={matches.length / 2} cell={cell} height={height} /> : null}
             </View>
@@ -95,12 +105,15 @@ function MatchBox({
   myId,
   isFinal,
   lapTime,
+  bronze,
 }: {
   match: TournamentMatch;
   pilots: Map<string, Pilot>;
   myId: string;
   isFinal: boolean;
   lapTime: boolean;
+  /** Petite finale : liseré bronze, et « À venir » tant que les demi-finales ne sont pas jouées. */
+  bronze?: boolean;
 }) {
   const mine = match.pilot_a === myId || match.pilot_b === myId;
   const live = !match.decided_at && !!match.challenge_id;
@@ -117,11 +130,11 @@ function MatchBox({
   };
 
   const box = (
-    <View style={[styles.box, live && styles.live, mine && live && styles.mine, isFinal && styles.final]}>
+    <View style={[styles.box, live && styles.live, bronze && styles.bronze, mine && live && styles.mine, isFinal && styles.final]}>
       {live ? <View style={[styles.liveDot, mine && { backgroundColor: colors.orange }]} /> : null}
-      <Line pilotId={match.pilot_a} match={match} pilots={pilots} myId={myId} score={score('a')} />
+      <Line pilotId={match.pilot_a} match={match} pilots={pilots} myId={myId} score={score('a')} pending={bronze} />
       <View style={styles.divider} />
-      <Line pilotId={match.pilot_b} match={match} pilots={pilots} myId={myId} score={score('b')} />
+      <Line pilotId={match.pilot_b} match={match} pilots={pilots} myId={myId} score={score('b')} pending={bronze} />
     </View>
   );
 
@@ -143,18 +156,21 @@ function Line({
   pilots,
   myId,
   score,
+  pending,
 }: {
   pilotId: string | null;
   match: TournamentMatch;
   pilots: Map<string, Pilot>;
   myId: string;
   score: string | null;
+  /** Case alimentée par un tour précédent même au premier tour affiché (petite finale). */
+  pending?: boolean;
 }) {
   const pilot = pilotId ? pilots.get(pilotId) : undefined;
   const won = !!match.decided_at && !!pilotId && match.winner_id === pilotId;
   const lost = !!match.decided_at && !!pilotId && match.winner_id !== pilotId;
   // Case vide : qualifié d'office en face au premier tour, ou vainqueur pas encore connu ensuite.
-  const placeholder = match.round === 1 ? 'Exempt' : 'À venir';
+  const placeholder = match.decided_at ? 'Personne' : match.round === 1 && !pending ? 'Exempt' : 'À venir';
 
   return (
     <View style={styles.line}>
@@ -217,6 +233,9 @@ const styles = StyleSheet.create({
   live: { borderColor: colors.borderStrong },
   mine: { borderColor: colors.orange, backgroundColor: colors.orangeDim },
   final: { borderColor: colors.neon, backgroundColor: colors.selected },
+  bronze: { borderColor: '#CD7F32' },
+  third: { gap: spacing.sm, marginTop: spacing.md },
+  thirdTitle: { color: '#CD7F32' },
   liveDot: { position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.neon },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 4 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 24 },
