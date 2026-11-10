@@ -20,9 +20,9 @@ export function roundLabel(round: number, rounds: number, short = false): string
 }
 
 /** Nom d'un duel de ce tour, au singulier (« Demi-finale à courir »). */
-export function matchLabel(round: number, rounds: number): string {
+export function matchLabel(round: number, rounds: number, slot = 0): string {
   const fromEnd = rounds - round;
-  if (fromEnd === 0) return 'Finale';
+  if (fromEnd === 0) return slot === 1 ? 'Petite finale' : 'Finale';
   if (fromEnd === 1) return 'Demi-finale';
   if (fromEnd === 2) return 'Quart de finale';
   if (fromEnd === 3) return 'Huitième de finale';
@@ -44,8 +44,22 @@ export const statusLabel: Record<TournamentStatus, string> = {
 export function bracketRounds(t: Tournament): TournamentMatch[][] {
   const rounds = roundCount(t.size);
   return Array.from({ length: rounds }, (_, i) =>
-    t.matches.filter((m) => m.round === i + 1).sort((a, b) => a.slot - b.slot),
+    t.matches.filter((m) => m.round === i + 1 && !isThirdPlace(m, rounds)).sort((a, b) => a.slot - b.slot),
   );
+}
+
+/** La petite finale occupe la case « dernier tour, slot 1 », à côté de la finale. */
+export const isThirdPlace = (m: Pick<TournamentMatch, 'round' | 'slot'>, rounds: number) => m.round === rounds && m.slot === 1;
+
+export function thirdPlaceMatch(t: Tournament): TournamentMatch | null {
+  const rounds = roundCount(t.size);
+  return t.matches.find((m) => isThirdPlace(m, rounds)) ?? null;
+}
+
+/** Les pilotes à la 3e place : le vainqueur de la petite finale, sinon les deux demi-finalistes battus (ex æquo). */
+export function thirdPlaces(t: Tournament): string[] {
+  if (t.third_place) return t.third_place_id ? [t.third_place_id] : [];
+  return semiFinalLosers(t);
 }
 
 /** Le tour en train de se jouer : le premier qui a encore une case non tranchée (la finale une fois terminé). */
@@ -77,14 +91,25 @@ export function isStillIn(t: Tournament, pilotId: string): boolean {
   );
 }
 
-/** Le tour atteint par le pilote (pour « Éliminé en demi-finale »). */
+/** Le tour atteint par le pilote (pour « Éliminé en demi-finale ») ; la petite finale n'élimine personne. */
 export function eliminatedIn(t: Tournament, pilotId: string): TournamentMatch | null {
+  const rounds = roundCount(t.size);
   return (
     t.matches.find(
-      (m) => m.decided_at && m.winner_id !== pilotId && (m.pilot_a === pilotId || m.pilot_b === pilotId),
+      (m) =>
+        m.decided_at &&
+        !isThirdPlace(m, rounds) &&
+        m.winner_id !== pilotId &&
+        (m.pilot_a === pilotId || m.pilot_b === pilotId),
     ) ?? null
   );
 }
+
+/** Échéance passée ? */
+export const isPast = (iso: string | null) => !!iso && new Date(iso).getTime() < Date.now();
+
+/** Duel dont l'échéance est passée. */
+export const isOverdue = (m: Pick<TournamentMatch, 'decided_at' | 'deadline_at'>) => !m.decided_at && isPast(m.deadline_at);
 
 /** Les deux demi-finalistes battus (3es ex æquo sur le podium). */
 export function semiFinalLosers(t: Tournament): string[] {

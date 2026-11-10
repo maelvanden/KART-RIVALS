@@ -27,6 +27,7 @@ import {
 import {
   conditionsLabel,
   eliminatedIn,
+  isOverdue,
   isStillIn,
   meetsConditions,
   matchLabel,
@@ -40,6 +41,7 @@ import {
 } from '@/features/tournaments/bracket';
 import { Bracket } from '@/features/tournaments/components/bracket';
 import { OfficialTag } from '@/features/tournaments/components/official-tag';
+import { OnSiteResults } from '@/features/tournaments/components/on-site-results';
 import { Podium } from '@/features/tournaments/components/podium';
 import { TournamentBanner } from '@/features/tournaments/components/tournament-banner';
 import { confirmAction } from '@/lib/confirm';
@@ -97,7 +99,10 @@ export default function TournamentScreen() {
   // Duels que l'organisateur peut arbitrer (il ne les joue pas).
   const refereeable =
     isOrganizer && t.status === 'running'
-      ? t.matches.filter((m) => !m.decided_at && m.challenge_id && m.pilot_a !== userId && m.pilot_b !== userId)
+      ? t.matches
+          .filter((m) => !m.decided_at && m.challenge_id && m.pilot_a !== userId && m.pilot_b !== userId)
+          // Les duels en retard d'abord.
+          .sort((a, b) => Number(isOverdue(b)) - Number(isOverdue(a)) || a.round - b.round || a.slot - b.slot)
       : [];
 
   const share = () =>
@@ -195,6 +200,15 @@ export default function TournamentScreen() {
         {t.starts_at ? <Meta icon={icons.clock} text={dateTimeFormat.format(new Date(t.starts_at))} /> : <Meta icon={icons.clock} text="Date à définir" />}
         <Meta icon={icons.bolt} text={`${sizeSummary(t.size)} · ${t.format === 'lap_time' ? 'duels au meilleur tour' : 'duels à la position'}`} />
         <Meta icon={icons.medal} text={conditions ? `Réservé : ${conditions}` : 'Ouvert à tous les niveaux'} />
+        {t.on_site ? (
+          <Meta icon={icons.pin} text={`Sur place : l’organisateur saisit les résultats${t.is_official ? '' : ' (hors ELO)'}`} />
+        ) : t.round_days ? (
+          <Meta icon={icons.timer} text={`${t.round_days} jour${t.round_days > 1 ? 's' : ''} pour jouer chaque duel`} />
+        ) : null}
+        {t.third_place ? <Meta icon={icons.trophy} text="Petite finale pour la 3e place" /> : null}
+        {t.status === 'registration' && t.registration_closes_at ? (
+          <Meta icon={icons.lock} text={`Clôture des inscriptions : ${dateTimeFormat.format(new Date(t.registration_closes_at))}`} />
+        ) : null}
         {t.is_official ? (
           <Meta icon={icons.verified} text={`Tournoi officiel de ${t.track.name}${isOrganizer ? ' · tu l’organises' : ''}`} />
         ) : organizer ? (
@@ -203,7 +217,7 @@ export default function TournamentScreen() {
         {t.message ? <Text style={styles.message}>« {t.message} »</Text> : null}
       </Card>
 
-      {t.status === 'completed' ? <Podium tournament={t} /> : null}
+      {t.champion_id ? <Podium tournament={t} /> : null}
 
       {t.status === 'running' && duels.total > 0 ? (
         <View style={styles.progress}>
@@ -331,6 +345,8 @@ export default function TournamentScreen() {
         </>
       ) : null}
 
+      {isOrganizer && t.on_site && t.status === 'running' ? <OnSiteResults tournament={t} myId={userId} /> : null}
+
       {refereeable.length > 0 ? (
         <>
           <Text variant="label">Arbitrage</Text>
@@ -446,6 +462,7 @@ function entryStatus(t: Tournament, pilotId: string): string {
   if (t.status === 'registration' || t.status === 'cancelled') return `Inscrit${organizer}`;
   if (t.champion_id === pilotId) return `Vainqueur${organizer}`;
   if (t.runner_up_id === pilotId) return `Finaliste${organizer}`;
+  if (t.third_place_id === pilotId) return `3e place${organizer}`;
   const out = eliminatedIn(t, pilotId);
   if (out) return `Éliminé · ${roundLabel(out.round, roundCount(t.size), true).toLowerCase()}${organizer}`;
   return `En lice${organizer}`;
@@ -458,9 +475,14 @@ function MyRun({ tournament: t, myId, current }: { tournament: Tournament; myId:
   let text: string;
   let tone: string = colors.textMuted;
   if (current) {
-    text = `${matchLabel(current.round, rounds)} : tu affrontes ${
+    text = `${matchLabel(current.round, rounds, current.slot)} : tu affrontes ${
       t.entries.find((e) => e.pilot_id === (current.pilot_a === myId ? current.pilot_b : current.pilot_a))?.pilot.username ?? 'ton adversaire'
-    }. Courez, saisissez le résultat et validez-le comme un défi.`;
+    }. ${
+      t.on_site
+        ? 'L’organisateur saisit le résultat à l’arrivée.'
+        : 'Courez, saisissez le résultat et validez-le comme un défi.'
+    }${current.deadline_at ? ` À jouer avant le ${dateTimeFormat.format(new Date(current.deadline_at))}.` : ''}`;
+    if (isOverdue(current)) text += ' Le délai est dépassé : l’organisateur peut prononcer un forfait.';
     tone = colors.orange;
   } else if (isStillIn(t, myId)) {
     text = 'Qualifié ! Ton prochain adversaire sera connu à la fin du duel en cours.';
@@ -493,8 +515,14 @@ function Walkover({
   return (
     <Card style={styles.walkover}>
       <Text variant="caption">
-        {matchLabel(match.round, rounds)} · {name(match.pilot_a)} contre {name(match.pilot_b)}
+        {matchLabel(match.round, rounds, match.slot)} · {name(match.pilot_a)} contre {name(match.pilot_b)}
       </Text>
+      {match.deadline_at ? (
+        <Text variant="caption" style={isOverdue(match) ? { color: colors.orange, fontWeight: '800' } : undefined}>
+          {isOverdue(match) ? 'Délai dépassé depuis le ' : 'À jouer avant le '}
+          {dateTimeFormat.format(new Date(match.deadline_at))}
+        </Text>
+      ) : null}
       <View style={styles.actions}>
         <Button
           title={`Qualifier ${name(match.pilot_a)}`}

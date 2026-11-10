@@ -19,9 +19,10 @@ function myStatus(t: Tournament, myId: string): { text: string; urgent: boolean 
   if (t.status === 'completed') {
     if (t.champion_id === myId) return { text: '🏆 Vainqueur', urgent: false };
     if (t.runner_up_id === myId) return { text: 'Finaliste', urgent: false };
+    if (t.third_place_id === myId) return { text: '3e place', urgent: false };
   }
   const current = myCurrentMatch(t, myId);
-  if (current) return { text: `${matchLabel(current.round, roundCount(t.size))} à courir`, urgent: true };
+  if (current) return { text: `${matchLabel(current.round, roundCount(t.size), current.slot)} à courir`, urgent: true };
   if (t.status === 'running' && isStillIn(t, myId)) return { text: 'Qualifié · en attente', urgent: false };
   const out = eliminatedIn(t, myId);
   return out ? { text: `Éliminé · ${matchLabel(out.round, roundCount(t.size)).toLowerCase()}`, urgent: false } : null;

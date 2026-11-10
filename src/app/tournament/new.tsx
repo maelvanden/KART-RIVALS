@@ -17,6 +17,7 @@ import type { EloRange } from '@/features/tournaments/bracket';
 import { BannerField } from '@/features/tournaments/components/banner-field';
 import { ConditionsField } from '@/features/tournaments/components/conditions-field';
 import { StartModeField } from '@/features/tournaments/components/start-mode-field';
+import { WhenField } from '@/features/tournaments/components/when-field';
 import { PrivacyField } from '@/features/tournaments/components/privacy-field';
 import { useTracksMap } from '@/features/tracks/api';
 import { TrackPicker } from '@/features/tracks/components/track-picker';
@@ -46,6 +47,11 @@ export default function NewTournamentScreen() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [prize, setPrize] = useState('');
   const [autoStart, setAutoStart] = useState(true);
+  const [onSite, setOnSite] = useState(false);
+  const [thirdPlace, setThirdPlace] = useState(true);
+  const [roundDays, setRoundDays] = useState<number | null>(null);
+  const [closeDay, setCloseDay] = useState<number | null>(null);
+  const [closeHour, setCloseHour] = useState(18);
   const [conditions, setConditions] = useState<{ range: EloRange; valid: boolean }>({
     range: { minElo: null, maxElo: null },
     valid: true,
@@ -78,6 +84,10 @@ export default function NewTournamentScreen() {
       autoStart,
       minElo: conditions.range.minElo,
       maxElo: conditions.range.maxElo,
+      thirdPlace,
+      roundDays: onSite ? null : roundDays,
+      registrationClosesAt: toScheduledAt(closeDay, closeHour),
+      onSite,
     });
     if (banner) {
       try {
@@ -139,8 +149,78 @@ export default function NewTournamentScreen() {
         </Text>
       </Section>
 
+      <Section label="Déroulement">
+        <Segmented
+          options={[
+            { value: 'remote', label: 'À distance' },
+            { value: 'on_site', label: 'Sur place' },
+          ]}
+          value={onSite ? 'on_site' : 'remote'}
+          onChange={(v) => setOnSite(v === 'on_site')}
+        />
+        <Text variant="caption">
+          {onSite
+            ? 'Tout le monde est au karting : tu saisis toi-même le résultat de chaque duel et le tableau avance en direct. Ces duels comptent pour l’ELO seulement dans un tournoi officiel.'
+            : 'Chaque duel se joue quand les deux pilotes le peuvent : ils saisissent et valident le résultat comme un défi, ELO compris.'}
+        </Text>
+      </Section>
+
+      {onSite ? null : (
+        <Section label="Délai pour jouer chaque tour">
+          <Chips
+            options={[
+              { value: null, label: 'Aucun' },
+              { value: 2, label: '2 jours' },
+              { value: 3, label: '3 jours' },
+              { value: 7, label: '1 semaine' },
+              { value: 14, label: '2 semaines' },
+            ]}
+            value={roundDays}
+            onChange={setRoundDays}
+          />
+          <Text variant="caption">
+            {roundDays
+              ? 'Les deux pilotes sont relancés la veille. Passé le délai, tu es prévenu et tu peux prononcer un forfait.'
+              : 'Sans délai, un pilote qui ne joue pas peut bloquer le tableau.'}
+          </Text>
+        </Section>
+      )}
+
+      <Section label="Petite finale">
+        <Segmented
+          options={[
+            { value: 'yes', label: 'Oui' },
+            { value: 'no', label: 'Non' },
+          ]}
+          value={thirdPlace ? 'yes' : 'no'}
+          onChange={(v) => setThirdPlace(v === 'yes')}
+        />
+        <Text variant="caption">
+          {thirdPlace
+            ? 'Les deux battus des demi-finales se disputent la 3e place : médaille de bronze et 50 points.'
+            : 'Pas de duel pour la 3e place : les deux demi-finalistes battus sont 3es ex æquo.'}
+        </Text>
+      </Section>
+
       <Section label="Lancement">
         <StartModeField autoStart={autoStart} onChange={setAutoStart} />
+      </Section>
+
+      <Section label="Clôture des inscriptions">
+        <WhenField
+          day={closeDay}
+          hour={closeHour}
+          onChange={(d, h) => {
+            setCloseDay(d);
+            setCloseHour(h);
+          }}
+          noneLabel="Aucune"
+        />
+        <Text variant="caption">
+          {closeDay !== null
+            ? `À cette heure, le tableau est tiré tout seul s’il y a au moins ${minPilotsToStart(size)} inscrits. Les inscrits sont prévenus la veille.`
+            : 'Sans date de clôture, le tableau part quand il est plein ou quand tu le lances.'}
+        </Text>
       </Section>
 
       <Section label="Qui peut s’inscrire">

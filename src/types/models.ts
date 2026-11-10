@@ -390,6 +390,8 @@ export type TournamentMatch = {
   b_position: number | null;
   a_best_lap_ms: number | null;
   b_best_lap_ms: number | null;
+  /** Échéance du duel (délai par tour), null sans délai. */
+  deadline_at: string | null;
 };
 
 export type Tournament = {
@@ -420,6 +422,15 @@ export type Tournament = {
   /** Conditions d'entrée : fourchette d'ELO (null = pas de borne). */
   min_elo: number | null;
   max_elo: number | null;
+  /** Petite finale : duel pour la 3e place (case « dernier tour, slot 1 » du tableau). */
+  third_place: boolean;
+  third_place_id: string | null;
+  /** Délai pour jouer chaque duel, en jours (null = pas de délai). */
+  round_days: number | null;
+  /** Clôture des inscriptions : le tableau est tiré automatiquement à cette heure. */
+  registration_closes_at: string | null;
+  /** Sur place : l'organisateur saisit lui-même les résultats (ELO compté seulement si officiel). */
+  on_site: boolean;
   track: Track & { cover_url: string | null };
   entries: TournamentEntry[];
   /** Remplaçants, dans l'ordre d'arrivée. */

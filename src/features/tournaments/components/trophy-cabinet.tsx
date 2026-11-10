@@ -9,9 +9,11 @@ import { colors, radius, spacing } from '@/theme';
 
 const GOLD = '#FFC83D';
 const SILVER = '#C0C7D1';
+const BRONZE = '#CD7F32';
+const placeLabel = { champion: 'Vainqueur', finalist: 'Finaliste', third: '3e place' } as const;
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' });
 
-/** Vitrine à trophées de la fiche pilote : tournois gagnés (or) et finales (argent). */
+/** Vitrine à trophées de la fiche pilote : tournois gagnés (or), finales (argent) et 3es places (bronze). */
 export function TrophyCabinet({ trophies }: { trophies: Trophy[] }) {
   if (trophies.length === 0) return null;
   const wins = trophies.filter((t) => t.place === 'champion').length;
@@ -26,12 +28,12 @@ export function TrophyCabinet({ trophies }: { trophies: Trophy[] }) {
       </View>
       <View style={styles.list}>
         {trophies.map((t) => {
-          const color = t.place === 'champion' ? GOLD : SILVER;
+          const color = t.place === 'champion' ? GOLD : t.place === 'finalist' ? SILVER : BRONZE;
           return (
             <Pressable
               key={t.id}
               accessibilityRole="button"
-              accessibilityLabel={`${t.place === 'champion' ? 'Vainqueur' : 'Finaliste'} de ${t.name}`}
+              accessibilityLabel={`${placeLabel[t.place]} de ${t.name}`}
               onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: t.id } })}
               style={({ pressed }) => [styles.trophy, pressed && { opacity: 0.8 }]}>
               <View style={[styles.cup, { borderColor: color }]}>
@@ -42,7 +44,7 @@ export function TrophyCabinet({ trophies }: { trophies: Trophy[] }) {
                   {t.name}
                 </Text>
                 <Text variant="caption" numberOfLines={1}>
-                  {t.place === 'champion' ? 'Vainqueur' : 'Finaliste'} · {t.track.name} · {t.size} pilotes ·{' '}
+                  {placeLabel[t.place]} · {t.track.name} · {t.size} pilotes ·{' '}
                   {dateFormat.format(new Date(t.completed_at))}
                 </Text>
               </View>
