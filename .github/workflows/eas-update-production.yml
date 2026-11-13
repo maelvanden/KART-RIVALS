@@ -1,4 +1,4 @@
-# Publie une mise à jour Expo (EAS Update) pour l'app installée depuis l'App Store / TestFlight (canal « production »).
+# Publie une mise à jour Expo (EAS Update) pour l'app installée depuis l'App Store / TestFlight et le Play Store (canal « production »).
 # Lancement à la main uniquement : onglet Actions > « Publier en production » > Run workflow, après avoir testé
 # la mise à jour (Expo Go ou build de développement). Seuls les changements de code JavaScript partent ainsi ;
 # grâce à runtimeVersion « fingerprint », une app dont la partie native diffère ne reçoit pas la mise à jour
@@ -39,4 +39,4 @@ jobs:
         env:
           # Passé par variable d'environnement : un message avec des guillemets ne casse pas la commande.
           MESSAGE: ${{ inputs.message }}
-        run: eas update --channel production --platform ios --message "$MESSAGE" --non-interactive
+        run: eas update --channel production --platform all --message "$MESSAGE" --non-interactive
