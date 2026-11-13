@@ -53,6 +53,12 @@ export default function ManageTrackScreen() {
       ) : null}
       {track.data && canManage ? (
         <>
+          <Button
+            title="Statistiques de la fiche"
+            variant="secondary"
+            icon={<Icon name={icons.poll} size={18} color={colors.text} />}
+            onPress={() => router.push({ pathname: '/admin/track/stats', params: { id } })}
+          />
           <CoverEditor track={track.data} />
           <TrackForm key={track.data.id} track={track.data} />
           <LayoutEditor track={track.data} />
