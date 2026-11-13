@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { SocialButtons } from '@/features/auth/components/social-buttons';
-import { openPrivacyPolicy, openTerms } from '@/lib/legal';
+import { EMAIL_CONFIRMED_URL, openPrivacyPolicy, openTerms } from '@/lib/legal';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/theme';
 
@@ -45,7 +45,7 @@ export default function SignInScreen() {
     const { data, error } =
       mode === 'sign-in'
         ? await supabase.auth.signInWithPassword(credentials)
-        : await supabase.auth.signUp(credentials);
+        : await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: EMAIL_CONFIRMED_URL } });
     setLoading(false);
     if (error) {
       setMessage({ text: authError(error.message), error: true });
