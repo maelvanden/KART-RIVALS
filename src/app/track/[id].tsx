@@ -12,6 +12,7 @@ import { useMyProfile, useUpdateProfile } from '@/features/profile/api';
 import { useTrack, useTrackLapRecords, useTrackLeaderboard } from '@/features/tracks/api';
 import { TrackEvents } from '@/features/events/components/track-events';
 import { TrackManageLink } from '@/features/admin/components/track-manage-link';
+import { useLogTrackView } from '@/features/admin/track-stats';
 import { TrackReviews } from '@/features/tracks/components/track-reviews';
 import { WeatherCard } from '@/features/tracks/components/weather-card';
 import { TrackSessions } from '@/features/sessions/components/track-sessions';
@@ -41,6 +42,7 @@ function directionsUrl(t: TrackDetails) {
 export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const track = useTrack(id);
+  useLogTrackView(id);
   const board = useTrackLeaderboard(id);
   const laps = useTrackLapRecords(id);
   const progress = useMyLapProgress();

@@ -257,6 +257,15 @@ export default function AdminScreen() {
               <Icon name={icons.edit} size={18} color={colors.neon} />
             </Pressable>
           ))}
+          {managed.map((t) => (
+            <MenuRow
+              key={`stats-${t.id}`}
+              icon={icons.poll}
+              title={managed.length > 1 ? `Statistiques · ${t.name}` : 'Statistiques de ma fiche'}
+              detail="Visites, pilotes venus rouler, habitués, intérêt pour tes événements"
+              onPress={() => router.push({ pathname: '/admin/track/stats', params: { id: t.id } })}
+            />
+          ))}
           <MenuRow
             icon={icons.report}
             title="Remontées des pilotes"
