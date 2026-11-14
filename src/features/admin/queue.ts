@@ -2,11 +2,12 @@ import type { Href } from 'expo-router';
 
 import { useAdminReports, useAdminTrackRequests, type TrackAdminRequest } from '@/features/admin/api';
 import { useAdminDisputes, useAdminTimeAttacks, useTrackCorrections } from '@/features/admin/panel';
+import { useAdminTournaments } from '@/features/admin/tournaments';
 import { useSupportInbox } from '@/features/social/radio';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatLapTime } from '@/lib/format';
 
-export type QueueKind = 'report' | 'support' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request';
+export type QueueKind = 'report' | 'support' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request' | 'tournament';
 
 export type QueueItem = {
   key: string;
@@ -28,12 +29,13 @@ export const QUEUE_LABELS: Record<QueueKind, string> = {
   suspect: 'Chrono suspect',
   correction: 'Remontée',
   request: 'Demande de karting',
+  tournament: 'Tournoi bloqué',
 };
 
 /**
  * Tout ce qui attend un admin appli, en une seule liste du plus ancien au plus récent :
- * signalements, messages au support sans réponse, tickets Time Attack à vérifier, litiges, chronos suspects, remontées et
- * demandes de gestion.
+ * signalements, messages au support sans réponse, tickets Time Attack à vérifier, litiges, chronos suspects, remontées,
+ * demandes de gestion et tournois dont un duel est bloqué (les duels contestés sont déjà dans les litiges).
  */
 export function useAdminQueue(enabled: boolean) {
   const reports = useAdminReports('open', enabled);
@@ -43,7 +45,8 @@ export function useAdminQueue(enabled: boolean) {
   const corrections = useTrackCorrections('open', enabled);
   const requests = useAdminTrackRequests(enabled);
   const support = useSupportInbox(enabled);
-  const sources = [reports, support, tickets, disputes, suspects, corrections, requests];
+  const tournaments = useAdminTournaments('watch', enabled);
+  const sources = [reports, support, tickets, disputes, suspects, corrections, requests, tournaments];
   const reason = (r: string) => REPORT_REASONS.find((x) => x.value === r)?.label ?? r;
 
   const items: QueueItem[] = [
@@ -106,6 +109,16 @@ export function useAdminQueue(enabled: boolean) {
       detail: q.message ? `« ${q.message} »` : q.track_city,
       request: q,
     })),
+    ...(tournaments.data ?? [])
+      .filter((t) => t.stuck > 0 && t.stuck_since)
+      .map((t) => ({
+        key: `tournament-${t.id}`,
+        kind: 'tournament' as const,
+        since: t.stuck_since!,
+        title: `${t.name} · ${t.track_name}`,
+        detail: `${t.stuck} duel${t.stuck > 1 ? 's' : ''} pas joué${t.stuck > 1 ? 's' : ''} malgré le délai · organisé par ${t.organizer ?? 'compte supprimé'}`,
+        href: { pathname: '/admin/tournament/[id]', params: { id: t.id } } as Href,
+      })),
   ].sort((a, b) => a.since.localeCompare(b.since));
 
   return {

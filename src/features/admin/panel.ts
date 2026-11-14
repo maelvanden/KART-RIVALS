@@ -1397,6 +1397,16 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       const kind = { post: 'Publication', comment: 'Commentaire', photo: 'Photo', review: 'Avis' }[d.kind as string] ?? 'Contenu';
       return `${kind} ${a.action === 'hide_content' ? 'masqué' : 'rétabli'}${d.kind === 'post' || d.kind === 'photo' ? 'e' : ''}${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
     }
+    case 'cancel_tournament':
+      return `Tournoi annulé${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'remove_tournament_pilot':
+      return `Inscription retirée${d.name ? ` de « ${d.name} »` : ''}`;
+    case 'tournament_walkover':
+      return `Forfait prononcé${d.label ? ` (${d.label})` : ''}${d.winner ? `, ${d.winner} qualifié` : ''}${d.name ? ` · « ${d.name} »` : ''}`;
+    case 'tournament_official':
+      return `Tournoi passé officiel${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'tournament_unofficial':
+      return `Statut officiel retiré${d.name ? ` : « ${d.name} »` : ''}`;
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:

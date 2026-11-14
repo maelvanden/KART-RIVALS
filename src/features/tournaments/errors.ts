@@ -31,6 +31,8 @@ const messages: Record<string, string> = {
   'A running tournament cannot be cancelled': 'Le tableau est lancé : seul un admin peut annuler le tournoi.',
   'Tournament is over': 'Ce tournoi est terminé.',
   'Tournament match not found': 'Duel introuvable.',
+  'Pilot is not registered': 'Ce pilote n’est pas inscrit à ce tournoi.',
+  'An official tournament must be public': 'Un tournoi officiel est forcément public : ce tournoi est privé.',
   'This duel is not being played': 'Ce duel n’est pas en cours.',
   'A result is awaiting confirmation': 'Un résultat attend d’être validé : valide-le ou conteste-le d’abord.',
   'Only the organizer can award a walkover': 'Seul l’organisateur (s’il ne joue pas ce duel) peut prononcer un forfait.',

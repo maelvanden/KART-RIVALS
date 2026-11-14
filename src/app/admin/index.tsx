@@ -28,6 +28,7 @@ import {
   useTrackCorrections,
 } from '@/features/admin/panel';
 import { useAdminQueue } from '@/features/admin/queue';
+import { useAdminTournaments } from '@/features/admin/tournaments';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSupportInbox } from '@/features/social/radio';
 import { useSearchPilots } from '@/features/nearby/api';
@@ -53,6 +54,7 @@ export default function AdminScreen() {
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
   const queue = useAdminQueue(isAppAdmin);
   const support = useSupportInbox(isAppAdmin);
+  const watchedTournaments = useAdminTournaments('watch', isAppAdmin).data?.length ?? 0;
   const supportUnread = (support.data ?? []).filter((t) => t.unread > 0).length;
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
@@ -194,6 +196,17 @@ export default function AdminScreen() {
             detail={`${disputes.data?.length ?? 0} litige${(disputes.data?.length ?? 0) > 1 ? 's' : ''} · ${pendingTickets.data?.length ?? 0} ticket${(pendingTickets.data?.length ?? 0) > 1 ? 's' : ''} à vérifier · ${suspects.data?.length ?? 0} suspect${(suspects.data?.length ?? 0) > 1 ? 's' : ''}`}
             alert={(disputes.data?.length ?? 0) + (pendingTickets.data?.length ?? 0) + (suspects.data?.length ?? 0) > 0}
             onPress={() => router.push('/admin/results')}
+          />
+          <MenuRow
+            icon={icons.trophy}
+            title="Tournois"
+            detail={
+              watchedTournaments > 0
+                ? `${watchedTournaments} tournoi${watchedTournaments > 1 ? 's' : ''} à surveiller : duel bloqué ou contesté`
+                : 'Forfaits, retrait d’un inscrit, statut officiel, annulation'
+            }
+            alert={watchedTournaments > 0}
+            onPress={() => router.push('/admin/tournaments')}
           />
           <MenuRow
             icon={icons.feed}

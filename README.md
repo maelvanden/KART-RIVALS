@@ -113,7 +113,9 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   d'activité par département et zones sans karting ; `admin_retention` : fidélité ; export CSV), remontées des pilotes (`track_corrections`, bouton
   « Signaler une erreur » sur la fiche, +20 pts si appliquée), suivi des kartings officiels (`admin_official_tracks`,
   `page_updated_at`), statistiques de sa fiche pour l'exploitant (`track_stats` : visites comptées par `log_track_view`,
-  pilotes venus rouler, habitués, intérêt pour ses événements ; écran `admin/track/stats`), arbitrage des résultats (`admin_disputes`,
+  pilotes venus rouler, habitués, intérêt pour ses événements ; écran `admin/track/stats`), tournois
+  (`admin_tournaments` : tous les tournois, duels bloqués ou contestés en premier ; `admin_cancel_tournament`,
+  `admin_remove_tournament_pilot`, `admin_tournament_walkover`, `admin_set_tournament_official`), arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction
   (`pilot_warnings`, `admin_warn_pilot` ; lus en plein écran à l'ouverture via `my_pending_warning`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal
