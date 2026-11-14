@@ -414,6 +414,6 @@ enabled = true
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
 
-# Discord authenticates interactions with an Ed25519 signature.
-[functions.discord-records]
+# The Discord bot authenticates with a dedicated server-side key.
+[functions.discord-data]
 verify_jwt = false
