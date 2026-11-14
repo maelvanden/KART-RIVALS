@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "package": "fr.kartrivals.app",
       "adaptiveIcon": {
         "backgroundColor": "#111418",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -72,7 +73,12 @@
               "name": "PilotCard",
               "displayName": "Ma licence",
               "description": "Ton ELO, ton rang et ton prochain défi.",
-              "supportedFamilies": ["systemSmall", "systemMedium", "accessoryRectangular", "accessoryInline"]
+              "supportedFamilies": [
+                "systemSmall",
+                "systemMedium",
+                "accessoryRectangular",
+                "accessoryInline"
+              ]
             }
           ]
         }
