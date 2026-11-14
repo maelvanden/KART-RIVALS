@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon, icons } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
@@ -119,6 +120,12 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         ) : null}
         {p.is_admin ? <Text style={styles.adminNote}>Admin appli : retire son rôle avant toute sanction.</Text> : null}
         <Button title="Voir sa licence" variant="ghost" onPress={() => router.push({ pathname: '/pilot/[id]', params: { id: p.id } })} />
+        <Button
+          title="Points et garage"
+          variant="secondary"
+          icon={<Icon name={icons.coin} size={18} color={colors.text} />}
+          onPress={() => router.push({ pathname: '/admin/pilot/wallet', params: { id: p.id } })}
+        />
       </Card>
 
       <Notes pilotId={p.id} />

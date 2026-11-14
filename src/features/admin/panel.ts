@@ -1431,6 +1431,16 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       const parts = Object.entries(changes).map(([key, c]) => labels[key]?.(c.after) ?? key);
       return `Réglages de l’appli${parts.length > 0 ? ` : ${parts.join(', ')}` : ''}`;
     }
+    case 'adjust_points': {
+      const amount = Number(d.amount ?? 0);
+      return `${amount >= 0 ? 'Points offerts' : 'Points retirés'} : ${amount > 0 ? '+' : '−'}${Math.abs(amount)} (solde ${d.before ?? '?'} → ${d.after ?? '?'})`;
+    }
+    case 'grant_item':
+      return `Objet offert${d.item ? ` : « ${d.item} »` : ''}`;
+    case 'revoke_item':
+      return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
+    case 'set_gear_price':
+      return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:

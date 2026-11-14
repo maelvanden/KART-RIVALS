@@ -121,7 +121,9 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   `admin_remove_tournament_pilot`, `admin_tournament_walkover`, `admin_set_tournament_official`), écuries
   (`admin_teams` ; `admin_rename_team`, `admin_moderate_team` : blason et message de recrutement ;
   `admin_transfer_team` : nouveau Team Principal ; `admin_dissolve_team`), réglages à distance
-  (`admin_update_app_settings` : pause du Time Attack, maintenance, version minimale), arbitrage des résultats (`admin_disputes`,
+  (`admin_update_app_settings` : pause du Time Attack, maintenance, version minimale), points et boutique
+  (`admin_pilot_wallet`, `admin_adjust_points`, `admin_grant_item`, `admin_revoke_item`, `admin_set_gear_price`),
+  arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction
   (`pilot_warnings`, `admin_warn_pilot` ; lus en plein écran à l'ouverture via `my_pending_warning`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal

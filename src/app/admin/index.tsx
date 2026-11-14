@@ -254,6 +254,12 @@ export default function AdminScreen() {
             onPress={() => router.push('/admin/officials')}
           />
           <MenuRow
+            icon={icons.coin}
+            title="Boutique"
+            detail="Prix des objets et popularité · les points d’un pilote se règlent sur sa fiche"
+            onPress={() => router.push('/admin/shop')}
+          />
+          <MenuRow
             icon={icons.megaphone}
             title="Annonces"
             detail="Message officiel affiché à tous les pilotes"
