@@ -1407,6 +1407,16 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Tournoi passé officiel${d.name ? ` : « ${d.name} »` : ''}`;
     case 'tournament_unofficial':
       return `Statut officiel retiré${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'rename_team':
+      return `Écurie renommée ${d.before ?? '?'} → ${d.after ?? '?'}`;
+    case 'team_remove_logo':
+      return `Blason retiré${d.name ? ` : ${d.name}` : ''}`;
+    case 'team_clear_message':
+      return `Message de recrutement effacé${d.name ? ` : ${d.name}` : ''}${d.excerpt ? ` (« ${d.excerpt} »)` : ''}`;
+    case 'transfer_team':
+      return `Écurie confiée à un nouveau Team Principal${d.name ? ` : ${d.name}` : ''}${d.before ? `, à la place de ${d.before}` : ''}`;
+    case 'dissolve_team':
+      return `Écurie dissoute${d.name ? ` : ${d.name}` : ''}${d.members ? ` (${d.members} pilotes)` : ''}`;
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:

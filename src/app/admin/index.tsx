@@ -209,6 +209,12 @@ export default function AdminScreen() {
             onPress={() => router.push('/admin/tournaments')}
           />
           <MenuRow
+            icon={icons.team}
+            title="Écuries"
+            detail="Nom, tag et blason inappropriés, Team Principal absent, dissolution"
+            onPress={() => router.push('/admin/teams')}
+          />
+          <MenuRow
             icon={icons.feed}
             title="Modération de l’Actu"
             detail={s ? `${s.posts_7d} publications cette semaine · masquer en un geste` : 'Publications, commentaires, photos, avis'}

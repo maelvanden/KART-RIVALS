@@ -164,6 +164,8 @@ function RootNavigator() {
         <Stack.Screen name="admin/tracks" options={{ ...detailHeader, title: 'Circuits' }} />
         <Stack.Screen name="admin/tournaments" options={{ ...detailHeader, title: 'Tournois' }} />
         <Stack.Screen name="admin/tournament/[id]" options={{ ...detailHeader, title: 'Tournoi' }} />
+        <Stack.Screen name="admin/teams" options={{ ...detailHeader, title: 'Écuries' }} />
+        <Stack.Screen name="admin/team/[id]" options={{ ...detailHeader, title: 'Écurie' }} />
         <Stack.Screen name="admin/announcements" options={{ ...detailHeader, title: 'Annonces' }} />
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />
