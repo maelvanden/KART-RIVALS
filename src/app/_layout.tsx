@@ -19,10 +19,13 @@ import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { RestrictedAccount } from '@/features/admin/components/restricted-account';
 import { WarningScreen } from '@/features/admin/components/warning-screen';
+import { useAdminRoles } from '@/features/admin/api';
 import { useAccountStatus, useAcknowledgeWarning, useMyPendingWarning } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { usePushNotifications } from '@/features/notifications/push';
+import { isOutdated, useAppSettings } from '@/features/settings/app-settings';
+import { MaintenanceScreen, UpdateRequiredScreen } from '@/features/settings/components/app-gate';
 import { useSocialRealtime } from '@/features/social/realtime';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { useTimeAttackLiveActivity } from '@/features/time-attack/live-activity';
@@ -68,6 +71,8 @@ function RootNavigator() {
   const account = useAccountStatus(profile.data ? userId : null);
   const warning = useMyPendingWarning(profile.data ? userId : null);
   const acknowledge = useAcknowledgeWarning();
+  const settings = useAppSettings();
+  const roles = useAdminRoles();
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
   const welcome = useWelcomeSeen();
@@ -75,7 +80,7 @@ function RootNavigator() {
   // Après la présentation : la demande d'autorisation du téléphone ne la recouvre pas.
   usePushNotifications(userId, !!profile.data && !restricted && !!welcome.seen);
   // Compte à rebours Time Attack sur l'écran verrouillé et la Dynamic Island (iOS).
-  useTimeAttackLiveActivity(TIME_ATTACK_ENABLED && !!profile.data && !restricted);
+  useTimeAttackLiveActivity((settings.data?.time_attack_enabled ?? TIME_ATTACK_ENABLED) && !!profile.data && !restricted);
   // Widget d'écran d'accueil : ELO, rang et prochain défi (iOS).
   usePilotWidget(!!profile.data && !restricted);
 
@@ -106,6 +111,18 @@ function RootNavigator() {
   const restriction = account.data;
   if (hasProfile && restriction && (restriction.banned_at || restriction.suspended_until)) {
     return <RestrictedAccount status={restriction} onSignOut={signOut} onRetry={() => account.refetch()} />;
+  }
+
+  // Réglages à distance : mise à jour obligatoire, puis maintenance. Les admins appli passent toujours (ce sont eux
+  // qui lèvent le blocage), et rien n'est bloqué tant que le rôle du pilote n'est pas connu.
+  const gate = settings.data;
+  if (hasProfile && gate && roles.data && !roles.data.is_app_admin) {
+    if (isOutdated(gate.min_version)) {
+      return <UpdateRequiredScreen settings={gate} checking={settings.isFetching} onRetry={() => settings.refetch()} />;
+    }
+    if (gate.maintenance) {
+      return <MaintenanceScreen settings={gate} checking={settings.isFetching} onRetry={() => settings.refetch()} />;
+    }
   }
 
   // Avertissement officiel non lu : le pilote doit le lire avant de continuer.
@@ -166,6 +183,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/tournament/[id]" options={{ ...detailHeader, title: 'Tournoi' }} />
         <Stack.Screen name="admin/teams" options={{ ...detailHeader, title: 'Écuries' }} />
         <Stack.Screen name="admin/team/[id]" options={{ ...detailHeader, title: 'Écurie' }} />
+        <Stack.Screen name="admin/settings" options={{ ...detailHeader, title: 'Réglages de l’appli' }} />
         <Stack.Screen name="admin/announcements" options={{ ...detailHeader, title: 'Annonces' }} />
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />

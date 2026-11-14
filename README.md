@@ -40,8 +40,11 @@ Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `ti
 Déploiement du backend : la GitHub Action « Déployer Supabase » applique les nouvelles migrations, enregistre
 la clé OCR et déploie l'Edge Function à chaque push sur `main` qui touche `supabase/` (ou à la main depuis l'onglet
 Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `OCR_SPACE_API_KEY`
-(clé gratuite sur ocr.space/ocrapi). Le Time Attack reste masqué dans l'app tant que `TIME_ATTACK_ENABLED`
-(`src/features/time-attack/config.ts`) vaut false.
+(clé gratuite sur ocr.space/ocrapi). Le Time Attack se met en pause sans mise à jour de l'appli depuis
+Administration > Réglages de l'appli (table `app_settings`, migration `…_app_settings.sql`) : en pause, les check-in sont
+refusés par le serveur et le mode disparaît des menus. `TIME_ATTACK_ENABLED` (`src/features/time-attack/config.ts`) n'est
+plus que la valeur par défaut tant que les réglages ne sont pas chargés. Les mêmes réglages portent la maintenance (écran
+d'attente pour les pilotes, les admins appli passent) et la version minimale (écran « Mise à jour nécessaire »).
 
 Garage virtuel + boutique (migration `…_user_gear.sql`, écran `src/app/shop.tsx`) :
 
@@ -117,7 +120,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   (`admin_tournaments` : tous les tournois, duels bloqués ou contestés en premier ; `admin_cancel_tournament`,
   `admin_remove_tournament_pilot`, `admin_tournament_walkover`, `admin_set_tournament_official`), écuries
   (`admin_teams` ; `admin_rename_team`, `admin_moderate_team` : blason et message de recrutement ;
-  `admin_transfer_team` : nouveau Team Principal ; `admin_dissolve_team`), arbitrage des résultats (`admin_disputes`,
+  `admin_transfer_team` : nouveau Team Principal ; `admin_dissolve_team`), réglages à distance
+  (`admin_update_app_settings` : pause du Time Attack, maintenance, version minimale), arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction
   (`pilot_warnings`, `admin_warn_pilot` ; lus en plein écran à l'ouverture via `my_pending_warning`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal

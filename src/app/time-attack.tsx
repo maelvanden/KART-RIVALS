@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useMyProfile } from '@/features/profile/api';
+import { useAppSettings } from '@/features/settings/app-settings';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import {
   takeTicketPhoto,
@@ -34,18 +35,10 @@ import { colors, spacing } from '@/theme';
 import type { TimeAttackSession } from '@/types/models';
 
 export default function TimeAttackScreen() {
-  if (!TIME_ATTACK_ENABLED) {
-    return (
-      <Screen safeTop={false}>
-        <EmptyState title="Bientôt disponible" message="Le mode Time Attack solo arrive prochainement." />
-      </Screen>
-    );
-  }
-  return <TimeAttack />;
-}
-
-function TimeAttack() {
+  const settings = useAppSettings().data;
   const sessions = useTimeAttackSessions();
+  // En pause (réglage admin) : plus de check-in, mais une session déjà en cours se termine normalement.
+  const paused = !(settings?.time_attack_enabled ?? TIME_ATTACK_ENABLED);
   const active = sessions.data?.find((s) => s.status === 'on_track');
   const history = (sessions.data ?? []).filter((s) => s.status !== 'on_track');
 
@@ -53,7 +46,18 @@ function TimeAttack() {
     <Screen safeTop={false} refreshing={sessions.isRefetching} onRefresh={sessions.refetch}>
       {sessions.isPending ? <Loading /> : null}
       {sessions.error ? <ErrorState error={sessions.error} /> : null}
-      {sessions.data ? active ? <OnTrack session={active} /> : <CheckIn /> : null}
+      {sessions.data ? (
+        active ? (
+          <OnTrack session={active} />
+        ) : paused ? (
+          <EmptyState
+            title="Time Attack en pause"
+            message={settings?.time_attack_message ?? 'Le Time Attack solo est momentanément indisponible. Il revient très vite.'}
+          />
+        ) : (
+          <CheckIn />
+        )
+      ) : null}
 
       {history.length > 0 ? <Text variant="label">Mes sessions</Text> : null}
       {history.map((s) => (

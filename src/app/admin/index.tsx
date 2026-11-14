@@ -29,6 +29,7 @@ import {
 } from '@/features/admin/panel';
 import { useAdminQueue } from '@/features/admin/queue';
 import { useAdminTournaments } from '@/features/admin/tournaments';
+import { useAppSettings } from '@/features/settings/app-settings';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSupportInbox } from '@/features/social/radio';
 import { useSearchPilots } from '@/features/nearby/api';
@@ -54,6 +55,8 @@ export default function AdminScreen() {
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
   const queue = useAdminQueue(isAppAdmin);
   const support = useSupportInbox(isAppAdmin);
+  const appSettings = useAppSettings().data;
+  const settingsAlert = !!appSettings && (appSettings.maintenance || !appSettings.time_attack_enabled);
   const watchedTournaments = useAdminTournaments('watch', isAppAdmin).data?.length ?? 0;
   const supportUnread = (support.data ?? []).filter((t) => t.unread > 0).length;
   const tracks = useTracksMap();
@@ -255,6 +258,19 @@ export default function AdminScreen() {
             title="Annonces"
             detail="Message officiel affiché à tous les pilotes"
             onPress={() => router.push('/admin/announcements')}
+          />
+          <MenuRow
+            icon={icons.admin}
+            title="Réglages de l’appli"
+            detail={
+              appSettings?.maintenance
+                ? 'Maintenance en cours : les pilotes sont bloqués'
+                : appSettings && !appSettings.time_attack_enabled
+                  ? 'Time Attack en pause'
+                  : 'Pause du Time Attack, maintenance, version minimale'
+            }
+            alert={settingsAlert}
+            onPress={() => router.push('/admin/settings')}
           />
         </>
       ) : null}

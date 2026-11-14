@@ -12,7 +12,7 @@ import { ChallengeCard } from '@/features/challenges/components/challenge-card';
 import { useMyRaces } from '@/features/races/api';
 import { RaceCard } from '@/features/races/components/race-card';
 import { raceStep } from '@/features/races/state';
-import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
+import { useTimeAttackEnabled } from '@/features/settings/app-settings';
 import { useMyTournamentInvites, useMyTournaments, useOpenTournaments } from '@/features/tournaments/api';
 import { TournamentCard } from '@/features/tournaments/components/tournament-card';
 import { Text } from '@/components/ui/text';
@@ -20,6 +20,7 @@ import { Text } from '@/components/ui/text';
 type Filter = 'received' | 'sent' | 'races' | 'tournaments';
 
 export default function ChallengesScreen() {
+  const timeAttackEnabled = useTimeAttackEnabled();
   const { userId } = useAuth();
   const [filter, setFilter] = useState<Filter>('received');
   const challenges = useMyChallenges();
@@ -96,7 +97,7 @@ export default function ChallengesScreen() {
       ) : filter === 'races' ? (
         <>
           <Button title="Organiser une course" onPress={() => router.push('/race/new')} />
-          {TIME_ATTACK_ENABLED ? (
+          {timeAttackEnabled ? (
             <Button title="Time Attack solo" variant="secondary" onPress={() => router.push('/time-attack')} />
           ) : null}
           {races.isPending ? <Loading /> : null}

@@ -55,7 +55,11 @@ export function useStartTimeAttack() {
       const { error } = await supabase.rpc('start_time_attack', { p_track_id: trackId });
       if (error) {
         throw new Error(
-          error.message.includes('already in progress') ? 'Tu as déjà une session Time Attack en cours.' : error.message,
+          error.message.includes('already in progress')
+            ? 'Tu as déjà une session Time Attack en cours.'
+            : error.message.includes('Time Attack is paused')
+              ? 'Le Time Attack est en pause pour le moment : réessaie plus tard.'
+              : error.message,
         );
       }
     },

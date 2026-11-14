@@ -1417,6 +1417,20 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Écurie confiée à un nouveau Team Principal${d.name ? ` : ${d.name}` : ''}${d.before ? `, à la place de ${d.before}` : ''}`;
     case 'dissolve_team':
       return `Écurie dissoute${d.name ? ` : ${d.name}` : ''}${d.members ? ` (${d.members} pilotes)` : ''}`;
+    case 'app_settings': {
+      const changes = (d.changes ?? {}) as Record<string, { before: unknown; after: unknown }>;
+      const labels: Record<string, (after: unknown) => string> = {
+        time_attack_enabled: (v) => (v ? 'Time Attack rouvert' : 'Time Attack mis en pause'),
+        maintenance: (v) => (v ? 'maintenance activée' : 'maintenance terminée'),
+        min_version: (v) => (v ? `version minimale ${v}` : 'version minimale retirée'),
+        time_attack_message: () => 'message du Time Attack',
+        maintenance_message: () => 'message de maintenance',
+        ios_store_url: () => 'lien App Store',
+        android_store_url: () => 'lien Google Play',
+      };
+      const parts = Object.entries(changes).map(([key, c]) => labels[key]?.(c.after) ?? key);
+      return `Réglages de l’appli${parts.length > 0 ? ` : ${parts.join(', ')}` : ''}`;
+    }
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:
