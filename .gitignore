@@ -42,3 +42,6 @@ example
 /ios
 /android
 .env
+
+# Clé du compte de service Google Play (eas submit) : ne jamais committer
+google-play-key.json
