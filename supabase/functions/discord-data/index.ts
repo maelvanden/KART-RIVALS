@@ -54,6 +54,35 @@ Deno.serve(async (request) => {
   const trackId = params.get('track');
   try {
     const action = params.get('action');
+    if (action === 'mesrecords' || action === 'circuits') {
+      const page = Number(params.get('page') ?? '1');
+      if (!Number.isInteger(page) || page < 1 || page > 10000) return new Response(null, { status: 400 });
+      const pagination = { limit: '11', offset: String((page - 1) * 10) };
+      if (action === 'mesrecords') {
+        const id = params.get('pilot') ?? '';
+        if (!uuid.test(id)) return new Response(null, { status: 400 });
+        const profile = await pilot(id);
+        if (!profile) return Response.json({ unavailable: true });
+        const rows = await query<PersonalRecord[]>('rpc/pilot_lap_records', new URLSearchParams({
+          select: 'track_id,track_name,lap_ms,position', order: 'position.asc,track_name.asc,track_id.asc', ...pagination,
+        }), { p_profile_id: id });
+        return Response.json({ pilot: profile, records: rows.slice(0, 10), page, has_more: rows.length > 10 });
+      }
+      const city = (params.get('city') ?? '').slice(0, 80).replace(/[^\p{L}\p{M}\p{N} -]/gu, '').trim();
+      if (city.length < 2) return new Response(null, { status: 400 });
+      const rows = await query<Track[]>('tracks', new URLSearchParams({
+        select: 'id,name,city', city: 'ilike.*' + city + '*', order: 'city.asc,name.asc,id.asc', ...pagination,
+      }));
+      return Response.json({ tracks: rows.slice(0, 10), city, page, has_more: rows.length > 10 });
+    }
+    if (action === 'dernierschronos') {
+      return Response.json({ laps: await query('rpc/discord_recent_laps', undefined, {}) });
+    }
+    if (action === 'rival') {
+      const id = params.get('pilot') ?? '';
+      if (!uuid.test(id) || !uuid.test(trackId ?? '')) return new Response(null, { status: 400 });
+      return Response.json(await query('rpc/discord_next_rival', undefined, { p_pilot_id: id, p_track_id: trackId }));
+    }
     if (action === 'pilots') {
       const term = (params.get('search') ?? '').slice(0, 20).replace(/[^a-z0-9_]/gi, '');
       const filters = pilotFilters({ select: 'id,username', order: 'username.asc,id.asc', limit: '25' });

@@ -74,3 +74,48 @@ test('circuit includes public information and API failures are sanitized', async
   assert.equal(failure.status, 502);
   assert.equal(await failure.text(), '');
 });
+test('record pagination is bounded and hidden profiles stay hidden', async () => {
+  let calls = 0;
+  global.fetch = async (url) => {
+    calls++;
+    const u = new URL(url);
+    if (u.pathname.endsWith('/profiles')) return Response.json([{ id, username: 'Pilot' }]);
+    assert.equal(u.searchParams.get('offset'), '10');
+    assert.equal(u.searchParams.get('limit'), '11');
+    assert.match(u.searchParams.get('order'), /track_id.asc/);
+    return Response.json(Array.from({ length: 11 }, () => ({ track_name: 'Track', lap_ms: 30000 })));
+  };
+  const data = await (await call('action=mesrecords&pilot=' + id + '&page=2')).json();
+  assert.equal(data.records.length, 10);
+  assert.equal(data.has_more, true);
+  assert.equal(calls, 2);
+  for (const page of ['0', '-1', '1.2', '10001', 'abc']) assert.equal((await call('action=mesrecords&pilot=' + id + '&page=' + page)).status, 400);
+  global.fetch = async () => Response.json([]);
+  assert.deepEqual(await (await call('action=mesrecords&pilot=' + id)).json(), { unavailable: true });
+});
+test('city search filters city only and recent/rival use restricted RPCs', async () => {
+  global.fetch = async (url) => {
+    const q = new URL(url).searchParams;
+    assert.equal(q.get('city'), 'ilike.*Saint-Étienne*');
+    assert.equal(q.get('or'), null);
+    assert.equal(q.get('offset'), '20');
+    return Response.json([]);
+  };
+  const data = await (await call('action=circuits&city=Saint-Étienne&page=3')).json();
+  assert.deepEqual(data.tracks, []);
+  assert.equal(data.has_more, false);
+  assert.equal((await call('action=circuits&city=*')).status, 400);
+  global.fetch = async (url, init) => {
+    assert.ok(new URL(url).pathname.endsWith('/rpc/discord_recent_laps'));
+    assert.equal(init.method, 'POST');
+    return Response.json([]);
+  };
+  assert.deepEqual(await (await call('action=dernierschronos')).json(), { laps: [] });
+  global.fetch = async (url, init) => {
+    assert.ok(new URL(url).pathname.endsWith('/rpc/discord_next_rival'));
+    assert.deepEqual(JSON.parse(init.body), { p_pilot_id: id, p_track_id: track });
+    return Response.json({ unavailable: true });
+  };
+  assert.deepEqual(await (await call('action=rival&pilot=' + id + '&track=' + track)).json(), { unavailable: true });
+  assert.equal((await call('action=rival&pilot=bad&track=' + track)).status, 400);
+});

@@ -36,3 +36,17 @@ utilisent la fonction existante `pilot_lap_records`.
 
 Tests de contrat (Node.js 24+) :
 `node --test supabase/functions/discord-data/test/api.test.mjs`.
+
+## Commandes complémentaires
+
+La migration `20261223000083_discord_commands.sql` ajoute `discord_recent_laps()` et
+`discord_next_rival(uuid, uuid)`, réservées à `service_role`. Elles lisent les sources
+validées existantes et excluent les profils privés, bannis et de démonstration.
+
+L’API authentifiée accepte aussi :
+- `action=mesrecords&pilot=<uuid>&page=1` : 10 circuits par page et `has_more`.
+- `action=rival&pilot=<uuid>&track=<uuid>` : meilleur temps personnel et prochain chrono strictement meilleur public.
+- `action=dernierschronos` : 10 chronos publics triés par validation décroissante.
+- `action=circuits&city=<ville>&page=1` : recherche partielle de ville, 10 résultats et `has_more`.
+
+Les pages sont bornées à 1–10000. `/aide` est rendu localement par le bot, sans requête API.
