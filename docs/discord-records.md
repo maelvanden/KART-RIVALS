@@ -17,3 +17,22 @@ Kart Rivals héberge la fonction Supabase `discord-data`.
 L’API accepte un GET authentifié par `Authorization: Bearer <clé dédiée>`.
 `?search=Angers` suggère jusqu’à 25 circuits. `?track=<UUID>` renvoie le circuit
 et jusqu’à dix chronos validés, avec uniquement la position, le pseudo et le temps.
+
+## Profils, classement, circuits et comparaison
+
+Les nouvelles routes utilisent la même clé serveur :
+
+- `?action=pilots&search=mael` : jusqu’à 25 pseudos publics pour l’autocomplétion.
+- `?action=profil&pilot=<UUID>` : statistiques du pilote et jusqu’à 5 records personnels.
+- `?action=classement` : top 10 Elo des profils publics avec au moins un match, ex æquo conservés.
+- `?action=circuit&track=<UUID>` : informations publiques du circuit et chronos validés.
+- `?action=comparaison&pilot=<UUID>&opponent=<UUID>&track=<UUID>` : meilleur chrono de chacun sur le circuit sélectionné, même hors du top 10. Un chrono absent est `null`.
+
+Les routes pilotes filtrent `is_discoverable=true`, `is_demo=false` et `banned_at is null`,
+y compris lorsqu’un identifiant est fourni directement. Seules les colonnes nécessaires
+sont sélectionnées : aucun email, token, emplacement de pilote ni donnée de modération
+n’est renvoyé. Aucune nouvelle migration SQL n’est nécessaire : les records personnels
+utilisent la fonction existante `pilot_lap_records`.
+
+Tests de contrat (Node.js 24+) :
+`node --test supabase/functions/discord-data/test/api.test.mjs`.
