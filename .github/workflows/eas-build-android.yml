@@ -1,0 +1,29 @@
+# Construit l'app Android (fichier .aab pour le Play Store) sur les serveurs Expo (EAS Build).
+# Lancement à la main : onglet Actions > « Construire Android » > Run workflow.
+# Le build se poursuit sur expo.dev (environ 15-20 min) : le fichier .aab se télécharge depuis la page du build.
+# La clé de signature Android est créée et gardée par EAS au premier build : ne pas la perdre (Expo la conserve).
+name: Construire Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Lancer le build Android
+        run: eas build --platform android --profile production --non-interactive --no-wait
