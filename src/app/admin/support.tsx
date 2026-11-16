@@ -5,7 +5,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
-import { useAdminRoles } from '@/features/admin/api';
+import { isStaff, useAdminRoles } from '@/features/admin/api';
 import { useSupportInbox, type SupportThread } from '@/features/social/radio';
 import { formatMessageTime } from '@/lib/format';
 import { colors, fonts, radius, spacing } from '@/theme';
@@ -13,10 +13,10 @@ import { colors, fonts, radius, spacing } from '@/theme';
 /** Support pilotes (admins appli) : conversations « Contacter l'équipe », non lues d'abord. */
 export default function SupportInboxScreen() {
   const roles = useAdminRoles().data;
-  const isAppAdmin = !!roles?.is_app_admin;
+  const isAppAdmin = isStaff(roles);
   const inbox = useSupportInbox(isAppAdmin);
 
-  if (roles && !isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé aux admins appli" /></Screen>;
+  if (roles && !isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé à l’équipe Kart Rivals" /></Screen>;
 
   const unread = (inbox.data ?? []).filter((t) => t.unread > 0).length;
 

@@ -37,16 +37,20 @@ export const QUEUE_LABELS: Record<QueueKind, string> = {
  * signalements, messages au support sans réponse, tickets Time Attack à vérifier, litiges, chronos suspects, remontées,
  * demandes de gestion et tournois dont un duel est bloqué (les duels contestés sont déjà dans les litiges).
  */
-export function useAdminQueue(enabled: boolean) {
+export function useAdminQueue(enabled: boolean, scope: 'admin' | 'moderator' = 'admin') {
+  // Un modérateur ne reçoit que ce qu'il peut traiter : signalements et messages au support.
+  const full = enabled && scope === 'admin';
   const reports = useAdminReports('open', enabled);
-  const tickets = useAdminTimeAttacks('pending', enabled);
-  const disputes = useAdminDisputes(enabled);
-  const suspects = useAdminTimeAttacks('suspect', enabled);
-  const corrections = useTrackCorrections('open', enabled);
-  const requests = useAdminTrackRequests(enabled);
+  const tickets = useAdminTimeAttacks('pending', full);
+  const disputes = useAdminDisputes(full);
+  const suspects = useAdminTimeAttacks('suspect', full);
+  const corrections = useTrackCorrections('open', full);
+  const requests = useAdminTrackRequests(full);
   const support = useSupportInbox(enabled);
-  const tournaments = useAdminTournaments('watch', enabled);
-  const sources = [reports, support, tickets, disputes, suspects, corrections, requests, tournaments];
+  const tournaments = useAdminTournaments('watch', full);
+  const sources = full ? [reports, support, tickets, disputes, suspects, corrections, requests, tournaments] : [reports, support];
+  // Hors périmètre, on ignore aussi ce qu'un autre écran aurait déjà mis en cache.
+  const adminOnly = <T,>(data: T[] | undefined): T[] => (full ? (data ?? []) : []);
   const reason = (r: string) => REPORT_REASONS.find((x) => x.value === r)?.label ?? r;
 
   const items: QueueItem[] = [
@@ -68,7 +72,7 @@ export function useAdminQueue(enabled: boolean) {
         detail: t.last_message ? `« ${t.last_message} »` : 'Nouveau message',
         href: { pathname: '/radio/[id]', params: { id: t.id, title: t.username } } as Href,
       })),
-    ...(tickets.data ?? []).map((t) => ({
+    ...adminOnly(tickets.data).map((t) => ({
       key: `ticket-${t.id}`,
       kind: 'ticket' as const,
       since: t.review_requested_at ?? t.check_in_at,
@@ -76,7 +80,7 @@ export function useAdminQueue(enabled: boolean) {
       detail: `${t.best_lap_ms ? `${formatLapTime(t.best_lap_ms)} déclaré` : 'Temps à lire sur la photo'} · ${t.review_auto ? 'envoyé d’office à l’échéance' : 'demandé par le pilote'}`,
       href: '/admin/results' as Href,
     })),
-    ...(disputes.data ?? []).map((d) => ({
+    ...adminOnly(disputes.data).map((d) => ({
       key: `dispute-${d.id}`,
       kind: 'dispute' as const,
       since: d.created_at,
@@ -85,7 +89,7 @@ export function useAdminQueue(enabled: boolean) {
       detail: `${d.track} · ${d.status === 'disputed' ? (d.dispute_reason ? `« ${d.dispute_reason} »` : 'résultat contesté') : 'non confirmé depuis plus de 3 jours'}`,
       href: '/admin/results' as Href,
     })),
-    ...(suspects.data ?? []).map((t) => ({
+    ...adminOnly(suspects.data).map((t) => ({
       key: `suspect-${t.id}`,
       kind: 'suspect' as const,
       since: t.validated_at ?? t.check_in_at,
@@ -93,7 +97,7 @@ export function useAdminQueue(enabled: boolean) {
       detail: `${t.best_lap_ms ? formatLapTime(t.best_lap_ms) : '—'}${t.gap_pct != null ? `, ${t.gap_pct} % sous le record` : ''}`,
       href: '/admin/results' as Href,
     })),
-    ...(corrections.data ?? []).map((c) => ({
+    ...adminOnly(corrections.data).map((c) => ({
       key: `correction-${c.id}`,
       kind: 'correction' as const,
       since: c.created_at,
@@ -101,7 +105,7 @@ export function useAdminQueue(enabled: boolean) {
       detail: `${c.author ?? 'Un pilote'} : « ${c.message} »`,
       href: '/admin/corrections' as Href,
     })),
-    ...(requests.data ?? []).map((q) => ({
+    ...adminOnly(requests.data).map((q) => ({
       key: `request-${q.id}`,
       kind: 'request' as const,
       since: q.created_at,
@@ -109,7 +113,7 @@ export function useAdminQueue(enabled: boolean) {
       detail: q.message ? `« ${q.message} »` : q.track_city,
       request: q,
     })),
-    ...(tournaments.data ?? [])
+    ...adminOnly(tournaments.data)
       .filter((t) => t.stuck > 0 && t.stuck_since)
       .map((t) => ({
         key: `tournament-${t.id}`,

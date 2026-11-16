@@ -15,8 +15,10 @@ import {
   useAdminRoles,
   useAdminTrackRequests,
   useAppAdmins,
+  useAppModerators,
   useClaimAppAdmin,
   useSetAppAdmin,
+  useSetAppModerator,
 } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
 import { QueueRow } from '@/features/admin/components/queue-row';
@@ -38,23 +40,25 @@ import { useTracksMap } from '@/features/tracks/api';
 import { confirmAction } from '@/lib/confirm';
 import { colors, radius, spacing } from '@/theme';
 
-/** Administration : tableau de bord et gestion (admin appli) ou fiches gérées (admin karting). */
+/** Administration : tableau de bord et gestion (admin appli), modération (modérateur) ou fiches gérées (admin karting). */
 export default function AdminScreen() {
   const roles = useAdminRoles();
   const claim = useClaimAppAdmin();
   const r = roles.data;
   const isAppAdmin = !!r?.is_app_admin;
+  const isModerator = !isAppAdmin && !!r?.is_moderator;
+  const staff = isAppAdmin || isModerator;
 
   const stats = useAdminStats(isAppAdmin);
-  const reports = useAdminReports('open', isAppAdmin);
+  const reports = useAdminReports('open', staff);
   const requests = useAdminTrackRequests(isAppAdmin);
   const actions = useAdminRecentActions(isAppAdmin, 6);
   const disputes = useAdminDisputes(isAppAdmin);
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
   const pendingTickets = useAdminTimeAttacks('pending', isAppAdmin);
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
-  const queue = useAdminQueue(isAppAdmin);
-  const support = useSupportInbox(isAppAdmin);
+  const queue = useAdminQueue(staff, isAppAdmin ? 'admin' : 'moderator');
+  const support = useSupportInbox(staff);
   const appSettings = useAppSettings().data;
   const settingsAlert = !!appSettings && (appSettings.maintenance || !appSettings.time_attack_enabled);
   const watchedTournaments = useAdminTournaments('watch', isAppAdmin).data?.length ?? 0;
@@ -91,11 +95,69 @@ export default function AdminScreen() {
         </Card>
       ) : null}
 
-      {r && r.admin_exists && !isAppAdmin && r.managed_track_ids.length === 0 ? (
+      {r && r.admin_exists && !staff && r.managed_track_ids.length === 0 ? (
         <EmptyState
           title="Accès réservé"
           message="Tu gères un karting ? Ouvre sa fiche et touche « Vous gérez ce karting ? » pour demander l’accès."
         />
+      ) : null}
+
+      {isModerator ? (
+        <>
+          <Card style={styles.claim}>
+            <Text variant="label" style={{ color: colors.neon }}>Modérateur</Text>
+            <Text variant="caption">
+              Tu traites les signalements, modères l’Actu et réponds au support. Pour une suspension, un bannissement ou
+              une correction d’ELO, laisse une note interne sur la fiche du pilote : un admin appli tranchera.
+            </Text>
+          </Card>
+          <SectionTitle
+            title="À traiter"
+            detail={queue.isPending ? '…' : `${queue.items.length}`}
+            accent={queue.items.length > 0 ? colors.orange : undefined}
+          />
+          {!queue.isPending && queue.items.length === 0 ? (
+            <Text variant="caption">Rien en attente : signalements et messages au support sont à jour. 🏁</Text>
+          ) : null}
+          {queue.items.slice(0, 5).map((item) => (
+            <QueueRow key={item.key} item={item} />
+          ))}
+          {queue.items.length > 5 ? (
+            <Button title={`Toute la file (${queue.items.length})`} variant="secondary" onPress={() => router.push('/admin/queue')} />
+          ) : null}
+
+          <SectionTitle title="Modération" />
+          <MenuRow
+            icon={icons.report}
+            title="Signalements"
+            detail={`${reports.data?.length ?? 0} signalement${(reports.data?.length ?? 0) > 1 ? 's' : ''} à traiter`}
+            alert={(reports.data?.length ?? 0) > 0}
+            onPress={() => router.push('/admin/reports')}
+          />
+          <MenuRow
+            icon={icons.support}
+            title="Support pilotes"
+            detail={
+              supportUnread > 0
+                ? `${supportUnread} conversation${supportUnread > 1 ? 's' : ''} en attente de réponse`
+                : 'Messages « Contacter l’équipe »'
+            }
+            alert={supportUnread > 0}
+            onPress={() => router.push('/admin/support')}
+          />
+          <MenuRow
+            icon={icons.feed}
+            title="Modération de l’Actu"
+            detail="Publications, commentaires, photos, avis : masquer en un geste"
+            onPress={() => router.push('/admin/content')}
+          />
+          <MenuRow
+            icon={icons.teammates}
+            title="Pilotes"
+            detail="Rechercher, consulter une fiche, avertir, noter"
+            onPress={() => router.push('/admin/pilots')}
+          />
+        </>
       ) : null}
 
       {isAppAdmin ? (
@@ -330,6 +392,7 @@ export default function AdminScreen() {
       ) : null}
 
       {isAppAdmin ? <AppAdmins /> : null}
+      {isAppAdmin ? <Moderators /> : null}
     </Screen>
   );
 }
@@ -476,7 +539,76 @@ function AppAdmins() {
   );
 }
 
+/** Modérateurs : liste, ajout par @pseudo, retrait. Réservé aux admins appli. */
+function Moderators() {
+  const moderators = useAppModerators(true);
+  const admins = useAppAdmins(true);
+  const setModerator = useSetAppModerator();
+  const [query, setQuery] = useState('');
+  const q = query.replace(/^@/, '').trim();
+  const search = useSearchPilots(q);
+  const taken = new Set([...(moderators.data ?? []), ...(admins.data ?? [])].map((p) => p.id));
+
+  return (
+    <>
+      <SectionTitle title="Modérateurs" detail={`${moderators.data?.length ?? ''}`} />
+      <Text variant="caption">
+        Un modérateur traite les signalements, modère l’Actu, répond au support et avertit les pilotes. Il ne peut ni
+        suspendre ni bannir, ni toucher à l’ELO, aux points, aux résultats, aux circuits ou aux réglages.
+      </Text>
+      {moderators.data?.length === 0 ? <Text variant="caption">Aucun modérateur pour l’instant.</Text> : null}
+      {moderators.data?.map((m) => (
+        <View key={m.id} style={styles.staffRow}>
+          <View style={styles.flex}>
+            <PilotRow pilotId={m.id} username={m.username} avatarUrl={m.avatar_url} rank={m.rank} elo={m.elo} subtitle="Modérateur" />
+          </View>
+          <Button
+            title="Retirer"
+            variant="quiet"
+            disabled={setModerator.isPending}
+            onPress={() =>
+              confirmAction(`Retirer ${m.username} ?`, 'Il ne sera plus modérateur.', 'Retirer', () =>
+                setModerator.mutate({ pilotId: m.id, moderator: false }),
+              )
+            }
+          />
+        </View>
+      ))}
+      <Input label="Nommer un modérateur" value={query} onChangeText={setQuery} placeholder="@pseudo" autoCapitalize="none" autoCorrect={false} />
+      {q.length >= 2
+        ? search.data
+            ?.filter((p) => !taken.has(p.id))
+            .map((p) => (
+              <View key={p.id} style={styles.staffRow}>
+                <View style={styles.flex}>
+                  <PilotRow pilotId={p.id} username={p.username} avatarUrl={p.avatar_url} rank={p.rank} elo={p.elo} subtitle={`@${p.username}`} />
+                </View>
+                <Button
+                  title="Nommer"
+                  variant="ghost"
+                  disabled={setModerator.isPending}
+                  onPress={() =>
+                    confirmAction(
+                      `Nommer ${p.username} modérateur ?`,
+                      'Il pourra traiter les signalements, modérer l’Actu, répondre au support et avertir les pilotes.',
+                      'Nommer',
+                      () => {
+                        setModerator.mutate({ pilotId: p.id, moderator: true });
+                        setQuery('');
+                      },
+                    )
+                  }
+                />
+              </View>
+            ))
+        : null}
+      {setModerator.error ? <Text style={styles.error}>{setModerator.error.message}</Text> : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  staffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   claim: { gap: spacing.md, alignItems: 'flex-start', borderLeftWidth: 3, borderLeftColor: colors.neon },
   error: { color: colors.danger },
   tiles: { flexDirection: 'row', gap: spacing.sm },

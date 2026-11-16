@@ -11,6 +11,7 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { useAdminRoles } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
 import {
   useAddPilotNote,
@@ -81,6 +82,8 @@ export default function AdminPilotScreen() {
 }
 
 function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
+  // Un modérateur consulte la fiche, avertit et tient les notes ; sanctions, badge, ELO et points restent aux admins appli.
+  const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
   const moderate = useModeratePilot();
   const setElo = useSetElo();
   const [days, setDays] = useState('7');
@@ -120,12 +123,14 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         ) : null}
         {p.is_admin ? <Text style={styles.adminNote}>Admin appli : retire son rôle avant toute sanction.</Text> : null}
         <Button title="Voir sa licence" variant="ghost" onPress={() => router.push({ pathname: '/pilot/[id]', params: { id: p.id } })} />
-        <Button
-          title="Points et garage"
-          variant="secondary"
-          icon={<Icon name={icons.coin} size={18} color={colors.text} />}
-          onPress={() => router.push({ pathname: '/admin/pilot/wallet', params: { id: p.id } })}
-        />
+        {isAppAdmin ? (
+          <Button
+            title="Points et garage"
+            variant="secondary"
+            icon={<Icon name={icons.coin} size={18} color={colors.text} />}
+            onPress={() => router.push({ pathname: '/admin/pilot/wallet', params: { id: p.id } })}
+          />
+        ) : null}
       </Card>
 
       <Notes pilotId={p.id} />
@@ -141,7 +146,18 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
 
       {moderate.error ? <Text style={styles.error}>{moderate.error.message}</Text> : null}
 
-      {ladder.suggestion ? (
+      {ladder.suggestion && !isAppAdmin ? (
+        <Card style={[styles.card, styles.suggestion]}>
+          <Text style={[styles.kicker, { color: colors.danger }]}>À signaler à un admin</Text>
+          <Text variant="caption">
+            {ladder.pending.length} avertissements sans changement de comportement : l’étape suivante est une{' '}
+            {ladder.suggestion.kind === 'ban' ? 'exclusion' : 'suspension'}, qu’un admin appli doit prononcer. Laisse une
+            note interne pour lui.
+          </Text>
+        </Card>
+      ) : null}
+
+      {ladder.suggestion && isAppAdmin ? (
         <Card style={[styles.card, styles.suggestion]}>
           <Text style={[styles.kicker, { color: colors.danger }]}>Sanction suggérée</Text>
           <Text variant="heading">
@@ -196,6 +212,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
 
       <Warnings pilot={p} pending={ladder.pending.length} />
 
+      {isAppAdmin ? (
+        <>
       <SectionTitle title="Sanctions" />
       <Card style={styles.card}>
         <Input
@@ -310,6 +328,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
       </Card>
 
       <RecentResults pilot={p} />
+        </>
+      ) : null}
 
       <SectionTitle title="Signalements reçus" detail={`${p.reports.length}`} />
       {p.reports.length === 0 ? <Text variant="caption">Aucun signalement.</Text> : null}

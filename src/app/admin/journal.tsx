@@ -8,6 +8,9 @@ import { useAdminRecentActions } from '@/features/admin/panel';
 export default function AdminJournalScreen() {
   const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
   const actions = useAdminRecentActions(isAppAdmin, 100);
+
+  if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé aux admins appli" /></Screen>;
+
   return (
     <Screen safeTop={false} refreshing={actions.isRefetching} onRefresh={actions.refetch}>
       {actions.isPending ? <Loading /> : null}

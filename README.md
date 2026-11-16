@@ -123,6 +123,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   `admin_transfer_team` : nouveau Team Principal ; `admin_dissolve_team`), réglages à distance
   (`admin_update_app_settings` : pause du Time Attack, maintenance, version minimale), points et boutique
   (`admin_pilot_wallet`, `admin_adjust_points`, `admin_grant_item`, `admin_revoke_item`, `admin_set_gear_price`),
+  rôle modérateur (`app_moderators`, `set_app_moderator`, `is_app_staff` : signalements, Actu, support, fiche pilote,
+  avertissements et notes ; sanctions, ELO, points et réglages restent aux admins appli),
   arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction

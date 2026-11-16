@@ -1441,6 +1441,10 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
     case 'set_gear_price':
       return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'add_moderator':
+      return 'Nommé modérateur';
+    case 'remove_moderator':
+      return 'Rôle de modérateur retiré';
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:
