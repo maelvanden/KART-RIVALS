@@ -119,3 +119,24 @@ test('city search filters city only and recent/rival use restricted RPCs', async
   assert.deepEqual(await (await call('action=rival&pilot=' + id + '&track=' + track)).json(), { unavailable: true });
   assert.equal((await call('action=rival&pilot=bad&track=' + track)).status, 400);
 });
+
+test('association RPCs require bot authentication and receive identities only in POST bodies', async()=>{
+ const post=(input,auth='Bearer bot-test')=>handler(new Request('https://api.example',{method:'POST',headers:{Authorization:auth},body:JSON.stringify(input)}));
+ let calls=0;
+ global.fetch=async(url,init)=>{
+  calls++;assert.equal(new URL(url).pathname,'/rest/v1/rpc/redeem_discord_link');
+  assert.deepEqual(JSON.parse(init.body),{p_discord_id:'111111111111111111',p_code:'A'.repeat(32)});
+  return Response.json({status:'linked'});
+ };
+ assert.equal((await post({action:'link',discord_id:'111111111111111111',code:'A'.repeat(32)},'bad')).status,401);
+ for(const invalid of [null,{}, {action:'link',discord_id:'not-id'}, {action:'link',discord_id:'111111111111111111',code:3},{action:'delete-account',discord_id:'111111111111111111'}])assert.equal((await post(invalid)).status,400);
+ assert.equal(calls,0);
+ const result=await post({action:'link',discord_id:'111111111111111111',code:'A'.repeat(32)});
+ assert.deepEqual(await result.json(),{status:'linked'});assert.equal(result.headers.get('cache-control'),'no-store');
+ assert.equal(calls,1);
+ for(const [action,rpc] of [['linked','discord_linked_profile'],['unlink','unlink_discord_account']]){
+  global.fetch=async(url,init)=>{assert.equal(new URL(url).pathname,'/rest/v1/rpc/'+rpc);assert.deepEqual(JSON.parse(init.body),{p_discord_id:'111111111111111111'});return Response.json({});};
+  assert.equal((await post({action,discord_id:'111111111111111111'})).status,200);
+ }
+ assert.equal((await call('action=link&discord_id=111111111111111111&code=secret')).status,400);
+});

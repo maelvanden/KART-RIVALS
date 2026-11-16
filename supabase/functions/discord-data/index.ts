@@ -40,7 +40,7 @@ async function query<T>(path: string, params?: URLSearchParams, body?: object): 
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== 'GET') return new Response(null, { status: 405 });
+  if (!['GET', 'POST'].includes(request.method)) return new Response(null, { status: 405 });
   const secret = Deno.env.get('KART_RIVALS_BOT_KEY');
   const received = request.headers.get('Authorization');
   const encoder = new TextEncoder();
@@ -53,6 +53,21 @@ Deno.serve(async (request) => {
   const params = new URL(request.url).searchParams;
   const trackId = params.get('track');
   try {
+    if (request.method === 'POST') {
+      const raw = await request.text();
+      if (raw.length > 2048) return new Response(null, { status: 413 });
+      let input: { action?: string; discord_id?: string; code?: string };
+      try { input = JSON.parse(raw); } catch { return new Response(null, { status: 400 }); }
+      if (!input || typeof input.discord_id !== 'string' || !/^\d{17,20}$/.test(input.discord_id)) return new Response(null, { status: 400 });
+      const actions: Record<string, string> = { link: 'redeem_discord_link', unlink: 'unlink_discord_account', linked: 'discord_linked_profile' };
+      if (!Object.hasOwn(actions, input.action ?? '')) return new Response(null, { status: 400 });
+      if (input.action === 'link' && (typeof input.code !== 'string' || input.code.length > 80)) return new Response(null, { status: 400 });
+      const result = await query('rpc/' + actions[input.action!], undefined, {
+        p_discord_id: input.discord_id,
+        ...(input.action === 'link' ? { p_code: input.code } : {}),
+      });
+      return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
+    }
     const action = params.get('action');
     if (action === 'mesrecords' || action === 'circuits') {
       const page = Number(params.get('page') ?? '1');

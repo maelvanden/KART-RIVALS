@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { Avatar } from '@/components/ui/avatar';
 import { useMyProfile, useSetPromoPush, useUpdateProfile } from '@/features/profile/api';
 import { pickSquarePhoto, useSetAvatar } from '@/features/profile/avatar';
+import { DiscordLinkCard } from '@/features/profile/components/discord-link-card';
 import { DeleteAccountCard } from '@/features/profile/components/delete-account-card';
 import { useOpenSupport } from '@/features/social/radio';
 import { useTracksMap } from '@/features/tracks/api';
@@ -179,6 +180,7 @@ function EditProfileForm({ profile }: { profile: Profile }) {
       <Button title="Revoir la présentation" variant="ghost" onPress={() => router.push('/welcome')} />
       <Button title="Conditions d’utilisation" variant="ghost" onPress={openTerms} />
       <Button title="Politique de confidentialité" variant="ghost" onPress={openPrivacyPolicy} />
+      <DiscordLinkCard key={profile.id} profileId={profile.id} />
       <DeleteAccountCard />
     </Screen>
   );
