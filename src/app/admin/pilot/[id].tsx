@@ -13,6 +13,8 @@ import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAdminRoles } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
+import { ReportContext } from '@/features/admin/components/report-context';
+import { useReportedMessages } from '@/features/admin/messages';
 import {
   useAddPilotNote,
   useAdminPilot,
@@ -331,6 +333,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         </>
       ) : null}
 
+      <ReportedMessages pilotId={p.id} />
+
       <SectionTitle title="Signalements reçus" detail={`${p.reports.length}`} />
       {p.reports.length === 0 ? <Text variant="caption">Aucun signalement.</Text> : null}
       {p.reports.map((r) => (
@@ -410,6 +414,34 @@ function RecentResults({ pilot: p }: { pilot: AdminPilotDetail }) {
                   )
             }
           />
+        </Card>
+      ))}
+    </>
+  );
+}
+
+/** Messages Radio signalés contre ce pilote, avec le fil de la conversation à la demande. */
+function ReportedMessages({ pilotId }: { pilotId: string }) {
+  const messages = useReportedMessages(pilotId, true);
+  const list = messages.data ?? [];
+  if (messages.isPending || (list.length === 0 && !messages.error)) return null;
+  return (
+    <>
+      <SectionTitle title="Messages signalés" detail={`${list.length}`} accent={list.some((m) => m.status === 'open') ? colors.orange : undefined} />
+      {messages.error ? <Text style={styles.error}>{messages.error.message}</Text> : null}
+      {list.map((m) => (
+        <Card key={m.report_id} style={[styles.card, m.status === 'open' && styles.open]}>
+          <Text style={styles.bold}>{REPORT_REASONS.find((x) => x.value === m.reason)?.label ?? m.reason}</Text>
+          <View style={styles.reportedQuote}>
+            <Text style={m.hidden ? styles.hiddenText : undefined}>{m.text ?? 'Message sans texte'}</Text>
+          </View>
+          {m.details ? <Text variant="caption">« {m.details} »</Text> : null}
+          <Text variant="caption">
+            Envoyé {formatMessageTime(m.sent_at)} · signalé par {m.reporter ?? 'pilote supprimé'} ·{' '}
+            {m.status === 'open' ? 'à traiter' : m.status === 'reviewed' ? 'traité' : 'rejeté'}
+            {m.hidden ? ' · masqué' : ''}
+          </Text>
+          <ReportContext reportId={m.report_id} />
         </Card>
       ))}
     </>
@@ -626,6 +658,8 @@ const styles = StyleSheet.create({
   open: { borderLeftWidth: 3, borderLeftColor: colors.danger },
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
+  reportedQuote: { padding: spacing.md, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.danger, backgroundColor: colors.surfaceAlt },
+  hiddenText: { color: colors.textMuted, fontStyle: 'italic' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   resultValue: { fontWeight: '900' },
   sent: { color: colors.neon, fontWeight: '700' },

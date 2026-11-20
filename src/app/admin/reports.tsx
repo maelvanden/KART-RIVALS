@@ -11,6 +11,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { isStaff, trackPhotoUrl, useAdminReports, useAdminRoles, useResolveReport, type AdminReport, type ReportStatus } from '@/features/admin/api';
+import { ReportContext } from '@/features/admin/components/report-context';
 import { mediaUrl } from '@/features/feed/api';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatMessageTime } from '@/lib/format';
@@ -97,6 +98,7 @@ function ReportCard({
           <Text style={styles.quoteText}>{r.message_body ?? (r.message_kind === 'image' ? '📷 Photo' : 'Message sans texte')}</Text>
         </View>
       ) : null}
+      {r.message_id ? <ReportContext reportId={r.id} /> : null}
       {r.post_id || r.comment_id ? (
         <View style={styles.quote}>
           <Text style={styles.quoteText}>{r.comment_body ?? r.post_caption ?? 'Publication sans texte (chrono ou média)'}</Text>

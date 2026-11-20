@@ -1453,6 +1453,8 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
     case 'set_gear_price':
       return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'view_message_context':
+      return 'Contexte d’un message signalé consulté';
     case 'resolve_report': {
       const verdict = d.status === 'dismissed' ? 'rejeté' : 'traité';
       const content = d.hidden === true ? ', contenu masqué' : d.hidden === false ? ', contenu rétabli' : '';

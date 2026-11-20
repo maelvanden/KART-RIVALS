@@ -127,6 +127,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   avertissements et notes ; sanctions, ELO, points et réglages restent aux admins appli),
   journal filtrable (`admin_journal` : par auteur, type d'action, pilote, circuit et période, avec export CSV ;
   `resolve_report` laisse une trace),
+  fiche pilote : messages signalés avec leur contexte (`admin_reported_messages`, `admin_report_context` : 5 messages
+  avant et après, ouvert à la demande depuis un signalement et tracé au journal),
   alertes à l'équipe (`push_on_serious_report` : notification dès un signalement grave ; `team_queue_watch` : rappel
   chaque matin à 9 h des éléments en attente depuis plus de 48 h ; réglage personnel `set_my_team_alerts`),
   recours contre une sanction (`sanction_appeals` : le pilote suspendu ou banni conteste depuis son écran
