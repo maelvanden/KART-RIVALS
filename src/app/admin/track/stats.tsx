@@ -11,10 +11,12 @@ import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAdminRoles, useCanManageTrack } from '@/features/admin/api';
-import { trend, useSetTrackDigest, useTrackDigest, useTrackStats, type TrackStats } from '@/features/admin/track-stats';
+import { fetchTrackDaily, trend, useSetTrackDigest, useTrackDigest, useTrackStats, type TrackStats } from '@/features/admin/track-stats';
+import { csvFilename, trackStatsRows } from '@/features/admin/track-stats-csv';
 import { eventWhen } from '@/features/events/format';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { useTrack } from '@/features/tracks/api';
+import { shareCsv, toCsv } from '@/lib/csv';
 import { formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 
@@ -30,6 +32,27 @@ export default function TrackStatsScreen() {
   // Le récapitulatif concerne les exploitants (admins karting), pas les admins appli qui n'ont aucun circuit.
   const managesTrack = (roles.data?.managed_track_ids.length ?? 0) > 0;
   const s = stats.data;
+  const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  /** Exporte les indicateurs, la courbe par semaine, les habitués, les événements et la série par jour. */
+  async function exportCsv() {
+    if (!s) return;
+    setExporting(true);
+    setExportNotice(null);
+    setExportError(null);
+    try {
+      const name = track.data?.name ?? 'Circuit';
+      const daily = await fetchTrackDaily(id);
+      await shareCsv(csvFilename(name), toCsv(trackStatsRows(name, s, daily)));
+      setExportNotice('Export enregistré ✓');
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'Export impossible.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Screen safeTop={false} refreshing={stats.isRefetching} onRefresh={stats.refetch}>
@@ -45,6 +68,10 @@ export default function TrackStatsScreen() {
             30 derniers jours, comparés aux 30 jours d’avant. Un pilote est compté quand un de ses résultats sur ton
             circuit est validé : défi, course ou Time Attack.
           </Text>
+
+          <Button title="Exporter en CSV" variant="secondary" loading={exporting} onPress={exportCsv} />
+          {exportNotice ? <Text style={styles.notice}>{exportNotice}</Text> : null}
+          {exportError ? <Text style={styles.error}>{exportError}</Text> : null}
 
           <View style={styles.grid}>
             <Kpi
@@ -252,6 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   error: { color: colors.danger },
+  notice: { color: colors.neon, fontWeight: '700' },
   flex: { flex: 1 },
   bold: { fontWeight: '800' },
   alert: { color: colors.orange },
