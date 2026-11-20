@@ -19,10 +19,14 @@ import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { RestrictedAccount } from '@/features/admin/components/restricted-account';
 import { WarningScreen } from '@/features/admin/components/warning-screen';
+import { useAdminRoles } from '@/features/admin/api';
 import { useAccountStatus, useAcknowledgeWarning, useMyPendingWarning } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { useRegisterDevice } from '@/features/auth/device';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { usePushNotifications } from '@/features/notifications/push';
+import { isOutdated, useAppSettings } from '@/features/settings/app-settings';
+import { MaintenanceScreen, UpdateRequiredScreen } from '@/features/settings/components/app-gate';
 import { useSocialRealtime } from '@/features/social/realtime';
 import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
 import { useTimeAttackLiveActivity } from '@/features/time-attack/live-activity';
@@ -68,6 +72,10 @@ function RootNavigator() {
   const account = useAccountStatus(profile.data ? userId : null);
   const warning = useMyPendingWarning(profile.data ? userId : null);
   const acknowledge = useAcknowledgeWarning();
+  const settings = useAppSettings();
+  const roles = useAdminRoles();
+  // Relie les comptes qui servent sur un même téléphone (repérer un banni qui revient). Y compris compte sanctionné.
+  useRegisterDevice(userId, !!profile.data);
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
   const welcome = useWelcomeSeen();
@@ -75,7 +83,7 @@ function RootNavigator() {
   // Après la présentation : la demande d'autorisation du téléphone ne la recouvre pas.
   usePushNotifications(userId, !!profile.data && !restricted && !!welcome.seen);
   // Compte à rebours Time Attack sur l'écran verrouillé et la Dynamic Island (iOS).
-  useTimeAttackLiveActivity(TIME_ATTACK_ENABLED && !!profile.data && !restricted);
+  useTimeAttackLiveActivity((settings.data?.time_attack_enabled ?? TIME_ATTACK_ENABLED) && !!profile.data && !restricted);
   // Widget d'écran d'accueil : ELO, rang et prochain défi (iOS).
   usePilotWidget(!!profile.data && !restricted);
 
@@ -106,6 +114,18 @@ function RootNavigator() {
   const restriction = account.data;
   if (hasProfile && restriction && (restriction.banned_at || restriction.suspended_until)) {
     return <RestrictedAccount status={restriction} onSignOut={signOut} onRetry={() => account.refetch()} />;
+  }
+
+  // Réglages à distance : mise à jour obligatoire, puis maintenance. Les admins appli passent toujours (ce sont eux
+  // qui lèvent le blocage), et rien n'est bloqué tant que le rôle du pilote n'est pas connu.
+  const gate = settings.data;
+  if (hasProfile && gate && roles.data && !roles.data.is_app_admin) {
+    if (isOutdated(gate.min_version)) {
+      return <UpdateRequiredScreen settings={gate} checking={settings.isFetching} onRetry={() => settings.refetch()} />;
+    }
+    if (gate.maintenance) {
+      return <MaintenanceScreen settings={gate} checking={settings.isFetching} onRetry={() => settings.refetch()} />;
+    }
   }
 
   // Avertissement officiel non lu : le pilote doit le lire avant de continuer.
@@ -157,11 +177,20 @@ function RootNavigator() {
         <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administration' }} />
         <Stack.Screen name="admin/reports" options={{ ...detailHeader, title: 'Signalements' }} />
         <Stack.Screen name="admin/track/[id]" options={{ ...detailHeader, title: 'Gérer la fiche' }} />
+        <Stack.Screen name="admin/track/reviews" options={{ ...detailHeader, title: 'Avis des pilotes' }} />
         <Stack.Screen name="admin/track/stats" options={{ ...detailHeader, title: 'Statistiques' }} />
         <Stack.Screen name="admin/track/new" options={{ ...detailHeader, presentation: 'modal', title: 'Nouveau circuit' }} />
         <Stack.Screen name="admin/pilots" options={{ ...detailHeader, title: 'Pilotes' }} />
+        <Stack.Screen name="admin/pilot/wallet" options={{ ...detailHeader, title: 'Points et garage' }} />
+        <Stack.Screen name="admin/shop" options={{ ...detailHeader, title: 'Boutique' }} />
         <Stack.Screen name="admin/pilot/[id]" options={{ ...detailHeader, title: 'Pilote' }} />
         <Stack.Screen name="admin/tracks" options={{ ...detailHeader, title: 'Circuits' }} />
+        <Stack.Screen name="admin/tournaments" options={{ ...detailHeader, title: 'Tournois' }} />
+        <Stack.Screen name="admin/tournament/[id]" options={{ ...detailHeader, title: 'Tournoi' }} />
+        <Stack.Screen name="admin/teams" options={{ ...detailHeader, title: 'Écuries' }} />
+        <Stack.Screen name="admin/team/[id]" options={{ ...detailHeader, title: 'Écurie' }} />
+        <Stack.Screen name="admin/settings" options={{ ...detailHeader, title: 'Réglages de l’appli' }} />
+        <Stack.Screen name="admin/appeals" options={{ ...detailHeader, title: 'Recours' }} />
         <Stack.Screen name="admin/announcements" options={{ ...detailHeader, title: 'Annonces' }} />
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />

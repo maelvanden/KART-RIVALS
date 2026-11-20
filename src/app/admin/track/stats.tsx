@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,13 @@ import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { useAdminRoles, useCanManageTrack } from '@/features/admin/api';
-import { trend, useTrackStats, type TrackStats } from '@/features/admin/track-stats';
+import { fetchTrackDaily, trend, useSetTrackDigest, useTrackDigest, useTrackStats, type TrackStats } from '@/features/admin/track-stats';
+import { csvFilename, trackStatsRows } from '@/features/admin/track-stats-csv';
 import { eventWhen } from '@/features/events/format';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { useTrack } from '@/features/tracks/api';
+import { useTrackReviews } from '@/features/tracks/reviews';
+import { shareCsv, toCsv } from '@/lib/csv';
 import { formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
 
@@ -27,7 +30,32 @@ export default function TrackStatsScreen() {
   const roles = useAdminRoles();
   const canManage = useCanManageTrack(id);
   const stats = useTrackStats(id, canManage);
+  const reviews = useTrackReviews(canManage ? id : undefined);
+  const unanswered = reviews.data ? reviews.data.filter((r) => !r.reply).length : null;
+  // Le récapitulatif concerne les exploitants (admins karting), pas les admins appli qui n'ont aucun circuit.
+  const managesTrack = (roles.data?.managed_track_ids.length ?? 0) > 0;
   const s = stats.data;
+  const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  /** Exporte les indicateurs, la courbe par semaine, les habitués, les événements et la série par jour. */
+  async function exportCsv() {
+    if (!s) return;
+    setExporting(true);
+    setExportNotice(null);
+    setExportError(null);
+    try {
+      const name = track.data?.name ?? 'Circuit';
+      const daily = await fetchTrackDaily(id);
+      await shareCsv(csvFilename(name), toCsv(trackStatsRows(name, s, daily)));
+      setExportNotice('Export enregistré ✓');
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'Export impossible.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Screen safeTop={false} refreshing={stats.isRefetching} onRefresh={stats.refetch}>
@@ -43,6 +71,10 @@ export default function TrackStatsScreen() {
             30 derniers jours, comparés aux 30 jours d’avant. Un pilote est compté quand un de ses résultats sur ton
             circuit est validé : défi, course ou Time Attack.
           </Text>
+
+          <Button title="Exporter en CSV" variant="secondary" loading={exporting} onPress={exportCsv} />
+          {exportNotice ? <Text style={styles.notice}>{exportNotice}</Text> : null}
+          {exportError ? <Text style={styles.error}>{exportError}</Text> : null}
 
           <View style={styles.grid}>
             <Kpi
@@ -139,13 +171,52 @@ export default function TrackStatsScreen() {
             <Line label="Sessions ouvertes à venir" value={s.sessions_upcoming} />
             <Line label="Tournois en cours ou ouverts" value={s.tournaments_live} />
             <Line label="Erreurs signalées à traiter" value={s.corrections_open} alert={s.corrections_open > 0} />
+            {unanswered != null ? <Line label="Avis sans réponse" value={unanswered} alert={unanswered > 0} /> : null}
           </Card>
+          {s.reviews > 0 ? (
+            <Button
+              title={unanswered ? `Répondre aux avis (${unanswered})` : 'Voir les avis des pilotes'}
+              variant={unanswered ? 'secondary' : 'ghost'}
+              onPress={() => router.push({ pathname: '/admin/track/reviews', params: { id } })}
+            />
+          ) : null}
           {s.corrections_open > 0 ? (
             <Button title="Voir les remontées des pilotes" variant="ghost" onPress={() => router.push('/admin/corrections')} />
           ) : null}
+
+          {managesTrack ? <DigestToggle /> : null}
         </>
       ) : null}
     </Screen>
+  );
+}
+
+/** Récapitulatif du lundi : réglage personnel de l'exploitant. */
+function DigestToggle() {
+  const digest = useTrackDigest(true);
+  const setDigest = useSetTrackDigest();
+  return (
+    <>
+      <SectionTitle title="Notifications" />
+      <View style={styles.digest}>
+        <View style={styles.flex}>
+          <Text style={styles.bold}>Récapitulatif du lundi</Text>
+          <Text variant="caption">
+            Chaque lundi à 9 h, par circuit que tu gères : visites de la fiche, pilotes venus rouler, intérêt pour tes
+            événements et nouveaux avis, avec l’évolution sur la semaine. Rien n’est envoyé une semaine sans activité.
+          </Text>
+        </View>
+        <Switch
+          value={digest.data ?? true}
+          disabled={digest.isPending || setDigest.isPending}
+          onValueChange={(v) => setDigest.mutate(v)}
+          trackColor={{ true: colors.neon, false: colors.surfaceAlt }}
+          thumbColor={colors.text}
+          accessibilityLabel="Récapitulatif du lundi"
+        />
+      </View>
+      {setDigest.error ? <Text style={styles.error}>{setDigest.error.message}</Text> : null}
+    </>
   );
 }
 
@@ -208,6 +279,18 @@ function Line({ label, value, alert }: { label: string; value: number; alert?: b
 }
 
 const styles = StyleSheet.create({
+  digest: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  error: { color: colors.danger },
+  notice: { color: colors.neon, fontWeight: '700' },
   flex: { flex: 1 },
   bold: { fontWeight: '800' },
   alert: { color: colors.orange },

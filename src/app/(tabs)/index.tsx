@@ -6,7 +6,7 @@ import { Screen } from '@/components/ui/screen';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
 import { AnnouncementBanner } from '@/features/admin/components/announcement-banner';
-import { useAdminRoles } from '@/features/admin/api';
+import { isStaff, useAdminRoles } from '@/features/admin/api';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useMyChallenges } from '@/features/challenges/api';
 import { challengeStep, needsMe } from '@/features/challenges/state';
@@ -44,8 +44,8 @@ export default function PaddockScreen() {
   const challenges = useMyChallenges();
   const races = useMyRaces();
   const roles = useAdminRoles().data;
-  // Admins, et tant qu'aucun admin n'existe : accès pour se déclarer.
-  const showAdmin = !!roles && (roles.is_app_admin || roles.managed_track_ids.length > 0 || !roles.admin_exists);
+  // Admins, modérateurs, et tant qu'aucun admin n'existe : accès pour se déclarer.
+  const showAdmin = !!roles && (isStaff(roles) || roles.managed_track_ids.length > 0 || !roles.admin_exists);
 
   const todo = userId
     ? (challenges.data ?? []).filter((c) => needsMe(challengeStep(c, userId))).length +

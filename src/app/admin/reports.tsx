@@ -10,7 +10,8 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
-import { trackPhotoUrl, useAdminReports, useAdminRoles, useResolveReport, type AdminReport, type ReportStatus } from '@/features/admin/api';
+import { isStaff, trackPhotoUrl, useAdminReports, useAdminRoles, useResolveReport, type AdminReport, type ReportStatus } from '@/features/admin/api';
+import { ReportContext } from '@/features/admin/components/report-context';
 import { mediaUrl } from '@/features/feed/api';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatMessageTime } from '@/lib/format';
@@ -26,7 +27,7 @@ const TABS: { value: ReportStatus; label: string }[] = [
 
 /** Signalements des pilotes : contenu visé, motif, et décision (masquer, rétablir, rejeter). */
 export default function ReportsScreen() {
-  const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
+  const isAppAdmin = isStaff(useAdminRoles().data);
   const [tab, setTab] = useState<ReportStatus>('open');
   const reports = useAdminReports(tab, isAppAdmin);
   const resolve = useResolveReport();
@@ -97,6 +98,7 @@ function ReportCard({
           <Text style={styles.quoteText}>{r.message_body ?? (r.message_kind === 'image' ? '📷 Photo' : 'Message sans texte')}</Text>
         </View>
       ) : null}
+      {r.message_id ? <ReportContext reportId={r.id} /> : null}
       {r.post_id || r.comment_id ? (
         <View style={styles.quote}>
           <Text style={styles.quoteText}>{r.comment_body ?? r.post_caption ?? 'Publication sans texte (chrono ou média)'}</Text>

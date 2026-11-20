@@ -5,12 +5,17 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon, icons } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
+import { useAdminRoles } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
+import { ReportContext } from '@/features/admin/components/report-context';
+import { useLinkedAccounts, type LinkedAccount } from '@/features/admin/linked';
+import { useReportedMessages } from '@/features/admin/messages';
 import {
   useAddPilotNote,
   useAdminPilot,
@@ -19,11 +24,13 @@ import {
   useDeletePilotNote,
   useModeratePilot,
   usePilotNotes,
+  useResetPilotProfile,
   useReviewTimeAttack,
   useSetElo,
   useWarnPilot,
   type AdminPilotDetail,
   type ModerationAction,
+  type ResetWhat,
 } from '@/features/admin/panel';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { REPORT_REASONS } from '@/features/social/safety';
@@ -61,6 +68,7 @@ function sanctionLadder(p: AdminPilotDetail) {
   return { pending, suggestion };
 }
 
+const short = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** Fiche admin d'un pilote : activité, signalements reçus, sanctions, badge vérifié, ELO. */
@@ -80,6 +88,8 @@ export default function AdminPilotScreen() {
 }
 
 function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
+  // Un modérateur consulte la fiche, avertit et tient les notes ; sanctions, badge, ELO et points restent aux admins appli.
+  const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
   const moderate = useModeratePilot();
   const setElo = useSetElo();
   const [days, setDays] = useState('7');
@@ -119,6 +129,14 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
         ) : null}
         {p.is_admin ? <Text style={styles.adminNote}>Admin appli : retire son rôle avant toute sanction.</Text> : null}
         <Button title="Voir sa licence" variant="ghost" onPress={() => router.push({ pathname: '/pilot/[id]', params: { id: p.id } })} />
+        {isAppAdmin ? (
+          <Button
+            title="Points et garage"
+            variant="secondary"
+            icon={<Icon name={icons.coin} size={18} color={colors.text} />}
+            onPress={() => router.push({ pathname: '/admin/pilot/wallet', params: { id: p.id } })}
+          />
+        ) : null}
       </Card>
 
       <Notes pilotId={p.id} />
@@ -134,7 +152,18 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
 
       {moderate.error ? <Text style={styles.error}>{moderate.error.message}</Text> : null}
 
-      {ladder.suggestion ? (
+      {ladder.suggestion && !isAppAdmin ? (
+        <Card style={[styles.card, styles.suggestion]}>
+          <Text style={[styles.kicker, { color: colors.danger }]}>À signaler à un admin</Text>
+          <Text variant="caption">
+            {ladder.pending.length} avertissements sans changement de comportement : l’étape suivante est une{' '}
+            {ladder.suggestion.kind === 'ban' ? 'exclusion' : 'suspension'}, qu’un admin appli doit prononcer. Laisse une
+            note interne pour lui.
+          </Text>
+        </Card>
+      ) : null}
+
+      {ladder.suggestion && isAppAdmin ? (
         <Card style={[styles.card, styles.suggestion]}>
           <Text style={[styles.kicker, { color: colors.danger }]}>Sanction suggérée</Text>
           <Text variant="heading">
@@ -188,6 +217,12 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
       ) : null}
 
       <Warnings pilot={p} pending={ladder.pending.length} />
+
+      <ProfileReset pilot={p} canEdit={isAppAdmin || !p.is_admin} />
+
+      {isAppAdmin ? (
+        <>
+      <LinkedAccounts pilotId={p.id} />
 
       <SectionTitle title="Sanctions" />
       <Card style={styles.card}>
@@ -303,6 +338,10 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
       </Card>
 
       <RecentResults pilot={p} />
+        </>
+      ) : null}
+
+      <ReportedMessages pilotId={p.id} />
 
       <SectionTitle title="Signalements reçus" detail={`${p.reports.length}`} />
       {p.reports.length === 0 ? <Text variant="caption">Aucun signalement.</Text> : null}
@@ -389,6 +428,187 @@ function RecentResults({ pilot: p }: { pilot: AdminPilotDetail }) {
   );
 }
 
+/**
+ * Autres comptes qui ont servi sur le même téléphone, pour repérer un pilote banni qui revient. Un indice à vérifier,
+ * pas une preuve : un téléphone partagé ou prêté lie aussi des comptes. Réservé aux admins appli.
+ */
+function LinkedAccounts({ pilotId }: { pilotId: string }) {
+  const linked = useLinkedAccounts(pilotId, true);
+  const data = linked.data;
+  if (linked.isPending) return null;
+  const banned = (data?.accounts ?? []).filter((a) => !!a.banned_at);
+  return (
+    <>
+      <SectionTitle title="Comptes liés" detail={`${data?.accounts.length ?? 0}`} accent={banned.length > 0 ? colors.danger : undefined} />
+      {linked.error ? <Text style={styles.error}>{linked.error.message}</Text> : null}
+      {data && data.accounts.length === 0 ? (
+        <Text variant="caption">
+          {data.devices === 0
+            ? 'Aucun appareil enregistré pour l’instant : il l’est à l’ouverture de la version à jour de l’appli.'
+            : `Aucun autre compte sur ${data.devices > 1 ? 'ses appareils' : 'son appareil'}.`}
+        </Text>
+      ) : null}
+      {banned.length > 0 ? (
+        <Card style={[styles.card, styles.linkedWarn]}>
+          <Text style={styles.linkedWarnTitle}>Même appareil qu’un compte banni</Text>
+          <Text variant="caption">
+            Un indice, pas une preuve : un téléphone prêté ou partagé en famille lie aussi des comptes. Vérifie les dates et
+            les signalements avant de décider.
+          </Text>
+        </Card>
+      ) : null}
+      {data?.accounts.map((a) => <LinkedRow key={a.id} account={a} />)}
+    </>
+  );
+}
+
+function LinkedRow({ account: a }: { account: LinkedAccount }) {
+  const status = a.banned_at
+    ? { label: 'Banni', color: colors.danger }
+    : a.suspended_until
+      ? { label: 'Suspendu', color: colors.orange }
+      : a.is_admin
+        ? { label: 'Admin', color: colors.neon }
+        : null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/admin/pilot/[id]', params: { id: a.id } })}
+      style={({ pressed }) => [styles.linkedRow, pressed && { opacity: 0.8 }]}>
+      <Avatar username={a.username} url={a.avatar_url} size={40} borderColor={rankMeta[a.rank].color} />
+      <View style={styles.flex}>
+        <Text style={styles.bold} numberOfLines={1}>{a.username}</Text>
+        <Text variant="caption">
+          {a.shared_devices} appareil{a.shared_devices > 1 ? 's' : ''} en commun · vu {a.first_seen === a.last_seen ? 'le' : 'du'} {short(a.first_seen)}
+          {a.first_seen === a.last_seen ? '' : ` au ${short(a.last_seen)}`}
+        </Text>
+        <Text variant="caption">
+          Inscrit le {short(a.created_at)}
+          {a.banned_at ? ` · banni le ${short(a.banned_at)}` : ''}
+        </Text>
+      </View>
+      {status ? <Text style={[styles.statusChip, { color: status.color, borderColor: status.color }]}>{status.label}</Text> : null}
+    </Pressable>
+  );
+}
+
+/**
+ * Pseudo et photo inappropriés : réinitialisation en un geste, motif obligatoire envoyé au pilote. Ouvert aux
+ * modérateurs, sauf sur le profil d'un admin appli.
+ */
+function ProfileReset({ pilot: p, canEdit }: { pilot: AdminPilotDetail; canEdit: boolean }) {
+  const reset = useResetPilotProfile();
+  const [reason, setReason] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  // Si la photo a bien été retirée du profil mais pas effacée du stockage, on laisse réessayer.
+  const [retryFiles, setRetryFiles] = useState(false);
+  const ready = reason.trim().length >= 3;
+  const sent = ready ? `Motif envoyé au pilote : « ${reason.trim()} »` : '';
+
+  function run(what: ResetWhat) {
+    setNotice(null);
+    reset.mutate(
+      { pilotId: p.id, what, reason },
+      {
+        onSuccess: (r) => {
+          setReason('');
+          setRetryFiles(!r.files_ok);
+          setNotice(
+            [
+              r.username ? `Pseudo remplacé par ${r.username} ✓` : null,
+              r.avatar_removed ? (r.files_ok ? 'Photo retirée ✓' : 'Photo retirée du profil, mais le fichier n’a pas pu être effacé : réessaie.') : null,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          );
+        },
+      },
+    );
+  }
+
+  return (
+    <>
+      <SectionTitle title="Pseudo et photo" />
+      <Card style={styles.card}>
+        <View style={styles.headerRow}>
+          <Avatar username={p.username} url={p.avatar_url} size={48} borderColor={rankMeta[p.rank].color} />
+          <View style={styles.flex}>
+            <Text style={styles.bold}>{p.username}</Text>
+            <Text variant="caption">{p.avatar_url ? 'Photo de profil définie' : 'Pas de photo de profil'}</Text>
+          </View>
+        </View>
+        {canEdit ? (
+          <>
+            <Input
+              label="Motif"
+              value={reason}
+              onChangeText={(v) => (setReason(v), setNotice(null))}
+              placeholder="Pseudo injurieux, photo choquante…"
+              maxLength={200}
+            />
+            <Text variant="caption">
+              Le pseudo devient « Pilote » suivi de 6 chiffres, la photo est supprimée. Le pilote reçoit le motif et peut
+              en choisir de nouveaux. Noté au journal.
+            </Text>
+            {reset.error ? <Text style={styles.error}>{reset.error.message}</Text> : null}
+            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            <View style={styles.row}>
+              <Button
+                title="Réinitialiser le pseudo"
+                variant="secondary"
+                style={styles.flex}
+                disabled={!ready || reset.isPending}
+                onPress={() =>
+                  confirmAction(`Réinitialiser le pseudo de ${p.username} ?`, `Il devient « Pilote » suivi de 6 chiffres. ${sent}`, 'Réinitialiser', () => run('username'))
+                }
+              />
+              <Button
+                title={retryFiles && !p.avatar_url ? 'Effacer le fichier' : 'Retirer la photo'}
+                variant="secondary"
+                style={styles.flex}
+                disabled={!ready || reset.isPending || (!p.avatar_url && !retryFiles)}
+                onPress={() =>
+                  confirmAction(`Retirer la photo de ${p.username} ?`, `La photo est supprimée définitivement. ${sent}`, 'Retirer', () => run('avatar'))
+                }
+              />
+            </View>
+          </>
+        ) : (
+          <Text variant="caption">Le profil d’un admin appli ne peut être modifié que par un admin appli.</Text>
+        )}
+      </Card>
+    </>
+  );
+}
+
+/** Messages Radio signalés contre ce pilote, avec le fil de la conversation à la demande. */
+function ReportedMessages({ pilotId }: { pilotId: string }) {
+  const messages = useReportedMessages(pilotId, true);
+  const list = messages.data ?? [];
+  if (messages.isPending || (list.length === 0 && !messages.error)) return null;
+  return (
+    <>
+      <SectionTitle title="Messages signalés" detail={`${list.length}`} accent={list.some((m) => m.status === 'open') ? colors.orange : undefined} />
+      {messages.error ? <Text style={styles.error}>{messages.error.message}</Text> : null}
+      {list.map((m) => (
+        <Card key={m.report_id} style={[styles.card, m.status === 'open' && styles.open]}>
+          <Text style={styles.bold}>{REPORT_REASONS.find((x) => x.value === m.reason)?.label ?? m.reason}</Text>
+          <View style={styles.reportedQuote}>
+            <Text style={m.hidden ? styles.hiddenText : undefined}>{m.text ?? 'Message sans texte'}</Text>
+          </View>
+          {m.details ? <Text variant="caption">« {m.details} »</Text> : null}
+          <Text variant="caption">
+            Envoyé {formatMessageTime(m.sent_at)} · signalé par {m.reporter ?? 'pilote supprimé'} ·{' '}
+            {m.status === 'open' ? 'à traiter' : m.status === 'reviewed' ? 'traité' : 'rejeté'}
+            {m.hidden ? ' · masqué' : ''}
+          </Text>
+          <ReportContext reportId={m.report_id} />
+        </Card>
+      ))}
+    </>
+  );
+}
+
 const PRESETS = [
   {
     label: 'Insultes',
@@ -405,6 +625,14 @@ const PRESETS = [
   {
     label: 'Contenu',
     text: 'Un de tes contenus a été jugé inapproprié et a été masqué. Merci de respecter les règles de la communauté.',
+  },
+  {
+    label: 'Pseudo / photo',
+    text: 'Ton pseudo ou ta photo de profil ne respecte pas les règles de la communauté. Merci de les modifier depuis ton profil.',
+  },
+  {
+    label: 'Sécurité',
+    text: 'Un comportement dangereux ou antisportif a été signalé en piste. Respecte les consignes du circuit et la sécurité des autres pilotes.',
   },
 ];
 
@@ -591,6 +819,22 @@ const styles = StyleSheet.create({
   open: { borderLeftWidth: 3, borderLeftColor: colors.danger },
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
+  notice: { color: colors.neon, fontWeight: '700' },
+  linkedWarn: { borderLeftWidth: 3, borderLeftColor: colors.danger },
+  linkedWarnTitle: { fontWeight: '800', color: colors.danger },
+  linkedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  statusChip: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2 },
+  reportedQuote: { padding: spacing.md, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.danger, backgroundColor: colors.surfaceAlt },
+  hiddenText: { color: colors.textMuted, fontStyle: 'italic' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   resultValue: { fontWeight: '900' },
   sent: { color: colors.neon, fontWeight: '700' },

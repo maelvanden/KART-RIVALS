@@ -11,12 +11,13 @@ import { nextRankProgress } from '@/features/profile/components/license-card';
 import { RankBadge } from '@/features/profile/components/rank-badge';
 import { VerifiedBadge } from '@/features/profile/components/verified-badge';
 import { TeamTag } from '@/features/social/components/team-tag';
-import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
+import { useTimeAttackEnabled } from '@/features/settings/app-settings';
 import { colors, fonts, gradients, radius, rankMeta, spacing } from '@/theme';
 import type { Profile } from '@/types/models';
 
 /** Carte héros du Paddock : identité, ELO géant et l'action principale « Entrer en piste ». */
 export function PaddockHero({ profile }: { profile: Profile }) {
+  const timeAttackEnabled = useTimeAttackEnabled();
   const { next, progress, remaining } = nextRankProgress(profile.elo);
   const accent = rankMeta[profile.rank].color;
 
@@ -67,7 +68,7 @@ export function PaddockHero({ profile }: { profile: Profile }) {
           title="Entrer en piste"
           size="lg"
           icon={<Icon name={icons.challenge} size={20} color={colors.onNeon} />}
-          onPress={() => router.push(TIME_ATTACK_ENABLED ? '/time-attack' : '/nearby')}
+          onPress={() => router.push(timeAttackEnabled ? '/time-attack' : '/nearby')}
         />
         <Button title="Trouver un rival" variant="secondary" onPress={() => router.push('/nearby')} />
       </View>

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,10 @@ import {
   useAdminRoles,
   useAdminTrackRequests,
   useAppAdmins,
+  useAppModerators,
   useClaimAppAdmin,
   useSetAppAdmin,
+  useSetAppModerator,
 } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
 import { QueueRow } from '@/features/admin/components/queue-row';
@@ -27,7 +29,11 @@ import {
   useAdminTimeAttacks,
   useTrackCorrections,
 } from '@/features/admin/panel';
+import { useSetTeamAlerts, useTeamAlerts } from '@/features/admin/alerts';
+import { useAdminAppeals } from '@/features/admin/appeals';
 import { useAdminQueue } from '@/features/admin/queue';
+import { useAdminTournaments } from '@/features/admin/tournaments';
+import { useAppSettings } from '@/features/settings/app-settings';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useSupportInbox } from '@/features/social/radio';
 import { useSearchPilots } from '@/features/nearby/api';
@@ -36,23 +42,29 @@ import { useTracksMap } from '@/features/tracks/api';
 import { confirmAction } from '@/lib/confirm';
 import { colors, radius, spacing } from '@/theme';
 
-/** Administration : tableau de bord et gestion (admin appli) ou fiches gérées (admin karting). */
+/** Administration : tableau de bord et gestion (admin appli), modération (modérateur) ou fiches gérées (admin karting). */
 export default function AdminScreen() {
   const roles = useAdminRoles();
   const claim = useClaimAppAdmin();
   const r = roles.data;
   const isAppAdmin = !!r?.is_app_admin;
+  const isModerator = !isAppAdmin && !!r?.is_moderator;
+  const staff = isAppAdmin || isModerator;
 
   const stats = useAdminStats(isAppAdmin);
-  const reports = useAdminReports('open', isAppAdmin);
+  const reports = useAdminReports('open', staff);
   const requests = useAdminTrackRequests(isAppAdmin);
   const actions = useAdminRecentActions(isAppAdmin, 6);
   const disputes = useAdminDisputes(isAppAdmin);
   const suspects = useAdminTimeAttacks('suspect', isAppAdmin);
   const pendingTickets = useAdminTimeAttacks('pending', isAppAdmin);
   const corrections = useTrackCorrections('open', isAppAdmin || (r?.managed_track_ids.length ?? 0) > 0);
-  const queue = useAdminQueue(isAppAdmin);
-  const support = useSupportInbox(isAppAdmin);
+  const queue = useAdminQueue(staff, isAppAdmin ? 'admin' : 'moderator');
+  const support = useSupportInbox(staff);
+  const appSettings = useAppSettings().data;
+  const settingsAlert = !!appSettings && (appSettings.maintenance || !appSettings.time_attack_enabled);
+  const appeals = useAdminAppeals('open', isAppAdmin).data?.length ?? 0;
+  const watchedTournaments = useAdminTournaments('watch', isAppAdmin).data?.length ?? 0;
   const supportUnread = (support.data ?? []).filter((t) => t.unread > 0).length;
   const tracks = useTracksMap();
   const managed = isAppAdmin ? [] : (tracks.data ?? []).filter((t) => r?.managed_track_ids.includes(t.id));
@@ -86,11 +98,69 @@ export default function AdminScreen() {
         </Card>
       ) : null}
 
-      {r && r.admin_exists && !isAppAdmin && r.managed_track_ids.length === 0 ? (
+      {r && r.admin_exists && !staff && r.managed_track_ids.length === 0 ? (
         <EmptyState
           title="Accès réservé"
           message="Tu gères un karting ? Ouvre sa fiche et touche « Vous gérez ce karting ? » pour demander l’accès."
         />
+      ) : null}
+
+      {isModerator ? (
+        <>
+          <Card style={styles.claim}>
+            <Text variant="label" style={{ color: colors.neon }}>Modérateur</Text>
+            <Text variant="caption">
+              Tu traites les signalements, modères l’Actu et réponds au support. Pour une suspension, un bannissement ou
+              une correction d’ELO, laisse une note interne sur la fiche du pilote : un admin appli tranchera.
+            </Text>
+          </Card>
+          <SectionTitle
+            title="À traiter"
+            detail={queue.isPending ? '…' : `${queue.items.length}`}
+            accent={queue.items.length > 0 ? colors.orange : undefined}
+          />
+          {!queue.isPending && queue.items.length === 0 ? (
+            <Text variant="caption">Rien en attente : signalements et messages au support sont à jour. 🏁</Text>
+          ) : null}
+          {queue.items.slice(0, 5).map((item) => (
+            <QueueRow key={item.key} item={item} />
+          ))}
+          {queue.items.length > 5 ? (
+            <Button title={`Toute la file (${queue.items.length})`} variant="secondary" onPress={() => router.push('/admin/queue')} />
+          ) : null}
+
+          <SectionTitle title="Modération" />
+          <MenuRow
+            icon={icons.report}
+            title="Signalements"
+            detail={`${reports.data?.length ?? 0} signalement${(reports.data?.length ?? 0) > 1 ? 's' : ''} à traiter`}
+            alert={(reports.data?.length ?? 0) > 0}
+            onPress={() => router.push('/admin/reports')}
+          />
+          <MenuRow
+            icon={icons.support}
+            title="Support pilotes"
+            detail={
+              supportUnread > 0
+                ? `${supportUnread} conversation${supportUnread > 1 ? 's' : ''} en attente de réponse`
+                : 'Messages « Contacter l’équipe »'
+            }
+            alert={supportUnread > 0}
+            onPress={() => router.push('/admin/support')}
+          />
+          <MenuRow
+            icon={icons.feed}
+            title="Modération de l’Actu"
+            detail="Publications, commentaires, photos, avis : masquer en un geste"
+            onPress={() => router.push('/admin/content')}
+          />
+          <MenuRow
+            icon={icons.teammates}
+            title="Pilotes"
+            detail="Rechercher, consulter une fiche, avertir, noter"
+            onPress={() => router.push('/admin/pilots')}
+          />
+        </>
       ) : null}
 
       {isAppAdmin ? (
@@ -196,6 +266,23 @@ export default function AdminScreen() {
             onPress={() => router.push('/admin/results')}
           />
           <MenuRow
+            icon={icons.trophy}
+            title="Tournois"
+            detail={
+              watchedTournaments > 0
+                ? `${watchedTournaments} tournoi${watchedTournaments > 1 ? 's' : ''} à surveiller : duel bloqué ou contesté`
+                : 'Forfaits, retrait d’un inscrit, statut officiel, annulation'
+            }
+            alert={watchedTournaments > 0}
+            onPress={() => router.push('/admin/tournaments')}
+          />
+          <MenuRow
+            icon={icons.team}
+            title="Écuries"
+            detail="Nom, tag et blason inappropriés, Team Principal absent, dissolution"
+            onPress={() => router.push('/admin/teams')}
+          />
+          <MenuRow
             icon={icons.feed}
             title="Modération de l’Actu"
             detail={s ? `${s.posts_7d} publications cette semaine · masquer en un geste` : 'Publications, commentaires, photos, avis'}
@@ -206,6 +293,13 @@ export default function AdminScreen() {
             title="Pilotes"
             detail={s ? `${s.pilots_total} inscrits · +${s.pilots_new_30d} ce mois-ci` : 'Rechercher, suspendre, bannir'}
             onPress={() => router.push('/admin/pilots')}
+          />
+          <MenuRow
+            icon={icons.block}
+            title="Recours"
+            detail={appeals > 0 ? `${appeals} recours contre une sanction à examiner` : 'Contestations des pilotes suspendus ou bannis'}
+            alert={appeals > 0}
+            onPress={() => router.push('/admin/appeals')}
           />
           <MenuRow
             icon={icons.map}
@@ -232,10 +326,29 @@ export default function AdminScreen() {
             onPress={() => router.push('/admin/officials')}
           />
           <MenuRow
+            icon={icons.coin}
+            title="Boutique"
+            detail="Prix des objets et popularité · les points d’un pilote se règlent sur sa fiche"
+            onPress={() => router.push('/admin/shop')}
+          />
+          <MenuRow
             icon={icons.megaphone}
             title="Annonces"
             detail="Message officiel affiché à tous les pilotes"
             onPress={() => router.push('/admin/announcements')}
+          />
+          <MenuRow
+            icon={icons.admin}
+            title="Réglages de l’appli"
+            detail={
+              appSettings?.maintenance
+                ? 'Maintenance en cours : les pilotes sont bloqués'
+                : appSettings && !appSettings.time_attack_enabled
+                  ? 'Time Attack en pause'
+                  : 'Pause du Time Attack, maintenance, version minimale'
+            }
+            alert={settingsAlert}
+            onPress={() => router.push('/admin/settings')}
           />
         </>
       ) : null}
@@ -288,7 +401,9 @@ export default function AdminScreen() {
         </>
       ) : null}
 
+      {staff ? <TeamAlertsToggle /> : null}
       {isAppAdmin ? <AppAdmins /> : null}
+      {isAppAdmin ? <Moderators /> : null}
     </Screen>
   );
 }
@@ -435,7 +550,115 @@ function AppAdmins() {
   );
 }
 
+/** Alertes de l'équipe, réglage personnel : signalement grave en direct et rappel du matin. */
+function TeamAlertsToggle() {
+  const alerts = useTeamAlerts(true);
+  const setAlerts = useSetTeamAlerts();
+  return (
+    <>
+      <SectionTitle title="Mes alertes" />
+      <View style={styles.alertRow}>
+        <View style={styles.flex}>
+          <Text style={styles.trackName}>Alertes de l’équipe</Text>
+          <Text variant="caption">
+            Une notification dès qu’un signalement grave arrive (harcèlement, contenu inapproprié, 3 signalements sur un
+            pilote), et chaque matin à 9 h un rappel de ce qui attend depuis plus de 48 h.
+          </Text>
+        </View>
+        <Switch
+          value={alerts.data ?? true}
+          disabled={alerts.isPending || setAlerts.isPending}
+          onValueChange={(v) => setAlerts.mutate(v)}
+          trackColor={{ true: colors.neon, false: colors.surfaceAlt }}
+          thumbColor={colors.text}
+          accessibilityLabel="Alertes de l’équipe"
+        />
+      </View>
+      {setAlerts.error ? <Text style={styles.error}>{setAlerts.error.message}</Text> : null}
+    </>
+  );
+}
+
+/** Modérateurs : liste, ajout par @pseudo, retrait. Réservé aux admins appli. */
+function Moderators() {
+  const moderators = useAppModerators(true);
+  const admins = useAppAdmins(true);
+  const setModerator = useSetAppModerator();
+  const [query, setQuery] = useState('');
+  const q = query.replace(/^@/, '').trim();
+  const search = useSearchPilots(q);
+  const taken = new Set([...(moderators.data ?? []), ...(admins.data ?? [])].map((p) => p.id));
+
+  return (
+    <>
+      <SectionTitle title="Modérateurs" detail={`${moderators.data?.length ?? ''}`} />
+      <Text variant="caption">
+        Un modérateur traite les signalements, modère l’Actu, répond au support et avertit les pilotes. Il ne peut ni
+        suspendre ni bannir, ni toucher à l’ELO, aux points, aux résultats, aux circuits ou aux réglages.
+      </Text>
+      {moderators.data?.length === 0 ? <Text variant="caption">Aucun modérateur pour l’instant.</Text> : null}
+      {moderators.data?.map((m) => (
+        <View key={m.id} style={styles.staffRow}>
+          <View style={styles.flex}>
+            <PilotRow pilotId={m.id} username={m.username} avatarUrl={m.avatar_url} rank={m.rank} elo={m.elo} subtitle="Modérateur" />
+          </View>
+          <Button
+            title="Retirer"
+            variant="quiet"
+            disabled={setModerator.isPending}
+            onPress={() =>
+              confirmAction(`Retirer ${m.username} ?`, 'Il ne sera plus modérateur.', 'Retirer', () =>
+                setModerator.mutate({ pilotId: m.id, moderator: false }),
+              )
+            }
+          />
+        </View>
+      ))}
+      <Input label="Nommer un modérateur" value={query} onChangeText={setQuery} placeholder="@pseudo" autoCapitalize="none" autoCorrect={false} />
+      {q.length >= 2
+        ? search.data
+            ?.filter((p) => !taken.has(p.id))
+            .map((p) => (
+              <View key={p.id} style={styles.staffRow}>
+                <View style={styles.flex}>
+                  <PilotRow pilotId={p.id} username={p.username} avatarUrl={p.avatar_url} rank={p.rank} elo={p.elo} subtitle={`@${p.username}`} />
+                </View>
+                <Button
+                  title="Nommer"
+                  variant="ghost"
+                  disabled={setModerator.isPending}
+                  onPress={() =>
+                    confirmAction(
+                      `Nommer ${p.username} modérateur ?`,
+                      'Il pourra traiter les signalements, modérer l’Actu, répondre au support et avertir les pilotes.',
+                      'Nommer',
+                      () => {
+                        setModerator.mutate({ pilotId: p.id, moderator: true });
+                        setQuery('');
+                      },
+                    )
+                  }
+                />
+              </View>
+            ))
+        : null}
+      {setModerator.error ? <Text style={styles.error}>{setModerator.error.message}</Text> : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  alertRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  staffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   claim: { gap: spacing.md, alignItems: 'flex-start', borderLeftWidth: 3, borderLeftColor: colors.neon },
   error: { color: colors.danger },
   tiles: { flexDirection: 'row', gap: spacing.sm },

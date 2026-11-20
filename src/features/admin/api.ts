@@ -8,7 +8,16 @@ import { demoProfile, demoTrackDetails, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
 import type { PilotSummary, ReportReason, TrackDetails } from '@/types/models';
 
-export type AdminRoles = { is_app_admin: boolean; admin_exists: boolean; managed_track_ids: string[] };
+export type AdminRoles = {
+  is_app_admin: boolean;
+  /** Modérateur : signalements, Actu, support, avertissements. Jamais vrai pour un admin appli. */
+  is_moderator?: boolean;
+  admin_exists: boolean;
+  managed_track_ids: string[];
+};
+
+/** Membre de l'équipe Kart Rivals : admin appli ou modérateur. */
+export const isStaff = (roles: AdminRoles | undefined) => !!roles && (roles.is_app_admin || !!roles.is_moderator);
 export type AdminPilot = PilotSummary & { since: string };
 export type TrackAdminRequest = {
   id: string;
@@ -84,6 +93,7 @@ const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOSt
 const asAdmin = (p: PilotSummary, minutes: number): AdminPilot => ({ ...p, since: ago(minutes) });
 const demoAdmin = {
   appAdmins: [] as AdminPilot[],
+  moderators: [] as AdminPilot[],
   trackAdmins: { t1: [] as AdminPilot[] } as Record<string, AdminPilot[]>,
   requests: [
     {
@@ -166,6 +176,7 @@ export function useAdminRoles() {
       if (isDemoMode) {
         return {
           is_app_admin: demoAdmin.appAdmins.some((a) => a.id === demoProfile.id),
+          is_moderator: false,
           admin_exists: demoAdmin.appAdmins.length > 0,
           managed_track_ids: Object.entries(demoAdmin.trackAdmins)
             .filter(([, list]) => list.some((a) => a.id === demoProfile.id))
@@ -229,10 +240,48 @@ export function useSetAppAdmin() {
         } else {
           const p = demoPilot(pilotId);
           if (p && !demoAdmin.appAdmins.some((a) => a.id === pilotId)) demoAdmin.appAdmins.push(asAdmin(p, 0));
+          // Un seul rôle à la fois : un admin appli n'est plus modérateur.
+          demoAdmin.moderators = demoAdmin.moderators.filter((m) => m.id !== pilotId);
         }
         return;
       }
       const { error } = await supabase.rpc('set_app_admin', { p_profile_id: pilotId, p_admin: admin });
+      if (error) throw socialError(error);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ---------- Modérateurs (nommés par les admins appli) ----------
+
+export function useAppModerators(enabled: boolean) {
+  return useQuery({
+    queryKey: ['app-moderators'],
+    enabled,
+    queryFn: async (): Promise<AdminPilot[]> => {
+      if (isDemoMode) return [...demoAdmin.moderators];
+      const { data, error } = await supabase.rpc('list_app_moderators');
+      if (error) throw socialError(error);
+      return data as AdminPilot[];
+    },
+  });
+}
+
+export function useSetAppModerator() {
+  const invalidate = useInvalidate('app-moderators', 'admin-roles', 'admin-actions');
+  return useMutation({
+    mutationFn: async ({ pilotId, moderator }: { pilotId: string; moderator: boolean }) => {
+      if (isDemoMode) {
+        if (!moderator) {
+          demoAdmin.moderators = demoAdmin.moderators.filter((m) => m.id !== pilotId);
+          return;
+        }
+        if (demoAdmin.appAdmins.some((a) => a.id === pilotId)) throw new Error('Ce pilote est déjà admin appli.');
+        const p = demoPilot(pilotId);
+        if (p && !demoAdmin.moderators.some((m) => m.id === pilotId)) demoAdmin.moderators.push(asAdmin(p, 0));
+        return;
+      }
+      const { error } = await supabase.rpc('set_app_moderator', { p_profile_id: pilotId, p_moderator: moderator });
       if (error) throw socialError(error);
     },
     onSuccess: invalidate,

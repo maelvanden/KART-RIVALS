@@ -10,6 +10,7 @@ import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
 import { ReportSheet } from '@/features/social/components/report-sheet';
 import { RatingStars, StarInput } from '@/features/tracks/components/rating-stars';
+import { ReviewReply } from '@/features/tracks/components/review-reply';
 import {
   CRITERIA,
   reviewOverall,
@@ -73,6 +74,8 @@ export function TrackReviews({ trackId, trackName }: { trackId: string; trackNam
       {mine ? (
         <ReviewItem
           review={mine}
+          trackId={trackId}
+          trackName={trackName}
           mine
           onEdit={() => setEditing(true)}
           onDelete={() => confirmAction('Supprimer ton avis ?', 'Il ne comptera plus dans la note du circuit.', 'Supprimer', () => remove.mutate(mine.id))}
@@ -86,7 +89,7 @@ export function TrackReviews({ trackId, trackName }: { trackId: string; trackNam
         />
       )}
       {others.slice(0, 10).map((r) => (
-        <ReviewItem key={r.id} review={r} onReport={() => setReporting(r)} />
+        <ReviewItem key={r.id} review={r} trackId={trackId} trackName={trackName} onReport={() => setReporting(r)} />
       ))}
 
       <ReviewSheet key={mine ? `${mine.id}-${mine.updated_at}` : 'new'} visible={editing} onClose={() => setEditing(false)} trackId={trackId} trackName={trackName} existing={mine} />
@@ -104,12 +107,16 @@ export function TrackReviews({ trackId, trackName }: { trackId: string; trackNam
 
 function ReviewItem({
   review: r,
+  trackId,
+  trackName,
   mine,
   onEdit,
   onDelete,
   onReport,
 }: {
   review: TrackReview;
+  trackId: string;
+  trackName: string;
   mine?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -127,6 +134,7 @@ function ReviewItem({
       </Text>
       {r.comment ? <Text style={styles.comment}>{r.comment}</Text> : null}
       {mine && r.hidden_at ? <Text style={styles.hidden}>Masqué après signalements : visible par toi seul.</Text> : null}
+      {r.reply || !mine ? <ReviewReply review={r} trackId={trackId} trackName={trackName} manage={!mine} /> : null}
       {mine ? (
         <View style={styles.actions}>
           <Button title="Modifier" variant="quiet" onPress={onEdit} />

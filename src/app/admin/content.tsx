@@ -10,7 +10,7 @@ import { Icon, icons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
-import { trackPhotoUrl, useAdminRoles } from '@/features/admin/api';
+import { isStaff, trackPhotoUrl, useAdminRoles } from '@/features/admin/api';
 import { useAdminContent, useSetContentHidden, type AdminContent, type ContentFilter } from '@/features/admin/panel';
 import { mediaUrl } from '@/features/feed/api';
 import { RatingStars } from '@/features/tracks/components/rating-stars';
@@ -36,13 +36,13 @@ const KIND_LABEL: Record<AdminContent['kind'], string> = {
 
 /** Modération de l'Actu : les derniers contenus des pilotes, masquables en un geste. */
 export default function AdminContentScreen() {
-  const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
+  const isAppAdmin = isStaff(useAdminRoles().data);
   const [filter, setFilter] = useState<ContentFilter>('all');
   const content = useAdminContent(filter, isAppAdmin);
   const toggle = useSetContentHidden();
   const items = content.data?.pages.flat() ?? [];
 
-  if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé aux admins appli" /></Screen>;
+  if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé à l’équipe Kart Rivals" /></Screen>;
 
   return (
     <Screen safeTop={false} refreshing={content.isRefetching} onRefresh={content.refetch}>

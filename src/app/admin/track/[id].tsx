@@ -59,6 +59,12 @@ export default function ManageTrackScreen() {
             icon={<Icon name={icons.poll} size={18} color={colors.text} />}
             onPress={() => router.push({ pathname: '/admin/track/stats', params: { id } })}
           />
+          <Button
+            title="Répondre aux avis des pilotes"
+            variant="secondary"
+            icon={<Icon name={icons.star} size={18} color={colors.text} />}
+            onPress={() => router.push({ pathname: '/admin/track/reviews', params: { id } })}
+          />
           <CoverEditor track={track.data} />
           <TrackForm key={track.data.id} track={track.data} />
           <LayoutEditor track={track.data} />

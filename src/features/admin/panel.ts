@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { demoPilots } from '@/features/social/demo';
@@ -314,12 +315,17 @@ export type AccountStatus = { suspended_until: string | null; banned_at: string 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 const later = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 
+/** Petite image en ligne pour essayer « Retirer la photo » en démonstration. */
+const DEMO_AVATAR =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="#FF6B1A"/><circle cx="48" cy="38" r="18" fill="#161920"/><rect x="20" y="62" width="56" height="34" rx="17" fill="#161920"/></svg>');
+
 const demo = {
   pilots: [
     { ...demoPilots.p1, created_at: ago(60 * 24 * 40), suspended_until: null, banned_at: null, open_reports: 0, total_reports: 0, is_admin: false },
     { ...demoPilots.p2, created_at: ago(60 * 24 * 12), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 2, is_admin: false },
     { ...demoPilots.p3, created_at: ago(60 * 24 * 3), suspended_until: null, banned_at: null, open_reports: 0, total_reports: 0, is_admin: false },
-    { ...demoPilots.p4, created_at: ago(60 * 20), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 1, is_admin: false },
+    { ...demoPilots.p4, avatar_url: DEMO_AVATAR, created_at: ago(60 * 20), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 1, is_admin: false },
     {
       id: demoProfile.id,
       username: demoProfile.username,
@@ -363,6 +369,15 @@ const demo = {
   actions: [
     { id: 2, action: 'announcement', created_at: ago(60 * 5), admin: demoProfile.username, pilot: null, track: null, details: { title: 'Nouveau : la carte regroupe les circuits' } },
     { id: 1, action: 'create_track', created_at: ago(60 * 26), admin: demoProfile.username, pilot: null, track: 'Kart Origins', details: null },
+    // Quelques décisions plus anciennes, dont celles d'une modératrice, pour essayer les filtres du journal.
+    { id: -1, action: 'warn', created_at: ago(60 * 30), admin: 'Modo_Lea', pilot: 'KartiNono', track: null, details: { number: 2, reason: 'Nouveaux propos insultants dans les commentaires de l’Actu.' } },
+    { id: -2, action: 'resolve_report', created_at: ago(60 * 31), admin: 'Modo_Lea', pilot: 'KartiNono', track: null, details: { status: 'reviewed', hidden: true, report_reason: 'harassment' } },
+    { id: -3, action: 'hide_content', created_at: ago(60 * 52), admin: 'Modo_Lea', pilot: 'Drift_Max', track: null, details: { kind: 'comment', excerpt: 'T’as triché c’est sûr' } },
+    { id: -4, action: 'suspend', created_at: ago(60 * 24 * 3), admin: demoProfile.username, pilot: 'KartiNono', track: null, details: { days: 3, reason: '3 avertissements sans changement de comportement.' } },
+    { id: -5, action: 'set_elo', created_at: ago(60 * 24 * 5), admin: demoProfile.username, pilot: 'ApexHunter', track: null, details: { before: 1520, after: 1467, reason: 'Résultat annulé après litige' } },
+    { id: -6, action: 'hide_track', created_at: ago(60 * 24 * 9), admin: demoProfile.username, pilot: null, track: 'SpeedPark Angers', details: null },
+    { id: -7, action: 'resolve_report', created_at: ago(60 * 24 * 12), admin: 'Modo_Lea', pilot: 'TurboLéa', track: null, details: { status: 'dismissed', hidden: null, report_reason: 'spam' } },
+    { id: -8, action: 'cancel_tournament', created_at: ago(60 * 24 * 40), admin: demoProfile.username, pilot: 'ApexHunter', track: 'Inwall Kart', details: { name: 'Coupe de printemps', reason: 'Organisateur injoignable' } },
   ] as AdminAction[],
 };
 const demoContent: AdminContent[] = [
@@ -422,6 +437,9 @@ const demoCorrections: TrackCorrection[] = [
   { id: 'tc1', track_id: 't3', track_name: 'Inwall Kart', track_city: 'Les Ponts-de-Cé', kind: 'hours', message: 'Maintenant fermé le lundi, ouvert jusqu’à 23 h le samedi.', suggested_lat: null, suggested_lng: null, current_lat: 47.4284, current_lng: -0.5434, status: 'open', created_at: ago(90), author_id: 'p1', author: 'TurboLéa', handled_by: null, handled_at: null },
   { id: 'tc2', track_id: 't2', track_name: 'SpeedPark Angers', track_city: 'Beaucouzé', kind: 'position', message: 'L’entrée est de l’autre côté du centre commercial.', suggested_lat: 47.4752, suggested_lng: -0.6265, current_lat: 47.4742, current_lng: -0.6301, status: 'open', created_at: ago(300), author_id: 'p3', author: 'ApexHunter', handled_by: null, handled_at: null },
 ];
+
+/** Journal de démonstration, pour les filtres de l'écran Journal. */
+export const demoActionLog = (): AdminAction[] => demo.actions;
 
 const logDemo = (action: string, pilot: string | null, track: string | null, details: Record<string, unknown> | null = null) =>
   demo.actions.unshift({ id: Date.now(), action, created_at: new Date().toISOString(), admin: demoProfile.username, pilot, track, details });
@@ -592,6 +610,55 @@ export function useModeratePilot() {
         return;
       }
       await rpc('admin_moderate_pilot', { p_profile: pilotId, p_action: action, p_days: days ?? null, p_reason: reason?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export type ResetWhat = 'username' | 'avatar' | 'both';
+export type ResetResult = { username: string | null; avatar_removed: boolean; files_ok: boolean };
+
+const RESET_ERRORS: Record<string, string> = {
+  UNAUTHORIZED: 'Ta session a expiré : reconnecte-toi puis réessaie.',
+  FORBIDDEN: 'Tu ne peux pas modifier ce profil (le profil d’un admin appli est réservé aux admins).',
+  NOT_FOUND: 'Pilote introuvable.',
+  REASON_REQUIRED: 'Indique le motif (3 caractères minimum) : le pilote le reçoit.',
+  BAD_REQUEST: 'Demande invalide.',
+};
+
+/**
+ * Réinitialise le pseudo et/ou la photo d'un pilote (Edge Function admin-reset-profile : la base décide, trace et
+ * prévient le pilote, puis la fonction efface les fichiers du stockage public). Ouvert à l'équipe.
+ */
+export function useResetPilotProfile() {
+  const invalidate = useInvalidate('admin-pilot', 'admin-pilots', 'admin-actions', 'admin-journal', 'pilot', 'profile', 'leaderboard', 'nearby');
+  return useMutation({
+    mutationFn: async ({ pilotId, what, reason }: { pilotId: string; what: ResetWhat; reason: string }): Promise<ResetResult> => {
+      if (reason.trim().length < 3) throw new Error(RESET_ERRORS.REASON_REQUIRED);
+      if (isDemoMode) {
+        const p = demo.pilots.find((x) => x.id === pilotId);
+        if (!p) throw new Error(RESET_ERRORS.NOT_FOUND);
+        if (p.is_admin && what !== 'avatar') throw new Error(RESET_ERRORS.FORBIDDEN);
+        const before = p.username;
+        let username: string | null = null;
+        if (what !== 'avatar') {
+          username = `Pilote${String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')}`;
+          p.username = username;
+          logDemo('reset_username', username, null, { before, after: username, reason: reason.trim() });
+        }
+        if (what !== 'username') {
+          logDemo('reset_avatar', p.username, null, { had_photo: !!p.avatar_url, reason: reason.trim() });
+          p.avatar_url = null;
+        }
+        return { username, avatar_removed: what !== 'username', files_ok: true };
+      }
+      const { data, error } = await supabase.functions.invoke('admin-reset-profile', { body: { pilot_id: pilotId, what, reason: reason.trim() } });
+      if (error instanceof FunctionsHttpError) {
+        const body = (await (error.context as Response).json().catch(() => null)) as { code?: string } | null;
+        throw new Error(RESET_ERRORS[body?.code ?? ''] ?? 'La réinitialisation a échoué, réessaie dans un instant.');
+      }
+      if (error) throw new Error('Connexion impossible, vérifie ton réseau puis réessaie.');
+      return data as ResetResult;
     },
     onSuccess: invalidate,
   });
@@ -1397,6 +1464,71 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       const kind = { post: 'Publication', comment: 'Commentaire', photo: 'Photo', review: 'Avis' }[d.kind as string] ?? 'Contenu';
       return `${kind} ${a.action === 'hide_content' ? 'masqué' : 'rétabli'}${d.kind === 'post' || d.kind === 'photo' ? 'e' : ''}${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
     }
+    case 'cancel_tournament':
+      return `Tournoi annulé${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'remove_tournament_pilot':
+      return `Inscription retirée${d.name ? ` de « ${d.name} »` : ''}`;
+    case 'tournament_walkover':
+      return `Forfait prononcé${d.label ? ` (${d.label})` : ''}${d.winner ? `, ${d.winner} qualifié` : ''}${d.name ? ` · « ${d.name} »` : ''}`;
+    case 'tournament_official':
+      return `Tournoi passé officiel${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'tournament_unofficial':
+      return `Statut officiel retiré${d.name ? ` : « ${d.name} »` : ''}`;
+    case 'rename_team':
+      return `Écurie renommée ${d.before ?? '?'} → ${d.after ?? '?'}`;
+    case 'team_remove_logo':
+      return `Blason retiré${d.name ? ` : ${d.name}` : ''}`;
+    case 'team_clear_message':
+      return `Message de recrutement effacé${d.name ? ` : ${d.name}` : ''}${d.excerpt ? ` (« ${d.excerpt} »)` : ''}`;
+    case 'transfer_team':
+      return `Écurie confiée à un nouveau Team Principal${d.name ? ` : ${d.name}` : ''}${d.before ? `, à la place de ${d.before}` : ''}`;
+    case 'dissolve_team':
+      return `Écurie dissoute${d.name ? ` : ${d.name}` : ''}${d.members ? ` (${d.members} pilotes)` : ''}`;
+    case 'app_settings': {
+      const changes = (d.changes ?? {}) as Record<string, { before: unknown; after: unknown }>;
+      const labels: Record<string, (after: unknown) => string> = {
+        time_attack_enabled: (v) => (v ? 'Time Attack rouvert' : 'Time Attack mis en pause'),
+        maintenance: (v) => (v ? 'maintenance activée' : 'maintenance terminée'),
+        min_version: (v) => (v ? `version minimale ${v}` : 'version minimale retirée'),
+        time_attack_message: () => 'message du Time Attack',
+        maintenance_message: () => 'message de maintenance',
+        ios_store_url: () => 'lien App Store',
+        android_store_url: () => 'lien Google Play',
+      };
+      const parts = Object.entries(changes).map(([key, c]) => labels[key]?.(c.after) ?? key);
+      return `Réglages de l’appli${parts.length > 0 ? ` : ${parts.join(', ')}` : ''}`;
+    }
+    case 'adjust_points': {
+      const amount = Number(d.amount ?? 0);
+      return `${amount >= 0 ? 'Points offerts' : 'Points retirés'} : ${amount > 0 ? '+' : '−'}${Math.abs(amount)} (solde ${d.before ?? '?'} → ${d.after ?? '?'})`;
+    }
+    case 'grant_item':
+      return `Objet offert${d.item ? ` : « ${d.item} »` : ''}`;
+    case 'revoke_item':
+      return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
+    case 'set_gear_price':
+      return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'delete_review_reply':
+      return `Réponse à un avis retirée${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
+    case 'reset_username':
+      return `Pseudo réinitialisé ${d.before ?? '?'} → ${d.after ?? '?'}`;
+    case 'reset_avatar':
+      return 'Photo de profil retirée';
+    case 'view_message_context':
+      return 'Contexte d’un message signalé consulté';
+    case 'resolve_report': {
+      const verdict = d.status === 'dismissed' ? 'rejeté' : 'traité';
+      const content = d.hidden === true ? ', contenu masqué' : d.hidden === false ? ', contenu rétabli' : '';
+      return `Signalement ${verdict}${content}`;
+    }
+    case 'appeal_accepted':
+      return `Recours accepté : sanction levée${d.kind === 'ban' ? ' (bannissement)' : ''}`;
+    case 'appeal_rejected':
+      return `Recours refusé${d.kind === 'ban' ? ' (bannissement)' : ''}`;
+    case 'add_moderator':
+      return 'Nommé modérateur';
+    case 'remove_moderator':
+      return 'Rôle de modérateur retiré';
     case 'announcement':
       return `Annonce ${d.starts_at ? 'programmée' : 'publiée'}${d.region ? ` (${d.region})` : ''}${d.title ? ` : « ${d.title} »` : ''}`;
     default:

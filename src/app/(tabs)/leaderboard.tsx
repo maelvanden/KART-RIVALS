@@ -14,7 +14,7 @@ import { StandingsCard } from '@/features/leaderboard/components/standings-card'
 import { TimeAttackBoard } from '@/features/leaderboard/components/time-attack-board';
 import { useApproxLocation } from '@/features/nearby/api';
 import { useMyProfile } from '@/features/profile/api';
-import { TIME_ATTACK_ENABLED } from '@/features/time-attack/config';
+import { useTimeAttackEnabled } from '@/features/settings/app-settings';
 import { DEPARTMENT_NAMES, REGIONS, ofDepartment, ofRegion, regionOfDepartment } from '@/lib/regions';
 import { colors } from '@/theme';
 
@@ -26,7 +26,10 @@ type Mode = 'elo' | 'time_attack';
 
 export default function LeaderboardScreen() {
   const { userId } = useAuth();
-  const [mode, setMode] = useState<Mode>('elo');
+  const timeAttackEnabled = useTimeAttackEnabled();
+  const [chosenMode, setMode] = useState<Mode>('elo');
+  // Time Attack mis en pause par un admin : on revient au classement ELO.
+  const mode: Mode = timeAttackEnabled ? chosenMode : 'elo';
   const [tab, setTab] = useState<Tab>('global');
   const profile = useMyProfile();
   const queryClient = useQueryClient();
@@ -79,7 +82,7 @@ export default function LeaderboardScreen() {
         board.refetch();
         standings.refetch();
       }}>
-      {TIME_ATTACK_ENABLED ? (
+      {timeAttackEnabled ? (
         <Segmented
           options={[
             { value: 'elo', label: 'ELO' },

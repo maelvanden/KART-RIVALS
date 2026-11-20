@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { demoPilots } from '@/features/social/demo';
+import type { DailyRow } from '@/features/admin/track-stats-csv';
 import { socialError } from '@/features/social/errors';
 import { demoProfile, isDemoMode } from '@/lib/demo';
 import { supabase } from '@/lib/supabase';
@@ -116,6 +117,58 @@ export function useTrackStats(trackId: string | undefined, enabled: boolean) {
       if (error) throw socialError(error);
       return data as TrackStats;
     },
+  });
+}
+
+/** Nombre de jours de la série exportée. */
+export const DAILY_DAYS = 90;
+
+/** Série par jour (visites et résultats validés) pour l'export CSV. Chargée seulement au moment de l'export. */
+export async function fetchTrackDaily(trackId: string, days = DAILY_DAYS): Promise<DailyRow[]> {
+  if (isDemoMode) {
+    return Array.from({ length: days }, (_, i) => {
+      const day = new Date(Date.now() - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10);
+      const wave = 3 + Math.round(2 * Math.sin(i / 3));
+      return { day, views: wave * 2 + (i % 5), pilots: Math.max(0, wave - 2), matches: i % 4 === 0 ? 1 : 0, races: i % 15 === 0 ? 1 : 0, time_attacks: i % 3 === 0 ? 1 : 0 };
+    });
+  }
+  const { data, error } = await supabase.rpc('track_stats_daily', { p_track: trackId, p_days: days });
+  if (error) throw socialError(error);
+  return data as DailyRow[];
+}
+
+/** Récapitulatif du lundi (notification) : un réglage par exploitant, activé par défaut. */
+let demoDigest = true;
+
+export function useTrackDigest(enabled: boolean) {
+  return useQuery({
+    queryKey: ['track-digest'],
+    enabled,
+    queryFn: async (): Promise<boolean> => {
+      if (isDemoMode) return demoDigest;
+      const { data, error } = await supabase.rpc('my_track_digest');
+      if (error) throw socialError(error);
+      return data as boolean;
+    },
+  });
+}
+
+export function useSetTrackDigest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (isDemoMode) {
+        demoDigest = enabled;
+        return;
+      }
+      const { error } = await supabase.rpc('set_my_track_digest', { p_enabled: enabled });
+      if (error) throw socialError(error);
+    },
+    onMutate: async (enabled) => {
+      await queryClient.cancelQueries({ queryKey: ['track-digest'] });
+      queryClient.setQueryData(['track-digest'], enabled);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['track-digest'] }),
   });
 }
 

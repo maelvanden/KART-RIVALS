@@ -40,8 +40,11 @@ Mode solo « Time Attack » (migration `…_time_attack.sql` + Edge Function `ti
 Déploiement du backend : la GitHub Action « Déployer Supabase » applique les nouvelles migrations, enregistre
 la clé OCR et déploie l'Edge Function à chaque push sur `main` qui touche `supabase/` (ou à la main depuis l'onglet
 Actions). Secrets GitHub requis : `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `OCR_SPACE_API_KEY`
-(clé gratuite sur ocr.space/ocrapi). Le Time Attack reste masqué dans l'app tant que `TIME_ATTACK_ENABLED`
-(`src/features/time-attack/config.ts`) vaut false.
+(clé gratuite sur ocr.space/ocrapi). Le Time Attack se met en pause sans mise à jour de l'appli depuis
+Administration > Réglages de l'appli (table `app_settings`, migration `…_app_settings.sql`) : en pause, les check-in sont
+refusés par le serveur et le mode disparaît des menus. `TIME_ATTACK_ENABLED` (`src/features/time-attack/config.ts`) n'est
+plus que la valeur par défaut tant que les réglages ne sont pas chargés. Les mêmes réglages portent la maintenance (écran
+d'attente pour les pilotes, les admins appli passent) et la version minimale (écran « Mise à jour nécessaire »).
 
 Garage virtuel + boutique (migration `…_user_gear.sql`, écran `src/app/shop.tsx`) :
 
@@ -113,7 +116,32 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   d'activité par département et zones sans karting ; `admin_retention` : fidélité ; export CSV), remontées des pilotes (`track_corrections`, bouton
   « Signaler une erreur » sur la fiche, +20 pts si appliquée), suivi des kartings officiels (`admin_official_tracks`,
   `page_updated_at`), statistiques de sa fiche pour l'exploitant (`track_stats` : visites comptées par `log_track_view`,
-  pilotes venus rouler, habitués, intérêt pour ses événements ; écran `admin/track/stats`), arbitrage des résultats (`admin_disputes`,
+  pilotes venus rouler, habitués, intérêt pour ses événements ; écran `admin/track/stats` ;
+  récapitulatif du lundi à 9 h en notification, `track_weekly_digest`, réglable par exploitant ; export CSV avec la
+  série par jour sur 90 jours, `track_stats_daily` ; réponses publiques de l'exploitant aux avis, `reply_to_review`,
+  écran `admin/track/reviews`), tournois
+  (`admin_tournaments` : tous les tournois, duels bloqués ou contestés en premier ; `admin_cancel_tournament`,
+  `admin_remove_tournament_pilot`, `admin_tournament_walkover`, `admin_set_tournament_official`), écuries
+  (`admin_teams` ; `admin_rename_team`, `admin_moderate_team` : blason et message de recrutement ;
+  `admin_transfer_team` : nouveau Team Principal ; `admin_dissolve_team`), réglages à distance
+  (`admin_update_app_settings` : pause du Time Attack, maintenance, version minimale), points et boutique
+  (`admin_pilot_wallet`, `admin_adjust_points`, `admin_grant_item`, `admin_revoke_item`, `admin_set_gear_price`),
+  rôle modérateur (`app_moderators`, `set_app_moderator`, `is_app_staff` : signalements, Actu, support, fiche pilote,
+  avertissements et notes ; sanctions, ELO, points et réglages restent aux admins appli),
+  journal filtrable (`admin_journal` : par auteur, type d'action, pilote, circuit et période, avec export CSV ;
+  `resolve_report` laisse une trace),
+  fiche pilote : messages signalés avec leur contexte (`admin_reported_messages`, `admin_report_context` : 5 messages
+  avant et après, ouvert à la demande depuis un signalement et tracé au journal),
+  réinitialisation d'un pseudo ou d'une photo inappropriés (`admin_reset_pilot_profile` + Edge Function
+  `admin-reset-profile`, qui efface aussi le fichier du bucket public ; ouvert aux modérateurs sauf sur un admin appli),
+  comptes probablement liés (`profile_devices`, `register_device` : identifiant aléatoire d'installation gardé dans le
+  trousseau du téléphone ; `admin_linked_accounts` réservé aux admins appli, alerte quand un compte banni et un autre
+  partagent un appareil ; conservation 12 mois sauf comptes bannis),
+  alertes à l'équipe (`push_on_serious_report` : notification dès un signalement grave ; `team_queue_watch` : rappel
+  chaque matin à 9 h des éléments en attente depuis plus de 48 h ; réglage personnel `set_my_team_alerts`),
+  recours contre une sanction (`sanction_appeals` : le pilote suspendu ou banni conteste depuis son écran
+  `submit_sanction_appeal` ; les admins appli lèvent la sanction ou refusent avec une réponse `admin_resolve_appeal`),
+  arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction
   (`pilot_warnings`, `admin_warn_pilot` ; lus en plein écran à l'ouverture via `my_pending_warning`), annonces (`announcements`, bannière dans le Paddock et l'Actu) et journal

@@ -9,7 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/state-views';
 import { Text } from '@/components/ui/text';
-import { useAdminRoles } from '@/features/admin/api';
+import { isStaff, useAdminRoles } from '@/features/admin/api';
 import { useAdminPilots, type AdminPilotRow, type PilotFilter } from '@/features/admin/panel';
 import { colors, radius, rankMeta, spacing } from '@/theme';
 
@@ -23,12 +23,12 @@ const FILTERS: { value: PilotFilter; label: string }[] = [
 /** Pilotes : recherche par pseudo et filtres (signalés, sanctionnés, inscrits depuis 7 jours). */
 export default function AdminPilotsScreen() {
   const params = useLocalSearchParams<{ filter?: PilotFilter }>();
-  const isAppAdmin = !!useAdminRoles().data?.is_app_admin;
+  const isAppAdmin = isStaff(useAdminRoles().data);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<PilotFilter>(params.filter ?? 'all');
   const pilots = useAdminPilots(query.replace(/^@/, ''), filter);
 
-  if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé aux admins appli" /></Screen>;
+  if (!isAppAdmin) return <Screen safeTop={false}><EmptyState title="Réservé à l’équipe Kart Rivals" /></Screen>;
 
   return (
     <Screen safeTop={false} refreshing={pilots.isRefetching} onRefresh={pilots.refetch}>

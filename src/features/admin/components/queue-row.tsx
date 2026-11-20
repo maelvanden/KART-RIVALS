@@ -16,6 +16,8 @@ const QUEUE_ICONS: Record<QueueKind, IconName> = {
   suspect: icons.timer,
   correction: icons.edit,
   request: icons.recruit,
+  tournament: icons.trophy,
+  appeal: icons.block,
 };
 
 /** Une ligne de la file ; aussi utilisée en aperçu sur le tableau de bord. */
