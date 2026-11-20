@@ -127,6 +127,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   avertissements et notes ; sanctions, ELO, points et réglages restent aux admins appli),
   journal filtrable (`admin_journal` : par auteur, type d'action, pilote, circuit et période, avec export CSV ;
   `resolve_report` laisse une trace),
+  alertes à l'équipe (`push_on_serious_report` : notification dès un signalement grave ; `team_queue_watch` : rappel
+  chaque matin à 9 h des éléments en attente depuis plus de 48 h ; réglage personnel `set_my_team_alerts`),
   arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { PilotRow } from '@/components/pilot-row';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import {
   useAdminTimeAttacks,
   useTrackCorrections,
 } from '@/features/admin/panel';
+import { useSetTeamAlerts, useTeamAlerts } from '@/features/admin/alerts';
 import { useAdminQueue } from '@/features/admin/queue';
 import { useAdminTournaments } from '@/features/admin/tournaments';
 import { useAppSettings } from '@/features/settings/app-settings';
@@ -391,6 +392,7 @@ export default function AdminScreen() {
         </>
       ) : null}
 
+      {staff ? <TeamAlertsToggle /> : null}
       {isAppAdmin ? <AppAdmins /> : null}
       {isAppAdmin ? <Moderators /> : null}
     </Screen>
@@ -539,6 +541,35 @@ function AppAdmins() {
   );
 }
 
+/** Alertes de l'équipe, réglage personnel : signalement grave en direct et rappel du matin. */
+function TeamAlertsToggle() {
+  const alerts = useTeamAlerts(true);
+  const setAlerts = useSetTeamAlerts();
+  return (
+    <>
+      <SectionTitle title="Mes alertes" />
+      <View style={styles.alertRow}>
+        <View style={styles.flex}>
+          <Text style={styles.trackName}>Alertes de l’équipe</Text>
+          <Text variant="caption">
+            Une notification dès qu’un signalement grave arrive (harcèlement, contenu inapproprié, 3 signalements sur un
+            pilote), et chaque matin à 9 h un rappel de ce qui attend depuis plus de 48 h.
+          </Text>
+        </View>
+        <Switch
+          value={alerts.data ?? true}
+          disabled={alerts.isPending || setAlerts.isPending}
+          onValueChange={(v) => setAlerts.mutate(v)}
+          trackColor={{ true: colors.neon, false: colors.surfaceAlt }}
+          thumbColor={colors.text}
+          accessibilityLabel="Alertes de l’équipe"
+        />
+      </View>
+      {setAlerts.error ? <Text style={styles.error}>{setAlerts.error.message}</Text> : null}
+    </>
+  );
+}
+
 /** Modérateurs : liste, ajout par @pseudo, retrait. Réservé aux admins appli. */
 function Moderators() {
   const moderators = useAppModerators(true);
@@ -608,6 +639,16 @@ function Moderators() {
 }
 
 const styles = StyleSheet.create({
+  alertRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   staffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   claim: { gap: spacing.md, alignItems: 'flex-start', borderLeftWidth: 3, borderLeftColor: colors.neon },
   error: { color: colors.danger },
