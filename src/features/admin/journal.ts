@@ -56,7 +56,8 @@ export const JOURNAL_CATEGORIES: { value: string; label: string; actions: string
       'review_cancel_time_attack',
     ],
   },
-  { value: 'pilots', label: 'Pilotes', actions: ['revoke_verified', 'restore_verified', 'set_elo', 'adjust_points', 'grant_item', 'revoke_item'] },
+  { value: 'pilots', label: 'Pilotes', actions: ['revoke_verified', 'restore_verified', 'set_elo', 'adjust_points', 'grant_item', 'revoke_item', 'reset_username', 'reset_avatar'],
+  },
   { value: 'tracks', label: 'Circuits', actions: ['create_track', 'hide_track', 'show_track', 'merge_track', 'track_correction'] },
   {
     value: 'tournaments',

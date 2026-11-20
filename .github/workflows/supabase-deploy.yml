@@ -121,3 +121,4 @@ jobs:
         run: |
           npx supabase functions deploy time-attack-ticket --project-ref "$PROJECT_REF" --use-api
           npx supabase functions deploy delete-account --project-ref "$PROJECT_REF" --use-api
+          npx supabase functions deploy admin-reset-profile --project-ref "$PROJECT_REF" --use-api

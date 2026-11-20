@@ -23,11 +23,13 @@ import {
   useDeletePilotNote,
   useModeratePilot,
   usePilotNotes,
+  useResetPilotProfile,
   useReviewTimeAttack,
   useSetElo,
   useWarnPilot,
   type AdminPilotDetail,
   type ModerationAction,
+  type ResetWhat,
 } from '@/features/admin/panel';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { REPORT_REASONS } from '@/features/social/safety';
@@ -213,6 +215,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
       ) : null}
 
       <Warnings pilot={p} pending={ladder.pending.length} />
+
+      <ProfileReset pilot={p} canEdit={isAppAdmin || !p.is_admin} />
 
       {isAppAdmin ? (
         <>
@@ -416,6 +420,95 @@ function RecentResults({ pilot: p }: { pilot: AdminPilotDetail }) {
           />
         </Card>
       ))}
+    </>
+  );
+}
+
+/**
+ * Pseudo et photo inappropriés : réinitialisation en un geste, motif obligatoire envoyé au pilote. Ouvert aux
+ * modérateurs, sauf sur le profil d'un admin appli.
+ */
+function ProfileReset({ pilot: p, canEdit }: { pilot: AdminPilotDetail; canEdit: boolean }) {
+  const reset = useResetPilotProfile();
+  const [reason, setReason] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  // Si la photo a bien été retirée du profil mais pas effacée du stockage, on laisse réessayer.
+  const [retryFiles, setRetryFiles] = useState(false);
+  const ready = reason.trim().length >= 3;
+  const sent = ready ? `Motif envoyé au pilote : « ${reason.trim()} »` : '';
+
+  function run(what: ResetWhat) {
+    setNotice(null);
+    reset.mutate(
+      { pilotId: p.id, what, reason },
+      {
+        onSuccess: (r) => {
+          setReason('');
+          setRetryFiles(!r.files_ok);
+          setNotice(
+            [
+              r.username ? `Pseudo remplacé par ${r.username} ✓` : null,
+              r.avatar_removed ? (r.files_ok ? 'Photo retirée ✓' : 'Photo retirée du profil, mais le fichier n’a pas pu être effacé : réessaie.') : null,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          );
+        },
+      },
+    );
+  }
+
+  return (
+    <>
+      <SectionTitle title="Pseudo et photo" />
+      <Card style={styles.card}>
+        <View style={styles.headerRow}>
+          <Avatar username={p.username} url={p.avatar_url} size={48} borderColor={rankMeta[p.rank].color} />
+          <View style={styles.flex}>
+            <Text style={styles.bold}>{p.username}</Text>
+            <Text variant="caption">{p.avatar_url ? 'Photo de profil définie' : 'Pas de photo de profil'}</Text>
+          </View>
+        </View>
+        {canEdit ? (
+          <>
+            <Input
+              label="Motif"
+              value={reason}
+              onChangeText={(v) => (setReason(v), setNotice(null))}
+              placeholder="Pseudo injurieux, photo choquante…"
+              maxLength={200}
+            />
+            <Text variant="caption">
+              Le pseudo devient « Pilote » suivi de 6 chiffres, la photo est supprimée. Le pilote reçoit le motif et peut
+              en choisir de nouveaux. Noté au journal.
+            </Text>
+            {reset.error ? <Text style={styles.error}>{reset.error.message}</Text> : null}
+            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            <View style={styles.row}>
+              <Button
+                title="Réinitialiser le pseudo"
+                variant="secondary"
+                style={styles.flex}
+                disabled={!ready || reset.isPending}
+                onPress={() =>
+                  confirmAction(`Réinitialiser le pseudo de ${p.username} ?`, `Il devient « Pilote » suivi de 6 chiffres. ${sent}`, 'Réinitialiser', () => run('username'))
+                }
+              />
+              <Button
+                title={retryFiles && !p.avatar_url ? 'Effacer le fichier' : 'Retirer la photo'}
+                variant="secondary"
+                style={styles.flex}
+                disabled={!ready || reset.isPending || (!p.avatar_url && !retryFiles)}
+                onPress={() =>
+                  confirmAction(`Retirer la photo de ${p.username} ?`, `La photo est supprimée définitivement. ${sent}`, 'Retirer', () => run('avatar'))
+                }
+              />
+            </View>
+          </>
+        ) : (
+          <Text variant="caption">Le profil d’un admin appli ne peut être modifié que par un admin appli.</Text>
+        )}
+      </Card>
     </>
   );
 }
@@ -658,6 +751,7 @@ const styles = StyleSheet.create({
   open: { borderLeftWidth: 3, borderLeftColor: colors.danger },
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
+  notice: { color: colors.neon, fontWeight: '700' },
   reportedQuote: { padding: spacing.md, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.danger, backgroundColor: colors.surfaceAlt },
   hiddenText: { color: colors.textMuted, fontStyle: 'italic' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

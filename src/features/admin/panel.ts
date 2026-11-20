@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { demoPilots } from '@/features/social/demo';
@@ -314,12 +315,17 @@ export type AccountStatus = { suspended_until: string | null; banned_at: string 
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 const later = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 
+/** Petite image en ligne pour essayer « Retirer la photo » en démonstration. */
+const DEMO_AVATAR =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="#FF6B1A"/><circle cx="48" cy="38" r="18" fill="#161920"/><rect x="20" y="62" width="56" height="34" rx="17" fill="#161920"/></svg>');
+
 const demo = {
   pilots: [
     { ...demoPilots.p1, created_at: ago(60 * 24 * 40), suspended_until: null, banned_at: null, open_reports: 0, total_reports: 0, is_admin: false },
     { ...demoPilots.p2, created_at: ago(60 * 24 * 12), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 2, is_admin: false },
     { ...demoPilots.p3, created_at: ago(60 * 24 * 3), suspended_until: null, banned_at: null, open_reports: 0, total_reports: 0, is_admin: false },
-    { ...demoPilots.p4, created_at: ago(60 * 20), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 1, is_admin: false },
+    { ...demoPilots.p4, avatar_url: DEMO_AVATAR, created_at: ago(60 * 20), suspended_until: null, banned_at: null, open_reports: 1, total_reports: 1, is_admin: false },
     {
       id: demoProfile.id,
       username: demoProfile.username,
@@ -604,6 +610,55 @@ export function useModeratePilot() {
         return;
       }
       await rpc('admin_moderate_pilot', { p_profile: pilotId, p_action: action, p_days: days ?? null, p_reason: reason?.trim() || null });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export type ResetWhat = 'username' | 'avatar' | 'both';
+export type ResetResult = { username: string | null; avatar_removed: boolean; files_ok: boolean };
+
+const RESET_ERRORS: Record<string, string> = {
+  UNAUTHORIZED: 'Ta session a expiré : reconnecte-toi puis réessaie.',
+  FORBIDDEN: 'Tu ne peux pas modifier ce profil (le profil d’un admin appli est réservé aux admins).',
+  NOT_FOUND: 'Pilote introuvable.',
+  REASON_REQUIRED: 'Indique le motif (3 caractères minimum) : le pilote le reçoit.',
+  BAD_REQUEST: 'Demande invalide.',
+};
+
+/**
+ * Réinitialise le pseudo et/ou la photo d'un pilote (Edge Function admin-reset-profile : la base décide, trace et
+ * prévient le pilote, puis la fonction efface les fichiers du stockage public). Ouvert à l'équipe.
+ */
+export function useResetPilotProfile() {
+  const invalidate = useInvalidate('admin-pilot', 'admin-pilots', 'admin-actions', 'admin-journal', 'pilot', 'profile', 'leaderboard', 'nearby');
+  return useMutation({
+    mutationFn: async ({ pilotId, what, reason }: { pilotId: string; what: ResetWhat; reason: string }): Promise<ResetResult> => {
+      if (reason.trim().length < 3) throw new Error(RESET_ERRORS.REASON_REQUIRED);
+      if (isDemoMode) {
+        const p = demo.pilots.find((x) => x.id === pilotId);
+        if (!p) throw new Error(RESET_ERRORS.NOT_FOUND);
+        if (p.is_admin && what !== 'avatar') throw new Error(RESET_ERRORS.FORBIDDEN);
+        const before = p.username;
+        let username: string | null = null;
+        if (what !== 'avatar') {
+          username = `Pilote${String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')}`;
+          p.username = username;
+          logDemo('reset_username', username, null, { before, after: username, reason: reason.trim() });
+        }
+        if (what !== 'username') {
+          logDemo('reset_avatar', p.username, null, { had_photo: !!p.avatar_url, reason: reason.trim() });
+          p.avatar_url = null;
+        }
+        return { username, avatar_removed: what !== 'username', files_ok: true };
+      }
+      const { data, error } = await supabase.functions.invoke('admin-reset-profile', { body: { pilot_id: pilotId, what, reason: reason.trim() } });
+      if (error instanceof FunctionsHttpError) {
+        const body = (await (error.context as Response).json().catch(() => null)) as { code?: string } | null;
+        throw new Error(RESET_ERRORS[body?.code ?? ''] ?? 'La réinitialisation a échoué, réessaie dans un instant.');
+      }
+      if (error) throw new Error('Connexion impossible, vérifie ton réseau puis réessaie.');
+      return data as ResetResult;
     },
     onSuccess: invalidate,
   });
@@ -1453,6 +1508,10 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
     case 'set_gear_price':
       return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'reset_username':
+      return `Pseudo réinitialisé ${d.before ?? '?'} → ${d.after ?? '?'}`;
+    case 'reset_avatar':
+      return 'Photo de profil retirée';
     case 'view_message_context':
       return 'Contexte d’un message signalé consulté';
     case 'resolve_report': {
