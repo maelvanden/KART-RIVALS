@@ -129,6 +129,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   `resolve_report` laisse une trace),
   alertes à l'équipe (`push_on_serious_report` : notification dès un signalement grave ; `team_queue_watch` : rappel
   chaque matin à 9 h des éléments en attente depuis plus de 48 h ; réglage personnel `set_my_team_alerts`),
+  recours contre une sanction (`sanction_appeals` : le pilote suspendu ou banni conteste depuis son écran
+  `submit_sanction_appeal` ; les admins appli lèvent la sanction ou refusent avec une réponse `admin_resolve_appeal`),
   arbitrage des résultats (`admin_disputes`,
   `admin_resolve_match`, `admin_resolve_race`, `admin_cancel_result` : ELO rendu ; `admin_time_attacks`,
   `admin_review_time_attack` : chronos suspects revus avec le ticket), avertissements avant sanction

@@ -433,6 +433,14 @@ const PRESETS = [
     label: 'Contenu',
     text: 'Un de tes contenus a été jugé inapproprié et a été masqué. Merci de respecter les règles de la communauté.',
   },
+  {
+    label: 'Pseudo / photo',
+    text: 'Ton pseudo ou ta photo de profil ne respecte pas les règles de la communauté. Merci de les modifier depuis ton profil.',
+  },
+  {
+    label: 'Sécurité',
+    text: 'Un comportement dangereux ou antisportif a été signalé en piste. Respecte les consignes du circuit et la sécurité des autres pilotes.',
+  },
 ];
 
 /** Avertissement officiel avant sanction : le pilote le lit en plein écran à l'ouverture de l'appli. */

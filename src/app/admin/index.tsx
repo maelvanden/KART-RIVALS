@@ -30,6 +30,7 @@ import {
   useTrackCorrections,
 } from '@/features/admin/panel';
 import { useSetTeamAlerts, useTeamAlerts } from '@/features/admin/alerts';
+import { useAdminAppeals } from '@/features/admin/appeals';
 import { useAdminQueue } from '@/features/admin/queue';
 import { useAdminTournaments } from '@/features/admin/tournaments';
 import { useAppSettings } from '@/features/settings/app-settings';
@@ -62,6 +63,7 @@ export default function AdminScreen() {
   const support = useSupportInbox(staff);
   const appSettings = useAppSettings().data;
   const settingsAlert = !!appSettings && (appSettings.maintenance || !appSettings.time_attack_enabled);
+  const appeals = useAdminAppeals('open', isAppAdmin).data?.length ?? 0;
   const watchedTournaments = useAdminTournaments('watch', isAppAdmin).data?.length ?? 0;
   const supportUnread = (support.data ?? []).filter((t) => t.unread > 0).length;
   const tracks = useTracksMap();
@@ -291,6 +293,13 @@ export default function AdminScreen() {
             title="Pilotes"
             detail={s ? `${s.pilots_total} inscrits · +${s.pilots_new_30d} ce mois-ci` : 'Rechercher, suspendre, bannir'}
             onPress={() => router.push('/admin/pilots')}
+          />
+          <MenuRow
+            icon={icons.block}
+            title="Recours"
+            detail={appeals > 0 ? `${appeals} recours contre une sanction à examiner` : 'Contestations des pilotes suspendus ou bannis'}
+            alert={appeals > 0}
+            onPress={() => router.push('/admin/appeals')}
           />
           <MenuRow
             icon={icons.map}

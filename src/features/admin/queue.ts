@@ -1,13 +1,14 @@
 import type { Href } from 'expo-router';
 
 import { useAdminReports, useAdminTrackRequests, type TrackAdminRequest } from '@/features/admin/api';
+import { useAdminAppeals } from '@/features/admin/appeals';
 import { useAdminDisputes, useAdminTimeAttacks, useTrackCorrections } from '@/features/admin/panel';
 import { useAdminTournaments } from '@/features/admin/tournaments';
 import { useSupportInbox } from '@/features/social/radio';
 import { REPORT_REASONS } from '@/features/social/safety';
 import { formatLapTime } from '@/lib/format';
 
-export type QueueKind = 'report' | 'support' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request' | 'tournament';
+export type QueueKind = 'report' | 'support' | 'ticket' | 'dispute' | 'suspect' | 'correction' | 'request' | 'tournament' | 'appeal';
 
 export type QueueItem = {
   key: string;
@@ -30,6 +31,7 @@ export const QUEUE_LABELS: Record<QueueKind, string> = {
   correction: 'Remontée',
   request: 'Demande de karting',
   tournament: 'Tournoi bloqué',
+  appeal: 'Recours',
 };
 
 /**
@@ -48,7 +50,8 @@ export function useAdminQueue(enabled: boolean, scope: 'admin' | 'moderator' = '
   const requests = useAdminTrackRequests(full);
   const support = useSupportInbox(enabled);
   const tournaments = useAdminTournaments('watch', full);
-  const sources = full ? [reports, support, tickets, disputes, suspects, corrections, requests, tournaments] : [reports, support];
+  const appeals = useAdminAppeals('open', full);
+  const sources = full ? [reports, support, tickets, disputes, suspects, corrections, requests, tournaments, appeals] : [reports, support];
   // Hors périmètre, on ignore aussi ce qu'un autre écran aurait déjà mis en cache.
   const adminOnly = <T,>(data: T[] | undefined): T[] => (full ? (data ?? []) : []);
   const reason = (r: string) => REPORT_REASONS.find((x) => x.value === r)?.label ?? r;
@@ -112,6 +115,14 @@ export function useAdminQueue(enabled: boolean, scope: 'admin' | 'moderator' = '
       title: `${q.username} veut gérer ${q.track_name}`,
       detail: q.message ? `« ${q.message} »` : q.track_city,
       request: q,
+    })),
+    ...adminOnly(appeals.data).map((a) => ({
+      key: `appeal-${a.id}`,
+      kind: 'appeal' as const,
+      since: a.created_at,
+      title: `${a.username} · recours contre ${a.kind === 'ban' ? 'son bannissement' : 'sa suspension'}`,
+      detail: `« ${a.message} »`,
+      href: '/admin/appeals' as Href,
     })),
     ...adminOnly(tournaments.data)
       .filter((t) => t.stuck > 0 && t.stuck_since)

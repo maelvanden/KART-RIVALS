@@ -186,6 +186,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/teams" options={{ ...detailHeader, title: 'Écuries' }} />
         <Stack.Screen name="admin/team/[id]" options={{ ...detailHeader, title: 'Écurie' }} />
         <Stack.Screen name="admin/settings" options={{ ...detailHeader, title: 'Réglages de l’appli' }} />
+        <Stack.Screen name="admin/appeals" options={{ ...detailHeader, title: 'Recours' }} />
         <Stack.Screen name="admin/announcements" options={{ ...detailHeader, title: 'Annonces' }} />
         <Stack.Screen name="admin/journal" options={{ ...detailHeader, title: 'Journal admin' }} />
         <Stack.Screen name="admin/content" options={{ ...detailHeader, title: 'Modération' }} />

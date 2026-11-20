@@ -1458,6 +1458,10 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       const content = d.hidden === true ? ', contenu masqué' : d.hidden === false ? ', contenu rétabli' : '';
       return `Signalement ${verdict}${content}`;
     }
+    case 'appeal_accepted':
+      return `Recours accepté : sanction levée${d.kind === 'ban' ? ' (bannissement)' : ''}`;
+    case 'appeal_rejected':
+      return `Recours refusé${d.kind === 'ban' ? ' (bannissement)' : ''}`;
     case 'add_moderator':
       return 'Nommé modérateur';
     case 'remove_moderator':
