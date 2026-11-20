@@ -177,6 +177,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/index" options={{ ...detailHeader, title: 'Administration' }} />
         <Stack.Screen name="admin/reports" options={{ ...detailHeader, title: 'Signalements' }} />
         <Stack.Screen name="admin/track/[id]" options={{ ...detailHeader, title: 'Gérer la fiche' }} />
+        <Stack.Screen name="admin/track/reviews" options={{ ...detailHeader, title: 'Avis des pilotes' }} />
         <Stack.Screen name="admin/track/stats" options={{ ...detailHeader, title: 'Statistiques' }} />
         <Stack.Screen name="admin/track/new" options={{ ...detailHeader, presentation: 'modal', title: 'Nouveau circuit' }} />
         <Stack.Screen name="admin/pilots" options={{ ...detailHeader, title: 'Pilotes' }} />

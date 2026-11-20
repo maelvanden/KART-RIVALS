@@ -16,6 +16,7 @@ import { csvFilename, trackStatsRows } from '@/features/admin/track-stats-csv';
 import { eventWhen } from '@/features/events/format';
 import { SectionTitle } from '@/features/social/components/section-title';
 import { useTrack } from '@/features/tracks/api';
+import { useTrackReviews } from '@/features/tracks/reviews';
 import { shareCsv, toCsv } from '@/lib/csv';
 import { formatLapTime } from '@/lib/format';
 import { colors, radius, spacing } from '@/theme';
@@ -29,6 +30,8 @@ export default function TrackStatsScreen() {
   const roles = useAdminRoles();
   const canManage = useCanManageTrack(id);
   const stats = useTrackStats(id, canManage);
+  const reviews = useTrackReviews(canManage ? id : undefined);
+  const unanswered = reviews.data ? reviews.data.filter((r) => !r.reply).length : null;
   // Le récapitulatif concerne les exploitants (admins karting), pas les admins appli qui n'ont aucun circuit.
   const managesTrack = (roles.data?.managed_track_ids.length ?? 0) > 0;
   const s = stats.data;
@@ -168,7 +171,15 @@ export default function TrackStatsScreen() {
             <Line label="Sessions ouvertes à venir" value={s.sessions_upcoming} />
             <Line label="Tournois en cours ou ouverts" value={s.tournaments_live} />
             <Line label="Erreurs signalées à traiter" value={s.corrections_open} alert={s.corrections_open > 0} />
+            {unanswered != null ? <Line label="Avis sans réponse" value={unanswered} alert={unanswered > 0} /> : null}
           </Card>
+          {s.reviews > 0 ? (
+            <Button
+              title={unanswered ? `Répondre aux avis (${unanswered})` : 'Voir les avis des pilotes'}
+              variant={unanswered ? 'secondary' : 'ghost'}
+              onPress={() => router.push({ pathname: '/admin/track/reviews', params: { id } })}
+            />
+          ) : null}
           {s.corrections_open > 0 ? (
             <Button title="Voir les remontées des pilotes" variant="ghost" onPress={() => router.push('/admin/corrections')} />
           ) : null}

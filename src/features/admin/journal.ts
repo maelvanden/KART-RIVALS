@@ -40,7 +40,7 @@ export const PERIODS: { value: JournalPeriod; label: string }[] = [
 /** Types d'actions regroupés par thème, pour le filtre du journal. */
 export const JOURNAL_CATEGORIES: { value: string; label: string; actions: string[] }[] = [
   { value: 'sanctions', label: 'Sanctions', actions: ['warn', 'suspend', 'unsuspend', 'ban', 'unban', 'appeal_accepted', 'appeal_rejected'] },
-  { value: 'content', label: 'Contenu', actions: ['hide_content', 'show_content', 'resolve_report', 'view_message_context'] },
+  { value: 'content', label: 'Contenu', actions: ['hide_content', 'show_content', 'resolve_report', 'view_message_context', 'delete_review_reply'] },
   {
     value: 'results',
     label: 'Résultats',

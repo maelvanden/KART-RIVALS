@@ -118,7 +118,8 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   `page_updated_at`), statistiques de sa fiche pour l'exploitant (`track_stats` : visites comptées par `log_track_view`,
   pilotes venus rouler, habitués, intérêt pour ses événements ; écran `admin/track/stats` ;
   récapitulatif du lundi à 9 h en notification, `track_weekly_digest`, réglable par exploitant ; export CSV avec la
-  série par jour sur 90 jours, `track_stats_daily`), tournois
+  série par jour sur 90 jours, `track_stats_daily` ; réponses publiques de l'exploitant aux avis, `reply_to_review`,
+  écran `admin/track/reviews`), tournois
   (`admin_tournaments` : tous les tournois, duels bloqués ou contestés en premier ; `admin_cancel_tournament`,
   `admin_remove_tournament_pilot`, `admin_tournament_walkover`, `admin_set_tournament_official`), écuries
   (`admin_teams` ; `admin_rename_team`, `admin_moderate_team` : blason et message de recrutement ;

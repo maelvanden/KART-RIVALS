@@ -1508,6 +1508,8 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
     case 'set_gear_price':
       return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'delete_review_reply':
+      return `Réponse à un avis retirée${d.excerpt ? ` : « ${d.excerpt} »` : ''}`;
     case 'reset_username':
       return `Pseudo réinitialisé ${d.before ?? '?'} → ${d.after ?? '?'}`;
     case 'reset_avatar':
