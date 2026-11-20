@@ -131,6 +131,9 @@ Administration (migration `…_admin.sql`, écrans `src/app/admin/`, bouclier da
   avant et après, ouvert à la demande depuis un signalement et tracé au journal),
   réinitialisation d'un pseudo ou d'une photo inappropriés (`admin_reset_pilot_profile` + Edge Function
   `admin-reset-profile`, qui efface aussi le fichier du bucket public ; ouvert aux modérateurs sauf sur un admin appli),
+  comptes probablement liés (`profile_devices`, `register_device` : identifiant aléatoire d'installation gardé dans le
+  trousseau du téléphone ; `admin_linked_accounts` réservé aux admins appli, alerte quand un compte banni et un autre
+  partagent un appareil ; conservation 12 mois sauf comptes bannis),
   alertes à l'équipe (`push_on_serious_report` : notification dès un signalement grave ; `team_queue_watch` : rappel
   chaque matin à 9 h des éléments en attente depuis plus de 48 h ; réglage personnel `set_my_team_alerts`),
   recours contre une sanction (`sanction_appeals` : le pilote suspendu ou banni conteste depuis son écran

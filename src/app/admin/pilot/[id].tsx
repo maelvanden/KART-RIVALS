@@ -14,6 +14,7 @@ import { Text } from '@/components/ui/text';
 import { useAdminRoles } from '@/features/admin/api';
 import { ActionLine } from '@/features/admin/components/action-line';
 import { ReportContext } from '@/features/admin/components/report-context';
+import { useLinkedAccounts, type LinkedAccount } from '@/features/admin/linked';
 import { useReportedMessages } from '@/features/admin/messages';
 import {
   useAddPilotNote,
@@ -67,6 +68,7 @@ function sanctionLadder(p: AdminPilotDetail) {
   return { pending, suggestion };
 }
 
+const short = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /** Fiche admin d'un pilote : activité, signalements reçus, sanctions, badge vérifié, ELO. */
@@ -220,6 +222,8 @@ function PilotAdmin({ pilot: p }: { pilot: AdminPilotDetail }) {
 
       {isAppAdmin ? (
         <>
+      <LinkedAccounts pilotId={p.id} />
+
       <SectionTitle title="Sanctions" />
       <Card style={styles.card}>
         <Input
@@ -421,6 +425,70 @@ function RecentResults({ pilot: p }: { pilot: AdminPilotDetail }) {
         </Card>
       ))}
     </>
+  );
+}
+
+/**
+ * Autres comptes qui ont servi sur le même téléphone, pour repérer un pilote banni qui revient. Un indice à vérifier,
+ * pas une preuve : un téléphone partagé ou prêté lie aussi des comptes. Réservé aux admins appli.
+ */
+function LinkedAccounts({ pilotId }: { pilotId: string }) {
+  const linked = useLinkedAccounts(pilotId, true);
+  const data = linked.data;
+  if (linked.isPending) return null;
+  const banned = (data?.accounts ?? []).filter((a) => !!a.banned_at);
+  return (
+    <>
+      <SectionTitle title="Comptes liés" detail={`${data?.accounts.length ?? 0}`} accent={banned.length > 0 ? colors.danger : undefined} />
+      {linked.error ? <Text style={styles.error}>{linked.error.message}</Text> : null}
+      {data && data.accounts.length === 0 ? (
+        <Text variant="caption">
+          {data.devices === 0
+            ? 'Aucun appareil enregistré pour l’instant : il l’est à l’ouverture de la version à jour de l’appli.'
+            : `Aucun autre compte sur ${data.devices > 1 ? 'ses appareils' : 'son appareil'}.`}
+        </Text>
+      ) : null}
+      {banned.length > 0 ? (
+        <Card style={[styles.card, styles.linkedWarn]}>
+          <Text style={styles.linkedWarnTitle}>Même appareil qu’un compte banni</Text>
+          <Text variant="caption">
+            Un indice, pas une preuve : un téléphone prêté ou partagé en famille lie aussi des comptes. Vérifie les dates et
+            les signalements avant de décider.
+          </Text>
+        </Card>
+      ) : null}
+      {data?.accounts.map((a) => <LinkedRow key={a.id} account={a} />)}
+    </>
+  );
+}
+
+function LinkedRow({ account: a }: { account: LinkedAccount }) {
+  const status = a.banned_at
+    ? { label: 'Banni', color: colors.danger }
+    : a.suspended_until
+      ? { label: 'Suspendu', color: colors.orange }
+      : a.is_admin
+        ? { label: 'Admin', color: colors.neon }
+        : null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/admin/pilot/[id]', params: { id: a.id } })}
+      style={({ pressed }) => [styles.linkedRow, pressed && { opacity: 0.8 }]}>
+      <Avatar username={a.username} url={a.avatar_url} size={40} borderColor={rankMeta[a.rank].color} />
+      <View style={styles.flex}>
+        <Text style={styles.bold} numberOfLines={1}>{a.username}</Text>
+        <Text variant="caption">
+          {a.shared_devices} appareil{a.shared_devices > 1 ? 's' : ''} en commun · vu {a.first_seen === a.last_seen ? 'le' : 'du'} {short(a.first_seen)}
+          {a.first_seen === a.last_seen ? '' : ` au ${short(a.last_seen)}`}
+        </Text>
+        <Text variant="caption">
+          Inscrit le {short(a.created_at)}
+          {a.banned_at ? ` · banni le ${short(a.banned_at)}` : ''}
+        </Text>
+      </View>
+      {status ? <Text style={[styles.statusChip, { color: status.color, borderColor: status.color }]}>{status.label}</Text> : null}
+    </Pressable>
   );
 }
 
@@ -752,6 +820,19 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '800' },
   error: { color: colors.danger },
   notice: { color: colors.neon, fontWeight: '700' },
+  linkedWarn: { borderLeftWidth: 3, borderLeftColor: colors.danger },
+  linkedWarnTitle: { fontWeight: '800', color: colors.danger },
+  linkedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  statusChip: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2 },
   reportedQuote: { padding: spacing.md, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.danger, backgroundColor: colors.surfaceAlt },
   hiddenText: { color: colors.textMuted, fontStyle: 'italic' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

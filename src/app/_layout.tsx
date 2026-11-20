@@ -22,6 +22,7 @@ import { WarningScreen } from '@/features/admin/components/warning-screen';
 import { useAdminRoles } from '@/features/admin/api';
 import { useAccountStatus, useAcknowledgeWarning, useMyPendingWarning } from '@/features/admin/panel';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { useRegisterDevice } from '@/features/auth/device';
 import { useChallengesRealtime } from '@/features/challenges/realtime';
 import { usePushNotifications } from '@/features/notifications/push';
 import { isOutdated, useAppSettings } from '@/features/settings/app-settings';
@@ -73,6 +74,8 @@ function RootNavigator() {
   const acknowledge = useAcknowledgeWarning();
   const settings = useAppSettings();
   const roles = useAdminRoles();
+  // Relie les comptes qui servent sur un même téléphone (repérer un banni qui revient). Y compris compte sanctionné.
+  useRegisterDevice(userId, !!profile.data);
   useChallengesRealtime(userId);
   useSocialRealtime(userId);
   const welcome = useWelcomeSeen();
