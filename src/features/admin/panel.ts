@@ -363,6 +363,15 @@ const demo = {
   actions: [
     { id: 2, action: 'announcement', created_at: ago(60 * 5), admin: demoProfile.username, pilot: null, track: null, details: { title: 'Nouveau : la carte regroupe les circuits' } },
     { id: 1, action: 'create_track', created_at: ago(60 * 26), admin: demoProfile.username, pilot: null, track: 'Kart Origins', details: null },
+    // Quelques décisions plus anciennes, dont celles d'une modératrice, pour essayer les filtres du journal.
+    { id: -1, action: 'warn', created_at: ago(60 * 30), admin: 'Modo_Lea', pilot: 'KartiNono', track: null, details: { number: 2, reason: 'Nouveaux propos insultants dans les commentaires de l’Actu.' } },
+    { id: -2, action: 'resolve_report', created_at: ago(60 * 31), admin: 'Modo_Lea', pilot: 'KartiNono', track: null, details: { status: 'reviewed', hidden: true, report_reason: 'harassment' } },
+    { id: -3, action: 'hide_content', created_at: ago(60 * 52), admin: 'Modo_Lea', pilot: 'Drift_Max', track: null, details: { kind: 'comment', excerpt: 'T’as triché c’est sûr' } },
+    { id: -4, action: 'suspend', created_at: ago(60 * 24 * 3), admin: demoProfile.username, pilot: 'KartiNono', track: null, details: { days: 3, reason: '3 avertissements sans changement de comportement.' } },
+    { id: -5, action: 'set_elo', created_at: ago(60 * 24 * 5), admin: demoProfile.username, pilot: 'ApexHunter', track: null, details: { before: 1520, after: 1467, reason: 'Résultat annulé après litige' } },
+    { id: -6, action: 'hide_track', created_at: ago(60 * 24 * 9), admin: demoProfile.username, pilot: null, track: 'SpeedPark Angers', details: null },
+    { id: -7, action: 'resolve_report', created_at: ago(60 * 24 * 12), admin: 'Modo_Lea', pilot: 'TurboLéa', track: null, details: { status: 'dismissed', hidden: null, report_reason: 'spam' } },
+    { id: -8, action: 'cancel_tournament', created_at: ago(60 * 24 * 40), admin: demoProfile.username, pilot: 'ApexHunter', track: 'Inwall Kart', details: { name: 'Coupe de printemps', reason: 'Organisateur injoignable' } },
   ] as AdminAction[],
 };
 const demoContent: AdminContent[] = [
@@ -422,6 +431,9 @@ const demoCorrections: TrackCorrection[] = [
   { id: 'tc1', track_id: 't3', track_name: 'Inwall Kart', track_city: 'Les Ponts-de-Cé', kind: 'hours', message: 'Maintenant fermé le lundi, ouvert jusqu’à 23 h le samedi.', suggested_lat: null, suggested_lng: null, current_lat: 47.4284, current_lng: -0.5434, status: 'open', created_at: ago(90), author_id: 'p1', author: 'TurboLéa', handled_by: null, handled_at: null },
   { id: 'tc2', track_id: 't2', track_name: 'SpeedPark Angers', track_city: 'Beaucouzé', kind: 'position', message: 'L’entrée est de l’autre côté du centre commercial.', suggested_lat: 47.4752, suggested_lng: -0.6265, current_lat: 47.4742, current_lng: -0.6301, status: 'open', created_at: ago(300), author_id: 'p3', author: 'ApexHunter', handled_by: null, handled_at: null },
 ];
+
+/** Journal de démonstration, pour les filtres de l'écran Journal. */
+export const demoActionLog = (): AdminAction[] => demo.actions;
 
 const logDemo = (action: string, pilot: string | null, track: string | null, details: Record<string, unknown> | null = null) =>
   demo.actions.unshift({ id: Date.now(), action, created_at: new Date().toISOString(), admin: demoProfile.username, pilot, track, details });
@@ -1441,6 +1453,11 @@ export function actionLabel(a: Pick<AdminAction, 'action' | 'details'>): string 
       return `Objet retiré du garage${d.item ? ` : « ${d.item} »` : ''}`;
     case 'set_gear_price':
       return `Prix modifié${d.item ? ` : « ${d.item} »` : ''} ${d.before ?? '?'} → ${d.after ?? '?'} pts`;
+    case 'resolve_report': {
+      const verdict = d.status === 'dismissed' ? 'rejeté' : 'traité';
+      const content = d.hidden === true ? ', contenu masqué' : d.hidden === false ? ', contenu rétabli' : '';
+      return `Signalement ${verdict}${content}`;
+    }
     case 'add_moderator':
       return 'Nommé modérateur';
     case 'remove_moderator':

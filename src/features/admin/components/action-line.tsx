@@ -6,7 +6,11 @@ import { formatMessageTime } from '@/lib/format';
 import { colors } from '@/theme';
 
 /** Une ligne du journal des actions admin : quoi, sur qui, par qui, quand. */
-export function ActionLine({ action }: { action: Pick<AdminAction, 'action' | 'details' | 'created_at' | 'admin'> & Partial<AdminAction> }) {
+export function ActionLine({
+  action,
+}: {
+  action: Pick<AdminAction, 'action' | 'details' | 'created_at' | 'admin'> & Partial<AdminAction> & { admin_role?: 'admin' | 'moderator' | null };
+}) {
   const target = action.pilot ?? action.track;
   const reason = typeof action.details?.reason === 'string' ? action.details.reason : null;
   return (
@@ -17,7 +21,8 @@ export function ActionLine({ action }: { action: Pick<AdminAction, 'action' | 'd
       </Text>
       {reason ? <Text variant="caption">« {reason} »</Text> : null}
       <Text variant="caption">
-        {action.admin ?? 'admin'} · {formatMessageTime(action.created_at)}
+        {action.admin ?? 'admin'}
+        {action.admin_role === 'moderator' ? ' (modérateur)' : ''} · {formatMessageTime(action.created_at)}
       </Text>
     </View>
   );
