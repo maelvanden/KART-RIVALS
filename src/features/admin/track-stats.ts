@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { demoPilots } from '@/features/social/demo';
@@ -116,6 +116,41 @@ export function useTrackStats(trackId: string | undefined, enabled: boolean) {
       if (error) throw socialError(error);
       return data as TrackStats;
     },
+  });
+}
+
+/** Récapitulatif du lundi (notification) : un réglage par exploitant, activé par défaut. */
+let demoDigest = true;
+
+export function useTrackDigest(enabled: boolean) {
+  return useQuery({
+    queryKey: ['track-digest'],
+    enabled,
+    queryFn: async (): Promise<boolean> => {
+      if (isDemoMode) return demoDigest;
+      const { data, error } = await supabase.rpc('my_track_digest');
+      if (error) throw socialError(error);
+      return data as boolean;
+    },
+  });
+}
+
+export function useSetTrackDigest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (isDemoMode) {
+        demoDigest = enabled;
+        return;
+      }
+      const { error } = await supabase.rpc('set_my_track_digest', { p_enabled: enabled });
+      if (error) throw socialError(error);
+    },
+    onMutate: async (enabled) => {
+      await queryClient.cancelQueries({ queryKey: ['track-digest'] });
+      queryClient.setQueryData(['track-digest'], enabled);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['track-digest'] }),
   });
 }
 
