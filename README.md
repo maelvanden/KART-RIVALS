@@ -233,6 +233,21 @@ EXPO_PUBLIC_DEMO_MODE=true npx expo start
 EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_DEMO_ONBOARDING=true npx expo start
 ```
 
+## Tests
+
+```bash
+npm test                          # Edge Functions : lecture du ticket, horaires du Time Attack, API Discord (Node ≥ 22)
+npx supabase db start             # base Supabase locale (Docker) avec toutes les migrations
+npm run test:db                   # tests SQL pgTAP de supabase/tests/database
+```
+
+- `supabase/functions/**/test/*.test.mjs` : tests `node:test`, sans dépendance ; les modules `.ts` sont importés tels quels.
+- `supabase/tests/database/` : flux d'un défi et moteur ELO (facteur K, nul, contestation, expiration), points (bienvenue,
+  duels, jamais sous zéro, jamais écrits par le client) et Time Attack serveur (règle d'or, ticket déjà utilisé, abandon à
+  −15 ELO, vérification manuelle, pause). `00_helpers.sql` passe en premier et installe le schéma `tests`
+  (`tests.pilot()`, `tests.login()`…) sur la base locale ; chaque fichier tourne ensuite dans une transaction annulée.
+- La GitHub Action « Tests » lance les deux suites sur chaque pull request qui touche `supabase/`.
+
 ## Design system
 
 Direction « Motorsport / Gaming Premium », tout est centralisé dans [`src/theme/index.ts`](./src/theme/index.ts) :

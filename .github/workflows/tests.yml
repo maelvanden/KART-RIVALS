@@ -1,0 +1,42 @@
+# Lance les tests du backend à chaque pull request (et push sur main) qui touche supabase/ :
+#   - Edge Functions : tests node:test (lecture du ticket, horaires du Time Attack, API Discord) ;
+#   - base de données : tests pgTAP sur une base Supabase locale montée avec toutes les migrations.
+name: Tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'package.json'
+      - '.github/workflows/tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'package.json'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+jobs:
+  functions:
+    name: Edge Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  database:
+    name: Base de données (pgTAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Démarrer la base locale (applique les migrations)
+        run: supabase db start
+      - name: Tests SQL
+        run: supabase test db
