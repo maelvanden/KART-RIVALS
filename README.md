@@ -210,6 +210,13 @@ pilote (défis, courses de groupe, Time Attack) sur chaque circuit, plus rapide 
 « −1,2 s en 2 mois sur Inwall Kart » (premier chrono → record). Sur l'accueil et sa propre fiche (un circuit à choisir)
 et sur la fiche d'un circuit. `my_lap_progress()` ne renvoie que les chronos du pilote connecté.
 
+Objectifs de chrono (migration `…_lap_targets.sql`, carte « Tes objectifs » sur l'accueil et « Ton objectif ici » sur la
+fiche circuit) : « Il te manque 0,322 s pour battre ApexHunter · 2e sur 4 · passe 1er et prends le record ».
+`my_lap_targets()` renvoie, pour chaque circuit où le pilote a un chrono, sa place au classement des meilleurs tours, le
+pilote juste devant et le record (objectifs les plus proches d'abord). À chaque chrono validé (défi, course, Time Attack),
+les pilotes doublés qui restent dans le top 10 reçoivent « 🏁 Lucas t'a doublé » (chrono, écart, nouvelle place) ;
+l'ancien détenteur du record reçoit seulement « 👑 Ton record est tombé ».
+
 ELO : départ à 1000, K = 40 pendant les 10 premiers résultats (duels et courses de groupe confondus), 24 ensuite,
 16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
