@@ -13,6 +13,7 @@ import { challengeStep, needsMe } from '@/features/challenges/state';
 import { useMyPoints } from '@/features/garage/api';
 import { VirtualGarage } from '@/features/garage/components/VirtualGarage';
 import { MissionsCard } from '@/features/missions/missions-card';
+import { DiscordLinkReminder } from '@/features/profile/components/discord-link-reminder';
 import { PromoConsentSheet } from '@/features/notifications/promo-consent';
 import { CommunityCard } from '@/features/social/components/community-card';
 import { useBadgeStats, useEloHistory, useMyProfile, usePilotLapRecords, usePilotMatches } from '@/features/profile/api';
@@ -144,6 +145,7 @@ export default function PaddockScreen() {
         </>
       ) : null}
       <PromoConsentSheet profile={p} />
+      {p ? <DiscordLinkReminder key={p.id} profileId={p.id} enabled={p.promo_push !== null} /> : null}
     </Screen>
   );
 }
