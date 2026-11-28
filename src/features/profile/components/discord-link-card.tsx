@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,10 +31,25 @@ export function DiscordLinkCard({ profileId }: { profileId: string }) {
     const { error } = await supabase.rpc('unlink_my_discord');
     if (error) throw error;
   }, onSuccess: () => { setCode(null); void client.invalidateQueries({ queryKey: key }); } });
+  const [now, setNow] = useState(Date.now());
+  const [openError, setOpenError] = useState(false);
+  useEffect(() => {
+    if (!code) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [code]);
+  const remaining = code ? Math.max(0, Math.ceil((Date.parse(code.expires_at) - now) / 1000)) : 0;
+  const formattedCode = code?.code.match(/.{1,8}/g)?.join('\n');
   const error = generate.error ?? unlink.error;
+  const openDiscord = () => {
+    setOpenError(false);
+    void Linking.openURL('https://discord.com/channels/1570441175746347010').catch(() => setOpenError(true));
+  };
   return (
-    <Card style={{ gap: spacing.sm }}>
-      <Text variant="heading">Mon compte Discord</Text>
+    <Card style={styles.card}>
+      <Text variant="label" style={{ color: colors.neon }}>KART RIVALS × DISCORD</Text>
+      <Text variant="heading">Ta licence, aussi sur Discord</Text>
       {link.isPending ? <Text variant="caption">Vérification de la liaison…</Text> : link.isError ? (
         <>
           <Text variant="caption">La liaison Discord est momentanément indisponible.</Text>
@@ -41,8 +57,9 @@ export function DiscordLinkCard({ profileId }: { profileId: string }) {
         </>
       ) : link.data?.discord_id ? (
         <>
-          <Text>Ton compte Discord est lié.</Text>
-          <Text variant="caption" selectable>Identifiant Discord : {link.data.discord_id}</Text>
+          <View style={styles.badge}><Text style={{ color: colors.neon }}>✓ Compte connecté</Text></View>
+          <Text variant="caption" selectable>Compte Discord · {link.data.discord_id}</Text>
+          <Button title="Ouvrir notre Discord" variant="secondary" onPress={openDiscord} />
           <Text variant="caption">Utilise /profil ou /mesrecords sans saisir ton pseudo. Ton réglage de visibilité reste appliqué.</Text>
           <Button title="Dissocier Discord" variant="ghost" loading={unlink.isPending}
             onPress={() => confirmAction('Dissocier Discord ?', 'Le bot ne retrouvera plus automatiquement ton profil.', 'Dissocier', () => unlink.mutate())} />
@@ -51,17 +68,37 @@ export function DiscordLinkCard({ profileId }: { profileId: string }) {
         <>
           <Text variant="caption">Retrouve tes statistiques et tes records sur Discord sans retaper ton pseudo.</Text>
           {code ? (
-            <>
-              <Text variant="caption">Dans le serveur Kart Rivals, lance /lier et colle ce code dans l’option code. Ne le partage avec personne.</Text>
-              <Text variant="mono" selectable>{code.code}</Text>
-              <Text variant="caption">Valable jusqu’à {new Date(code.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (10 minutes), une seule fois. Un nouveau code remplace le précédent.</Text>
-            </>
+            <View style={styles.codeBox}>
+              <Text variant="label" style={{ color: colors.neon }}>TON CODE DE LIAISON</Text>
+              {remaining > 0 ? (
+                <>
+                  <Text selectable accessibilityLabel="Code de liaison, appui long pour copier" style={styles.code}>{formattedCode}</Text>
+                  <Text variant="caption" style={styles.center}>Appui long sur le code → Tout sélectionner → Copier.</Text>
+                  <View style={styles.badge}>
+                    <Text style={{ color: colors.neon }}>Expire dans {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</Text>
+                  </View>
+                </>
+              ) : <Text style={styles.center}>Ce code a expiré. Génère-en un nouveau.</Text>}
+            </View>
           ) : null}
-          <Button title={code ? 'Générer un nouveau code' : 'Lier mon compte Discord'} loading={generate.isPending} onPress={() => generate.mutate()} />
+          <Text>1. Génère ton code privé.</Text>
+          <Text>2. Sur notre Discord, utilise <Text style={{ color: colors.neon }}>/lier</Text> et colle le code.</Text>
+          <Text variant="caption">Les retours à la ligne sont acceptés. Le code est à usage unique : garde-le pour toi.</Text>
+          <Button title={code ? 'Nouveau code' : 'Générer mon code'} loading={generate.isPending} onPress={() => generate.mutate()} />
+          <Button title="Ouvrir notre Discord" variant="secondary" onPress={openDiscord} />
           <Text variant="caption">Seules les données de ton profil public seront affichées par les commandes du bot.</Text>
         </>
       )}
+      {openError ? <Text style={{ color: colors.danger }}>Ouvre Discord puis le serveur Kart Rivals pour utiliser /lier.</Text> : null}
       {error ? <Text style={{ color: colors.danger }}>{error.message}</Text> : null}
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { gap: spacing.md, borderColor: colors.neon, borderTopWidth: 3 },
+  codeBox: { backgroundColor: colors.background, borderRadius: 12, borderWidth: 1, borderColor: colors.neon, padding: spacing.lg, gap: spacing.md, alignItems: 'stretch' },
+  code: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 26, lineHeight: 38, letterSpacing: 2, textAlign: 'center', color: colors.text },
+  badge: { alignSelf: 'center', backgroundColor: colors.neonDim, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 8 },
+  center: { textAlign: 'center' },
+});
