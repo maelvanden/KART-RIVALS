@@ -245,9 +245,12 @@ npm run test:db                   # tests SQL pgTAP de supabase/tests/database
 - `supabase/functions/**/test/*.test.mjs` : tests `node:test`, sans dépendance ; les modules `.ts` sont importés tels quels.
 - `supabase/tests/database/` : flux d'un défi et moteur ELO (facteur K, nul, contestation, expiration), points (bienvenue,
   duels, jamais sous zéro, jamais écrits par le client) et Time Attack serveur (règle d'or, ticket déjà utilisé, abandon à
-  −15 ELO, vérification manuelle, pause). `00_helpers.sql` passe en premier et installe le schéma `tests`
+  −15 ELO, vérification manuelle, pause), courses de groupe (invitations, classement, majorité, ELO multi-pilotes, égalité au
+  chrono, contestation), boutique (achat, rang requis, équipement) et missions (progression, réclamation unique), tournois
+  (tirage par ELO, avancement du tableau, forfait, qualification d'office, lancement manuel, récompenses). `00_helpers.sql` passe en premier et installe le schéma `tests`
   (`tests.pilot()`, `tests.login()`…) sur la base locale ; chaque fichier tourne ensuite dans une transaction annulée.
-- La GitHub Action « Tests » lance les deux suites sur chaque pull request qui touche `supabase/`.
+- La GitHub Action « Tests » lance les deux suites sur chaque pull request qui touche `supabase/` ; « Vérifier l'app » lance
+  `expo lint` et `tsc --noEmit` sur celles qui touchent l'app.
 
 ## Design system
 
