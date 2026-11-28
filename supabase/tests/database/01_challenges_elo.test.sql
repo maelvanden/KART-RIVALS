@@ -1,6 +1,6 @@
 -- Flux d'un défi (respond_challenge → submit_match_result → confirm_match / dispute_match) et moteur ELO.
 begin;
-select plan(38);
+select plan(42);
 
 select tests.pilot('alice');
 select tests.pilot('bruno');
@@ -187,6 +187,46 @@ select throws_ok(
   $$ insert into challenges (opponent_id, track_id) values (tests.id('karim'), tests.track()) $$,
   'Account suspended', 'un pilote suspendu ne peut pas lancer de défi');
 reset role;
+
+-- ========== Le facteur K compte duels et courses ==========
+-- Léa a 10 courses de groupe mais aucun duel : elle n'est plus débutante (K = 24), Marc l'est (K = 40).
+select tests.logout();
+select tests.pilot('lea');
+select tests.pilot('marc');
+update profiles set race_count = 10 where id = tests.id('lea');
+insert into challenges (challenger_id, opponent_id, track_id, status)
+values (tests.id('lea'), tests.id('marc'), tests.track(), 'accepted');
+select tests.login('lea');
+set local role authenticated;
+create temp table m5 on commit drop as
+  select * from submit_match_result((select id from challenges where challenger_id = tests.id('lea')),
+                                    1::smallint, 2::smallint);
+grant select on m5 to authenticated;
+select tests.login('marc');
+select confirm_match((select id from m5));
+reset role;
+select tests.logout();
+
+select results_eq(
+  $$ select profile_id, k_factor::int, elo_after from elo_history where match_id = (select id from m5) order by k_factor $$,
+  $$ values (tests.id('lea'), 24, 1012), (tests.id('marc'), 40, 980) $$,
+  '10 courses de groupe suffisent pour quitter K = 40 en duel');
+
+-- Même règle pour un duel validé par un admin.
+select tests.pilot('nora');
+select tests.pilot('oscar');
+update profiles set race_count = 6, wins = 4 where id = tests.id('nora');
+insert into challenges (challenger_id, opponent_id, track_id, status)
+values (tests.id('nora'), tests.id('oscar'), tests.track(), 'accepted');
+insert into matches (challenge_id, submitted_by, challenger_position, opponent_position, winner_id, status)
+select id, tests.id('nora'), 1, 2, tests.id('nora'), 'disputed' from challenges where challenger_id = tests.id('nora');
+select apply_match_elo((select id from matches where submitted_by = tests.id('nora')));
+select is((select k_factor::int from elo_history where profile_id = tests.id('nora')), 24,
+  'validation admin : 4 duels + 6 courses → K = 24');
+select is((select k_factor::int from elo_history where profile_id = tests.id('oscar')), 40,
+  'validation admin : débutant → K = 40');
+select is((select status from matches where submitted_by = tests.id('nora')), 'confirmed'::match_status,
+  'le duel validé par l''admin est confirmé');
 
 select * from finish();
 rollback;

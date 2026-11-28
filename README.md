@@ -210,7 +210,8 @@ pilote (défis, courses de groupe, Time Attack) sur chaque circuit, plus rapide 
 « −1,2 s en 2 mois sur Inwall Kart » (premier chrono → record). Sur l'accueil et sa propre fiche (un circuit à choisir)
 et sur la fiche d'un circuit. `my_lap_progress()` ne renvoie que les chronos du pilote connecté.
 
-ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
+ELO : départ à 1000, K = 40 pendant les 10 premiers résultats (duels et courses de groupe confondus), 24 ensuite,
+16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
 ## Démarrer
