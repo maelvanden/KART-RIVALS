@@ -67,6 +67,7 @@ function EditProfileForm({ profile }: { profile: Profile }) {
 
   return (
     <Screen safeTop={false}>
+      <DiscordLinkCard key={profile.id} profileId={profile.id} />
       <View style={styles.photoRow}>
         <Avatar
           username={profile.username}
@@ -180,7 +181,6 @@ function EditProfileForm({ profile }: { profile: Profile }) {
       <Button title="Revoir la présentation" variant="ghost" onPress={() => router.push('/welcome')} />
       <Button title="Conditions d’utilisation" variant="ghost" onPress={openTerms} />
       <Button title="Politique de confidentialité" variant="ghost" onPress={openPrivacyPolicy} />
-      <DiscordLinkCard key={profile.id} profileId={profile.id} />
       <DeleteAccountCard />
     </Screen>
   );
