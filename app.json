@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "package": "fr.kartrivals.app",
       "adaptiveIcon": {
         "backgroundColor": "#111418",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
