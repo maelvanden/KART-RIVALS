@@ -271,10 +271,10 @@ function demoConfirm(matchId: string) {
   const now = new Date().toISOString();
   const iAmChallenger = c.challenger_id === demoProfile.id;
   const rival = iAmChallenger ? c.opponent : c.challenger;
-  // Même formule que confirm_match() : K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 dès 1850.
+  // Même formule que confirm_match() : K = 40 pendant les 10 premiers résultats (duels + courses), 24 ensuite, 16 dès 1850.
   const expected = 1 / (1 + 10 ** ((rival.elo - demoProfile.elo) / 400));
   const score = c.match.winner_id === demoProfile.id ? 1 : c.match.winner_id === null ? 0.5 : 0;
-  const k = demoProfile.matches_played < 10 ? 40 : demoProfile.elo >= 1850 ? 16 : 24;
+  const k = demoProfile.matches_played + demoProfile.race_count < 10 ? 40 : demoProfile.elo >= 1850 ? 16 : 24;
   const delta = Math.round(k * (score - expected));
   demoProfile.elo += delta;
   if (score === 1) demoProfile.wins += 1;

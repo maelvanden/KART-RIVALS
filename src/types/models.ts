@@ -179,6 +179,23 @@ export type LapProgressPoint = {
   source: 'challenge' | 'race' | 'time_attack';
 };
 
+/** Objectif de chrono sur un circuit : ma place, le pilote juste devant et le record (my_lap_targets). */
+export type LapTarget = {
+  track_id: string;
+  track_name: string;
+  lap_ms: number;
+  position: number;
+  pilots: number;
+  /** Pilote juste devant ; null si je détiens (ou égale) le record. */
+  target_id: string | null;
+  target_username: string | null;
+  target_lap_ms: number | null;
+  target_position: number | null;
+  record_id: string;
+  record_username: string;
+  record_lap_ms: number;
+};
+
 /** Circuit qui a au moins un chrono Time Attack validé (sélecteur du classement Time Attack). */
 export type TimeAttackTrack = { track_id: string; track_name: string; city: string | null; pilots: number; best_lap_ms: number };
 

@@ -5,7 +5,7 @@ sur des circuits locaux, valider les résultats à deux et grimper au classement
 
 ## Stack
 
-- Expo (SDK 57) + Expo Router + TypeScript
+- Expo (SDK 58) + Expo Router + TypeScript
 - Supabase : Auth, PostgreSQL + PostGIS, Realtime, Edge Functions
 - TanStack Query, React Hook Form, Zod
 
@@ -210,7 +210,15 @@ pilote (défis, courses de groupe, Time Attack) sur chaque circuit, plus rapide 
 « −1,2 s en 2 mois sur Inwall Kart » (premier chrono → record). Sur l'accueil et sa propre fiche (un circuit à choisir)
 et sur la fiche d'un circuit. `my_lap_progress()` ne renvoie que les chronos du pilote connecté.
 
-ELO : départ à 1000, K = 40 pendant les 10 premiers matchs, 24 ensuite, 16 au-delà de 1850.
+Objectifs de chrono (migration `…_lap_targets.sql`, carte « Tes objectifs » sur l'accueil et « Ton objectif ici » sur la
+fiche circuit) : « Il te manque 0,322 s pour battre ApexHunter · 2e sur 4 · passe 1er et prends le record ».
+`my_lap_targets()` renvoie, pour chaque circuit où le pilote a un chrono, sa place au classement des meilleurs tours, le
+pilote juste devant et le record (objectifs les plus proches d'abord). À chaque chrono validé (défi, course, Time Attack),
+les pilotes doublés qui restent dans le top 10 reçoivent « 🏁 Lucas t'a doublé » (chrono, écart, nouvelle place) ;
+l'ancien détenteur du record reçoit seulement « 👑 Ton record est tombé ».
+
+ELO : départ à 1000, K = 40 pendant les 10 premiers résultats (duels et courses de groupe confondus), 24 ensuite,
+16 au-delà de 1850.
 Rangs : Novice < 1100 ≤ Bronze < 1250 ≤ Argent < 1400 ≤ Or < 1550 ≤ Platine < 1700 ≤ Diamant < 1850 ≤ Légende.
 
 ## Démarrer
@@ -232,6 +240,24 @@ EXPO_PUBLIC_DEMO_MODE=true npx expo start
 # démo qui commence par la création de licence :
 EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_DEMO_ONBOARDING=true npx expo start
 ```
+
+## Tests
+
+```bash
+npm test                          # Edge Functions : lecture du ticket, horaires du Time Attack, API Discord (Node ≥ 22)
+npx supabase db start             # base Supabase locale (Docker) avec toutes les migrations
+npm run test:db                   # tests SQL pgTAP de supabase/tests/database
+```
+
+- `supabase/functions/**/test/*.test.mjs` : tests `node:test`, sans dépendance ; les modules `.ts` sont importés tels quels.
+- `supabase/tests/database/` : flux d'un défi et moteur ELO (facteur K, nul, contestation, expiration), points (bienvenue,
+  duels, jamais sous zéro, jamais écrits par le client) et Time Attack serveur (règle d'or, ticket déjà utilisé, abandon à
+  −15 ELO, vérification manuelle, pause), courses de groupe (invitations, classement, majorité, ELO multi-pilotes, égalité au
+  chrono, contestation), boutique (achat, rang requis, équipement) et missions (progression, réclamation unique), tournois
+  (tirage par ELO, avancement du tableau, forfait, qualification d'office, lancement manuel, récompenses). `00_helpers.sql` passe en premier et installe le schéma `tests`
+  (`tests.pilot()`, `tests.login()`…) sur la base locale ; chaque fichier tourne ensuite dans une transaction annulée.
+- La GitHub Action « Tests » lance les deux suites sur chaque pull request qui touche `supabase/` ; « Vérifier l'app » lance
+  `expo lint` et `tsc --noEmit` sur celles qui touchent l'app.
 
 ## Design system
 

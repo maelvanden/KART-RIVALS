@@ -2,6 +2,7 @@ import type {
   Challenge,
   EloPoint,
   LapProgressPoint,
+  LapTarget,
   LeaderboardEntry,
   NearbyPilot,
   PilotLapRecord,
@@ -1129,6 +1130,37 @@ export function demoLapProgress(): LapProgressPoint[] {
     })
     .sort((a, b) => Date.parse(a.driven_at) - Date.parse(b.driven_at));
 }
+
+/** Démo : objectifs du pilote démo, calculés comme my_lap_targets() à partir des records du tour. */
+export function demoLapTargets(): LapTarget[] {
+  return Object.entries(demoLaps)
+    .flatMap(([trackId, laps]) => {
+      const i = laps.findIndex(([id]) => id === demoProfile.id);
+      const track = demoTracks.find((t) => t.id === trackId);
+      if (i < 0 || !track) return [];
+      const [recordId, recordLap] = laps[0];
+      const ahead = i > 0 ? laps[i - 1] : null;
+      return [
+        {
+          track_id: trackId,
+          track_name: track.name,
+          lap_ms: laps[i][1],
+          position: i + 1,
+          pilots: laps.length,
+          target_id: ahead?.[0] ?? null,
+          target_username: ahead ? (demoPilot(ahead[0])?.username ?? 'Pilote') : null,
+          target_lap_ms: ahead?.[1] ?? null,
+          target_position: ahead ? i : null,
+          record_id: recordId,
+          record_username: recordId === demoProfile.id ? demoProfile.username : (demoPilot(recordId)?.username ?? 'Pilote'),
+          record_lap_ms: recordLap,
+        },
+      ];
+    })
+    .sort((a, b) => gapOf(a) - gapOf(b));
+}
+
+const gapOf = (t: LapTarget) => (t.target_lap_ms === null ? Infinity : t.lap_ms - t.target_lap_ms);
 
 /** Démo : circuits qui ont des chronos Time Attack (mêmes temps que les records du tour). */
 export function demoTimeAttackTracks(): TimeAttackTrack[] {

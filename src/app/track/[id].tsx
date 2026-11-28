@@ -20,8 +20,9 @@ import { TrackTournaments } from '@/features/tournaments/components/track-tourna
 import { TrackHero } from '@/features/tracks/components/track-hero';
 import { TrackGallery } from '@/features/tracks/components/track-gallery';
 import { TrackLapRecords } from '@/features/tracks/components/track-lap-records';
-import { useMyLapProgress } from '@/features/lap-progress/api';
+import { useMyLapProgress, useMyLapTargets } from '@/features/lap-progress/api';
 import { LapProgressCard } from '@/features/lap-progress/components/lap-progress-card';
+import { LapTargetsCard } from '@/features/lap-progress/components/lap-targets-card';
 import { TrackLayoutCard } from '@/features/tracks/components/track-layout-card';
 import { TrackLinks } from '@/features/tracks/components/track-links';
 import { TrackMap } from '@/features/tracks/components/track-map';
@@ -46,6 +47,7 @@ export default function TrackScreen() {
   const board = useTrackLeaderboard(id);
   const laps = useTrackLapRecords(id);
   const progress = useMyLapProgress();
+  const targets = useMyLapTargets();
   const profile = useMyProfile();
   const update = useUpdateProfile();
 
@@ -60,6 +62,7 @@ export default function TrackScreen() {
         board.refetch();
         laps.refetch();
         progress.refetch();
+        targets.refetch();
       }}>
       {/* L'en-tête photo remplace la barre de navigation une fois le circuit chargé. */}
       <Stack.Screen options={{ title: t?.name ?? 'Circuit', headerShown: !t }} />
@@ -121,6 +124,7 @@ export default function TrackScreen() {
             />
           ) : null}
           {laps.data && laps.data.length > 0 ? <TrackLapRecords records={laps.data} myId={profile.data?.id} /> : null}
+          {targets.data && t ? <LapTargetsCard targets={targets.data} myId={profile.data?.id} trackId={t.id} /> : null}
           {progress.data && t ? <LapProgressCard points={progress.data} trackId={t.id} /> : null}
 
           <Text variant="label">Classement du circuit</Text>

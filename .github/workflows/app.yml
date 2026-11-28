@@ -1,0 +1,33 @@
+# Vérifie l'app à chaque pull request (et push sur main) : lint Expo et typecheck TypeScript.
+# Une erreur bloque la PR avant que l'app ne parte sur Expo (EAS Update) à la fusion.
+name: Vérifier l'app
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'supabase/**'
+      - 'docs/**'
+      - '**/*.md'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'supabase/**'
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Lint et typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npx expo lint
+      - name: Typecheck
+        run: npx tsc --noEmit
