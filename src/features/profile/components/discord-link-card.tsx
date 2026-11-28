@@ -17,6 +17,7 @@ export function DiscordLinkCard({ profileId }: { profileId: string }) {
   const key = ['discord-link', profileId];
   // One-use codes are never persisted in query cache or device storage.
   const [code, setCode] = useState<Code | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const link = useQuery({ queryKey: key, queryFn: async () => {
     const { data, error } = await supabase.rpc('my_discord_link');
     if (error) throw error;
@@ -25,17 +26,16 @@ export function DiscordLinkCard({ profileId }: { profileId: string }) {
   const generate = useMutation({ mutationFn: async () => {
     const { data, error } = await supabase.rpc('create_discord_link_code');
     if (error) throw error;
+    setNow(Date.now());
     setCode(data as Code);
   } });
   const unlink = useMutation({ mutationFn: async () => {
     const { error } = await supabase.rpc('unlink_my_discord');
     if (error) throw error;
   }, onSuccess: () => { setCode(null); void client.invalidateQueries({ queryKey: key }); } });
-  const [now, setNow] = useState(Date.now());
   const [openError, setOpenError] = useState(false);
   useEffect(() => {
     if (!code) return;
-    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [code]);
