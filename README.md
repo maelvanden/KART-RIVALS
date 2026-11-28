@@ -5,7 +5,7 @@ sur des circuits locaux, valider les résultats à deux et grimper au classement
 
 ## Stack
 
-- Expo (SDK 57) + Expo Router + TypeScript
+- Expo (SDK 58) + Expo Router + TypeScript
 - Supabase : Auth, PostgreSQL + PostGIS, Realtime, Edge Functions
 - TanStack Query, React Hook Form, Zod
 
